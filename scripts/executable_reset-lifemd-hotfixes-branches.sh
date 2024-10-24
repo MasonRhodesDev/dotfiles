@@ -13,7 +13,7 @@ set -u
 set -o pipefail
 
 # Check remote repository name is thecvlb/lifemd
-if [[ $(git remote get-url origin) != "https://github.com/thecvlb/lifemd" ]]; then
+if [[ $(git remote get-url origin) != *"thecvlb/lifemd"* ]]; then
     echo "Remote repository is not thecvlb/lifemd"
     exit 1
 fi
