@@ -1,41 +1,5 @@
 # .bashprofile
-# SSH_ENV="$HOME/.ssh/agent-environment"
 
-# function start_agent {
-#     echo "Initialising new SSH agent..."
-#     /usr/bin/ssh-agent | sed 's/^echo/#echo/' >"$SSH_ENV"
-#     echo succeeded
-#     chmod 600 "$SSH_ENV"
-#     . "$SSH_ENV" >/dev/null
-#     /usr/bin/ssh-add;
-# }
-
-# # Source SSH settings, if applicable
-
-# if [ -f "$SSH_ENV" ]; then
-#     . "$SSH_ENV" >/dev/null
-#     #ps $SSH_AGENT_PID doesn't work under Cygwin
-#     ps -ef | grep $SSH_AGENT_PID | grep ssh-agent$ >/dev/null || {
-#         start_agent
-#     }
-# else
-#     start_agent
-# fi
-
-# # Start the ssh-agent if it's not already running
-# eval "$(ssh-agent -s)"
-
-# # Add all private keys from ~/.ssh/ids
-# for key in ~/.ssh/ids/*; do
-#     if [[ -f "$key" && ! "$key" =~ \.pub$ ]]; then
-#         ssh-add "$key"
-#     fi
-# done
-
-# echo "All SSH keys from ~/.ssh/ids have been added to the ssh-agent"
-
-### START-Keychain ###
-# Let  re-use ssh-agent and/or gpg-agent between logins
-/usr/bin/keychain $HOME/.ssh/ids/lifemd_id_ed25519
-source $HOME/.keychain/$HOSTNAME-sh
-### End-Keychain ###
+if [ -f ~/.bashrc ]; then
+    . ~/.bashrc
+fi

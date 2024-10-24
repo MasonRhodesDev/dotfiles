@@ -23,3 +23,12 @@ if [ -d ~/.bashrc.d ]; then
     done
 fi
 unset rc
+
+### START-Keychain ###
+# Let  re-use ssh-agent and/or gpg-agent between logins
+/usr/bin/keychain $HOME/.ssh/ids/lifemd_id_ed25519 --quiet
+source $HOME/.keychain/$HOSTNAME-sh
+
+export GNOME_KEYRING_CONTROL=/run/user/$(id -u)/keyring
+export SSH_AUTH_SOCK=/run/user/$(id -u)/keyring/ssh
+### End-Keychain ###
