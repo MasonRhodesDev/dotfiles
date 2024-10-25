@@ -4,6 +4,6 @@ Version=1.0
 Terminal=false
 Type=Application
 Name=YouTube Music
-Exec=/opt/brave.com/brave/brave-browser "--profile-directory=Profile 1" --app-id=cinhimbnkkaeohfgghhklpknlkffjgod
-Icon=brave-cinhimbnkkaeohfgghhklpknlkffjgod-Profile_1
+Exec=/opt/brave.com/brave/brave-browser "--profile-directory='Default'" --app-id=cinhimbnkkaeohfgghhklpknlkffjgod
+Icon=brave-cinhimbnkkaeohfgghhklpknlkffjgod-'Default'
 StartupWMClass=crx_cinhimbnkkaeohfgghhklpknlkffjgod
