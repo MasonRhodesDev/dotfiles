@@ -1,0 +1,5 @@
+{
+    "files.associations": {
+        "dot_config/hypr/**.conf.tmpl": "hyprlang"
+    }
+} 
