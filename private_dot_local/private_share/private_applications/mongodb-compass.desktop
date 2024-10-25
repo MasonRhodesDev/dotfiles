@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=MongoDB Compass
+Comment=The MongoDB GUI
+GenericName=MongoDB Compass
+Exec=env XDG_CURRENT_DESKTOP=GNOME mongodb-compass %U
+Icon=mongodb-compass
+Type=Application
+StartupNotify=true
+Categories=Office;Database;Building;Debugger;IDE;GUIDesigner;Profiling;
+MimeType=x-scheme-handler/mongodb;x-scheme-handler/mongodb+srv;
+
