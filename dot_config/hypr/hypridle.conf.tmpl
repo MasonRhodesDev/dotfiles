@@ -4,6 +4,12 @@ general {
 }
 
 listener {
+  timeout = 175   # 5sec before lock
+  on-timeout = {{ .chezmoi.homeDir }}/.config/hypr/toggle-dim.sh
+  on-resume = {{ .chezmoi.homeDir }}/.config/hypr/toggle-dim.sh
+}
+
+listener {
   on-timeout=lock_cmd
   timeout=180
 }
@@ -12,9 +18,11 @@ listener {
   on-resume=hyprctl dispatch dpms on
   on-timeout=hyprctl dispatch dpms off
   timeout=240
+  # timeout=24
 }
 
 listener {
   on-timeout=systemctl suspend
   timeout=540
+  # timeout=54
 }

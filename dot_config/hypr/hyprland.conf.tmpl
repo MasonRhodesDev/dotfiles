@@ -8,3 +8,13 @@ source = {{ .chezmoi.homeDir }}/.config/hypr/configs/monitors.conf
 source = {{ .chezmoi.homeDir }}/.config/hypr/configs/rules.conf
 
 source = {{ .chezmoi.homeDir }}/.config/hypr/configs/exec.conf
+
+
+# Dim overlay
+windowrule = float,^(dim_overlay)$
+windowrule = size 100% 100%,^(dim_overlay)$
+windowrule = move 0 0,^(dim_overlay)$
+windowrule = opacity 0.7,^(dim_overlay)$
+
+# Keybind to toggle dim overlay
+bind = $mainMod, D, exec, /path/to/toggle_dim.sh

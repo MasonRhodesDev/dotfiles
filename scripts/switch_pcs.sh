@@ -6,4 +6,4 @@
 playerctl pause
 
 # Lock screen
-gnome-screensaver-command -l
+# gnome-screensaver-command -l

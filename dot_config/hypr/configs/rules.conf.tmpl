@@ -32,3 +32,16 @@ windowrulev2=size 10000 10000, title:^(PRE_SLEEP_WINDOW)$
 windowrulev2=opacity 0.95 override 0.95 override 0.95 override, title:^(PRE_SLEEP_WINDOW)$
 windowrulev2=xray off, title:^(PRE_SLEEP_WINDOW)$
 windowrulev2=float, title: ^(Sign in - Google Accounts*)$
+
+# Dim overlay
+windowrule = float,^(dim_overlay)$
+windowrule = size 100% 100%,^(dim_overlay)$
+windowrule = move 0 0,^(dim_overlay)$
+windowrule = opacity 0.7,^(dim_overlay)$
+windowrule = nofocus,^(dim_overlay)$
+windowrule = pin,^(dim_overlay)$
+
+# Specific rules for dim_overlay
+windowrule = noanim,^(dim_overlay)$
+windowrule = animation fadein:5,^(dim_overlay)$
+windowrule = animation fadeout,^(dim_overlay)$
