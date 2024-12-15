@@ -42,7 +42,6 @@ bind=SHIFT, Print, exec, {{ .chezmoi.homeDir }}/scripts/record
 bind=$mainMod, L, exec, {{ .chezmoi.homeDir }}/scripts/lock_cmd
 bind=$mainMod, M, exec, ~/.config/wofi/power-menu.sh
 bind=$mainMod, XF86AudioPlay, exec, ~/.config/wofi/change-default-audio-device.js WofiListAudioDevices
-bind=$mainMod CTRL SHIFT, W, exec, swww img {{ .chezmoi.homeDir }}/Pictures/forrest.png
 bindl=, XF86AudioPlay, exec, playerctl play-pause
 bindl=, XF86AudioStop, exec, playerctl stop
 bindl=, XF86AudioMute, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle
@@ -50,5 +49,8 @@ bindl=, XF86AudioNext, exec, playerctl next
 bindl=, XF86AudioPrev, exec, playerctl previous
 bindle=, XF86AudioRaiseVolume, exec, wpctl set-volume -l 1.5 @DEFAULT_AUDIO_SINK@ 1%+
 bindle=, XF86AudioLowerVolume, exec, wpctl set-volume -l 1.5 @DEFAULT_AUDIO_SINK@ 1%-
+
 bindm=$mainMod, mouse:272, movewindow
 bindm=$mainMod, mouse:273, resizewindow
+
+bind=SHIFT, XF86AudioPlay, exec, pavucontrol

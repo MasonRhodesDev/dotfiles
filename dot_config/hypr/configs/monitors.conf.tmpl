@@ -1,14 +1,15 @@
 # Evaluation is by first match. So order matters
 
+# left and right hdmi ports respectively
+monitor = DP-2,highres,auto,1
+monitor = DP-3,highres,auto-right,1
+
 monitor =  desc:Dell Inc. DELL S3422DWG HSRTS63,3440x1440,0x0,auto
 # monitor =  desc:Dell Inc. DELL S2721QS 6VSGM43,highres,3440x0,1.5
 monitor =  desc:Dell Inc. DELL S2721QS 6VSGM43,highres,3440x0,1.5, transform, 3
 
 # monitor =  desc:Sharp Corporation 0x14D1,highres,0x0,1
 
-# left and right hdmi ports respectively
-monitor = DP-2,highres,auto,1
-monitor = DP-3,highres,auto-right,1
 
 # No match fall back
 monitor =  ,preferred,auto,1
@@ -18,3 +19,8 @@ monitor =  ,preferred,auto,1
 bindl=,switch:on:Lid Switch,exec,exec ~/.config/hypr/disable-or-suspend.js --state=on --id=eDP-1
 # trigger when the switch is turning off
 bindl=,switch:off:Lid Switch,exec, exec ~/.config/hypr/disable-or-suspend.js --state=off --id=eDP-1
+
+{{ if ne .chezmoi.hostname .work_machine }}
+# Move workspace 1 to DP-3 by default
+workspace = 1, monitor:DP-3
+{{ end }}

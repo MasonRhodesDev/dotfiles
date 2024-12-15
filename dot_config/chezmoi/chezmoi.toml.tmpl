@@ -1,0 +1,11 @@
+# .chezmoi.toml
+[data]
+    work_machine = "mason-work"
+    {{ if eq .chezmoi.hostname "mason-work" }}
+    wallpaper = "{{ .chezmoi.homeDir }}/Pictures/forrest.png"
+    {{ else }}
+    wallpaper = "{{ .chezmoi.homeDir }}/Pictures/landscape.png"
+    {{ end }}
+[data.paths]
+    config = "{{ .chezmoi.homeDir }}/.config/hypr"
+    scripts = "{{ .chezmoi.homeDir }}/scripts"

@@ -11,3 +11,4 @@ if ! command -v code &> /dev/null; then
 fi
 
 exit 0
+

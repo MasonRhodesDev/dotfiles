@@ -12,6 +12,8 @@ while ! pgrep -f waybar; do
 done
 sleep 5
 
-# Start other applications
+{{ if eq .chezmoi.hostname .work_machine }}
+# Start work applications
 gtk-launch slack &
 gtk-launch youtube-music.desktop &
+{{ end }}

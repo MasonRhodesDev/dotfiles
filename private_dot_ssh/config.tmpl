@@ -1,6 +1,6 @@
 Host *
     AddKeysToAgent yes
-{{- if eq .chezmoi.hostname "mason-work" }}
+{{- if eq .chezmoi.hostname .work_machine }}
     IdentityFile ~/.ssh/ids/lifemd_id_ed25519
 {{- else }}
     IdentityFile ~/.ssh/ids/mrhodesdev_id_ed25519

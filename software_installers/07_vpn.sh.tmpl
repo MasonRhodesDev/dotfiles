@@ -1,6 +1,7 @@
 #!/bin/sh
 set -eu
 
+{{- if eq .chezmoi.hostname .work_machine }}
 # PriTunl
 if ! command -v pritunl-client &> /dev/null; then
     echo "Prepping VPN"
@@ -14,6 +15,8 @@ EOF'
     
     sudo dnf install -y pritunl-client-electron
 fi
-
+{{- else }}
+echo "Skipped. Not on work machine"
+{{- end }}
 
 exit 0

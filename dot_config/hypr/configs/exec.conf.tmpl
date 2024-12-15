@@ -14,5 +14,6 @@ exec-once={{ .chezmoi.homeDir }}/.config/hypr/idle.sh
 exec=waybar
 exec-once=solaar --window=hide
 exec-once=nm-applet --indicator
+exec-once=hyprls
 exec-once={{ .chezmoi.homeDir }}/.config/hypr/configs/delayed_start_once.sh > {{ .chezmoi.homeDir }}/.config/hypr/logs/delayed_start_once.log 2>&1
 exec={{ .chezmoi.homeDir }}/.config/hypr/configs/delayed_start.sh > {{ .chezmoi.homeDir }}/.config/hypr/logs/delayed_start.log 2>&1

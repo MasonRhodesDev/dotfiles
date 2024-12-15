@@ -1,0 +1,15 @@
+#!/bin/bash
+
+{{ if eq .chezmoi.hostname .work_machine }}
+# Work computer - install Slack
+echo "Installing Slack for work computer..."
+# Add your Slack installation commands here
+flatpak install -y flathub com.slack.Slack
+
+{{ else }}
+# Personal computer - install Discord
+echo "Installing Discord for personal computer..."
+# Add your Discord installation commands here
+flatpak install -y flathub com.discordapp.Discord
+
+{{ end }}

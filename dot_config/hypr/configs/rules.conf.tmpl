@@ -18,10 +18,6 @@ windowrulev2=opacity 1 1, title:^(Huddle*)
 windowrulev2=float, title:^(meet.google.com is sharing.*)
 windowrulev2=pin, title:^(meet.google.com is sharing.*)
 windowrulev2=float, title:^(.*Bitwarden.*)$
-windowrulev2=workspace 9, class:^(gamescope)$
-windowrulev2=monitor 0, class:^(gamescope)$
-windowrulev2=fullscreen, class:^(gamescope)$
-windowrulev2=forceinput, class:^(gamescope)$
 windowrulev2=pin, class:^(gcr-prompter)$
 windowrulev2=float, class:^(gcr-prompter)$
 windowrulev2=center, class:^(gcr-prompter)$
@@ -45,3 +41,10 @@ windowrule = pin,^(dim_overlay)$
 windowrule = noanim,^(dim_overlay)$
 windowrule = animation fadein:5,^(dim_overlay)$
 windowrule = animation fadeout,^(dim_overlay)$
+
+# pavucontrol rules
+windowrulev2=float,class:^(org.pulseaudio.pavucontrol)$
+windowrulev2=center,class:^(org.pulseaudio.pavucontrol)$
+windowrulev2=size 1000 600,class:^(org.pulseaudio.pavucontrol)$
+windowrulev2=stayfocused,class:^(org.pulseaudio.pavucontrol)$
+windowrulev2=pin,class:^(org.pulseaudio.pavucontrol)$

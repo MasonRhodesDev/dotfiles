@@ -17,4 +17,4 @@ windowrule = move 0 0,^(dim_overlay)$
 windowrule = opacity 0.7,^(dim_overlay)$
 
 # Keybind to toggle dim overlay
-bind = $mainMod, D, exec, /path/to/toggle_dim.sh
+bind = $mainMod, D, exec, {{ .chezmoi.homeDir }}/.config/hypr/toggle-dim.sh

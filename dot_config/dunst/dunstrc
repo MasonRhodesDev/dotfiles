@@ -1,7 +1,6 @@
 [global]
 alignment="left"
 always_run_script=yes
-browser="/usr/bin/firefox -new-tab"
 class="Dunst"
 corner_radius=25
 follow="mouse"
@@ -21,7 +20,9 @@ layer="overlay"
 line_height=4
 markup="full"
 monitor=0
-mouse_right_click="context"
+mouse_left_click = do_action, close_current
+mouse_middle_click = close_all
+mouse_right_click = close_current
 padding=16
 separator_color="#ab4c51"
 separator_height=0
