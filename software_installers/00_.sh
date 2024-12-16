@@ -2,7 +2,6 @@
 set -eu
 
 # TEMPLATE
-
 echo "Testing sudo elevation..."
 
 # Attempt to run a command with sudo
@@ -23,4 +22,7 @@ else
 fi
 
 echo "Elevation test completed successfully."
+
+sudo usermod -aG video,input "$(whoami)"
+
 exit 0

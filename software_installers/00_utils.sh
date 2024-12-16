@@ -21,4 +21,10 @@ EOF
 sudo udevadm control --reload-rules
 sudo udevadm trigger
 
+#Install Brew
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+#Install oh-my-posh
+brew install oh-my-posh
+
 exit 0

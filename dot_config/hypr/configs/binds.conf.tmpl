@@ -53,4 +53,4 @@ bindle=, XF86AudioLowerVolume, exec, wpctl set-volume -l 1.5 @DEFAULT_AUDIO_SINK
 bindm=$mainMod, mouse:272, movewindow
 bindm=$mainMod, mouse:273, resizewindow
 
-bind=SHIFT, XF86AudioPlay, exec, pavucontrol
+bind=SHIFT, XF86AudioPlay, exec, PULSE_LATENCY_MSEC=60 pavucontrol 

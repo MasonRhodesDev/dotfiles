@@ -13,7 +13,7 @@ if ! command -v hyprland &> /dev/null; then
     # Install gvm
     if ! command -v gvm &> /dev/null; then
         bash < <(curl -s -S -L https://raw.githubusercontent.com/moovweb/gvm/master/binscripts/gvm-installer)
-        source ~/.gvm/scripts/gvm
+        source /home/mason/.gvm/scripts/gvm
     fi
 
     gvm install go1.20.6

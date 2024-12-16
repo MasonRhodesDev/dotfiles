@@ -1,4 +1,7 @@
 # .chezmoi.toml
+[git]
+    autoCommit = true
+    autoPush = true
 [data]
     work_machine = "mason-work"
     {{ if eq .chezmoi.hostname "mason-work" }}
