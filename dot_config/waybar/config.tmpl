@@ -138,7 +138,7 @@
     "battery",
     "custom/headsetcontrol_battery",
     "tray",
-    "dunst"
+    "custom/dunst"
   ],
   "network": {
     "format-alt": "{ifname}: {ipaddr}/{cidr}",
@@ -173,9 +173,9 @@
     ],
     "format-muted": "",
     "on-click": "{{ .chezmoi.homeDir }}/.config/wofi/change-default-audio-device.js WofiListAudioDevices",
-    "on-click-right": "pavucontrol"
+    "on-click-right": "PULSE_LATENCY_MSEC=60 pavucontrol"
   },
-  "dunst": {
+  "custom/dunst": {
     "format": "{icon}",
     "format-icons": {
       "default": "󰂚",

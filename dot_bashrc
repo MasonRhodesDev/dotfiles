@@ -4,10 +4,9 @@
 if [ -f /etc/bashrc ]; then
     . /etc/bashrc
 fi
-
 # User specific environment
 if ! [[ "$PATH" =~ "$HOME/.local/bin:$HOME/bin:" ]]; then
-    PATH="$HOME/.local/bin:$HOME/bin:$HOME/.npm-global/bin:$PATH"
+    PATH="$HOME/.local/bin:$HOME/bin:$PATH"
 fi
 export PATH
 
@@ -23,15 +22,3 @@ if [ -d ~/.bashrc.d ]; then
     done
 fi
 unset rc
-
-### START-Keychain ###
-# Let  re-use ssh-agent and/or gpg-agent between logins
-if [[ $- == *i* ]]; then
-	/usr/bin/keychain $HOME/.ssh/ids/lifemd_id_ed25519 --quiet --agents ssh
-	source $HOME/.keychain/$HOSTNAME-sh
-fi
-### End-Keychain ###
-
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion

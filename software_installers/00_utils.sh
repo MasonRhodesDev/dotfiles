@@ -21,8 +21,13 @@ EOF
 sudo udevadm control --reload-rules
 sudo udevadm trigger
 
-#Install Brew
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+if ! command -v brew &> /dev/null; then
+    #Install Brew
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+fi
+
+# source brew
+eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 
 #Install oh-my-posh
 brew install oh-my-posh

@@ -8,7 +8,7 @@ cd $SOFTWARE_INSTALLER_LOCATION
 
 # check if ags is installedu
 if ! command -v ags &> /dev/null; then
-    sudo dnf install meson vala valadoc gtk3-devel gtk-layer-shell-devel gobject-introspection-devel
+    sudo dnf install -y meson vala valadoc gtk3-devel gtk-layer-shell-devel gobject-introspection-devel
 
     if [ ! -d /tmp/astal ]; then
         git clone https://github.com/aylur/astal.git /tmp/astal

@@ -26,16 +26,11 @@
   	color:#c9545d;
   }
 
-  #custom-headsetcontrol_battery.show {
-  	margin: 2px 7px 0px 7px;
-  }
 
-  #custom-headsetcontrol_battery.hide {
-    margin: 0;
-    padding: 0;
-  }
-
-
+#custom-dunst {
+  margin: 2px 15px 0px 7px;
+}
+  
 @define-color base00 #101c32; @define-color base01 #004a79; @define-color base02 #ab4c51; @define-color base03 #ae97af;
 @define-color base04 #d4b1b0; @define-color base05 #ffdea3; @define-color base06 #fff0cd; @define-color base07 #fff0c5;
 
