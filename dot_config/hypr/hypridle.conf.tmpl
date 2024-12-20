@@ -17,12 +17,12 @@ listener {
 listener {
   on-resume=hyprctl dispatch dpms on
   on-timeout=hyprctl dispatch dpms off
-  timeout=240
+  timeout=240 # 4 minutes
   # timeout=24
 }
 
 listener {
   on-timeout=systemctl suspend
-  timeout=540
+  timeout=540 # 9 minutes
   # timeout=54
 }

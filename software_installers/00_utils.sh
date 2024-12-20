@@ -32,4 +32,7 @@ eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 #Install oh-my-posh
 brew install oh-my-posh
 
+# add solopasha/hyprland source to dnf
+sudo dnf copr enable solopasha/hyprland -y
+
 exit 0

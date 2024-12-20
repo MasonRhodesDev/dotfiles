@@ -1,4 +1,5 @@
 #!/bin/bash
+
 hyprlock
 # swaylock \
 #   --image "$HOME/Pictures/forrest.png" \
