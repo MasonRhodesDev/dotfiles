@@ -1,4 +1,5 @@
 #!/bin/sh
+{{ if eq .chezmoi.hostname .work_machine }}
 set -eu
 
 # docker
@@ -17,3 +18,4 @@ if ! command -v docker &> /dev/null; then
 fi
 
 exit 0
+{{ end }}

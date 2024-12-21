@@ -1,4 +1,5 @@
 #!/bin/sh
+{{ if eq .chezmoi.hostname .work_machine }}
 set -eu
 
 # MongoDB
@@ -65,3 +66,4 @@ EOF'
 fi
 
 exit 0
+{{ end }}

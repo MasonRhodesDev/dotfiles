@@ -1,4 +1,6 @@
 #!/bin/sh
+
+{{ if eq .chezmoi.hostname .work_machine }}
 set -eu
 
 {{- if eq .chezmoi.hostname .work_machine }}
@@ -20,3 +22,4 @@ echo "Skipped. Not on work machine"
 {{- end }}
 
 exit 0
+{{ end }}

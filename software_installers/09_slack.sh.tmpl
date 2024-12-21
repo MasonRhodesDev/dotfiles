@@ -1,4 +1,5 @@
 #!/bin/sh
+{{ if eq .chezmoi.hostname .work_machine }}
 set -eu
 
 #slack
@@ -18,3 +19,4 @@ EOF'
 fi
 
 exit 0
+{{ end }}
