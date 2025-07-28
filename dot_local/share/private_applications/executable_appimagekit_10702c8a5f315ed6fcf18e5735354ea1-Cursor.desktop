@@ -1,0 +1,73 @@
+[Desktop Entry]
+Name=Cursor (1.2.4)
+Comment=The AI Code Editor.
+GenericName=Text Editor
+Exec=/home/mason/Applications/Cursor-1.1.7-x86_64_f72b4fbaa4644d2e58943bed18f36ac1.AppImage %F
+Icon=appimagekit_10702c8a5f315ed6fcf18e5735354ea1_co.anysphere.cursor
+Type=Application
+StartupNotify=false
+StartupWMClass=Cursor
+Categories=TextEditor;Development;IDE;
+MimeType=application/x-cursor-workspace;
+Actions=Remove;Update;
+Keywords=cursor;
+
+X-AppImage-Version=1.2.4
+
+TryExec=/home/mason/Applications/Cursor-1.1.7-x86_64_f72b4fbaa4644d2e58943bed18f36ac1.AppImage
+X-AppImage-Old-Icon=co.anysphere.cursor
+X-AppImage-Old-Name=Cursor
+X-AppImage-Identifier=10702c8a5f315ed6fcf18e5735354ea1
+X-AppImageLauncher-Version=2.2.0 (git commit 0f91801), built on 2020-09-29 21:36:22 UTC
+[Desktop Action new-empty-window]
+Name=New Empty Window
+Name[cs]=Nové prázdné okno
+Name[de]=Neues leeres Fenster
+Name[es]=Nueva ventana vacía
+Name[fr]=Nouvelle fenêtre vide
+Name[it]=Nuova finestra vuota
+Name[ja]=新しい空のウィンドウ
+Name[ko]=새 빈 창
+Name[ru]=Новое пустое окно
+Name[zh_CN]=新建空窗口
+Name[zh_TW]=開新空視窗
+Exec=/home/mason/Applications/Cursor-1.1.7-x86_64_f72b4fbaa4644d2e58943bed18f36ac1.AppImage --new-window %F
+Icon=appimagekit_10702c8a5f315ed6fcf18e5735354ea1_co.anysphere.cursor
+
+X-AppImage-Old-Icon=co.anysphere.cursor
+
+[Desktop Action Remove]
+Name=Remove AppImage from system
+Icon=AppImageLauncher
+Exec=/usr/lib/x86_64-linux-gnu/appimagelauncher/remove "/home/mason/Applications/Cursor-1.1.7-x86_64_f72b4fbaa4644d2e58943bed18f36ac1.AppImage"
+Name[ast]=Desaniciar AppImage del sistema
+Name[cs]=Odebrat AppImage ze systému
+Name[de]=AppImage vom System entfernen
+Name[en]=Remove AppImage from system
+Name[es]=Eliminar Appimage del Sistema
+Name[fr]=Supprimer l'AppImage du système
+Name[it]=Rimuovi AppImage dal sistema
+Name[nl]=AppImage deïnstalleren
+Name[pl]=Usuń AppImage z systemu
+Name[pt]=Remover AppImage do sistema
+Name[pt_PT]=Remover AppImage do sistema
+Name[ru]=Удалить AppImage из системы
+Name[zh_Hans]=从系统中移除 AppImage
+
+[Desktop Action Update]
+Name=Update AppImage
+Icon=AppImageLauncher
+Exec=/usr/lib/x86_64-linux-gnu/appimagelauncher/update "/home/mason/Applications/Cursor-1.1.7-x86_64_f72b4fbaa4644d2e58943bed18f36ac1.AppImage"
+Name[ast]=Anovar AppImage
+Name[cs]=Aktualizovat AppImage
+Name[de]=AppImage aktualisieren
+Name[en]=Update AppImage
+Name[es]=Actualizar Appimage
+Name[fr]=Mettre à jour l'AppImage
+Name[it]=Aggiorna AppImage
+Name[nl]=AppImage bijwerken
+Name[pl]=Uaktualnij AppImage
+Name[pt]=Actualizar AppImage
+Name[pt_PT]=Atualizar AppImage
+Name[ru]=Обновить AppImage
+Name[zh_Hans]=更新 AppImage

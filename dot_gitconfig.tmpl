@@ -1,0 +1,17 @@
+[user]
+    name = Mason Rhodes
+{{- if contains "work" .chezmoi.hostname }}
+    email = work@example.com
+{{- else }}
+    email = user@example.com
+{{- end }}
+
+[credential]
+    credentialStore = secretservice
+    helper = /usr/local/bin/git-credential-manager
+
+[credential "https://dev.azure.com"]
+    useHttpPath = true
+
+[push]
+    autoSetupRemote = true

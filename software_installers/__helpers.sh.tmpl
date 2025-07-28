@@ -1,0 +1,124 @@
+#!/bin/bash
+
+# Helper functions for software installation
+
+# Detect distribution
+get_distro() {
+    if command -v dnf &> /dev/null; then
+        echo "fedora"
+    elif command -v pacman &> /dev/null; then
+        echo "arch"
+    else
+        echo "unknown"
+    fi
+}
+
+# Install packages based on distro
+install_packages() {
+    local distro=$(get_distro)
+    local fedora_packages="$1"
+    local arch_packages="$2"
+    
+    case $distro in
+        "fedora")
+            if [ -n "$fedora_packages" ]; then
+                sudo dnf install -y $fedora_packages
+            fi
+            ;;
+        "arch")
+            if [ -n "$arch_packages" ]; then
+                sudo pacman -S --needed --noconfirm $arch_packages
+            fi
+            ;;
+        *)
+            echo "Unsupported distribution"
+            return 1
+            ;;
+    esac
+}
+
+# Install AUR packages (Arch only)
+install_aur_packages() {
+    local packages="$1"
+    
+    if [ "$(get_distro)" != "arch" ]; then
+        echo "AUR packages only available on Arch Linux"
+        return 1
+    fi
+    
+    # Install yay if not present
+    if ! command -v yay &> /dev/null; then
+        echo "Installing yay AUR helper..."
+        git clone https://aur.archlinux.org/yay.git /tmp/yay
+        cd /tmp/yay
+        makepkg -si --noconfirm
+        cd -
+        rm -rf /tmp/yay
+    fi
+    
+    if [ -n "$packages" ]; then
+        yay -S --needed --noconfirm $packages
+    fi
+}
+
+# Download and extract latest GitHub release
+download_and_extract_latest_release() {
+    local username="$1"
+    local repo="$2"
+    local dest_dir="${3:-/tmp}"
+    
+    echo "Downloading latest release of $username/$repo..."
+    
+    local latest_url=$(curl -s "https://api.github.com/repos/$username/$repo/releases/latest" | jq -r '.tarball_url')
+    
+    if [ "$latest_url" = "null" ]; then
+        echo "Error: Could not find latest release for $username/$repo"
+        return 1
+    fi
+    
+    local tarball="$dest_dir/${repo}-latest.tar.gz"
+    local extract_dir="$dest_dir/${repo}-latest"
+    
+    curl -L "$latest_url" -o "$tarball"
+    
+    if [ $? -ne 0 ]; then
+        echo "Error: Failed to download $tarball"
+        return 1
+    fi
+    
+    mkdir -p "$extract_dir"
+    tar -xzf "$tarball" -C "$extract_dir" --strip-components=1
+    
+    if [ $? -ne 0 ]; then
+        echo "Error: Failed to extract $tarball"
+        return 1
+    fi
+    
+    rm "$tarball"
+    echo "$extract_dir"
+}
+
+# Download AppImage and integrate with AppImageLauncher
+install_appimage() {
+    local name="$1"
+    local download_url="$2"
+    local apps_dir="{{ .chezmoi.homeDir }}/Applications"
+    
+    # Ensure AppImageLauncher is installed
+    install_packages "AppImageLauncher" "appimagelauncher"
+    
+    mkdir -p "$apps_dir"
+    
+    local appimage_file="$apps_dir/$name.AppImage"
+    
+    echo "Downloading $name AppImage..."
+    curl -L "$download_url" -o "$appimage_file"
+    
+    if [ $? -ne 0 ]; then
+        echo "Error: Failed to download $name AppImage"
+        return 1
+    fi
+    
+    chmod +x "$appimage_file"
+    echo "$name AppImage installed to $appimage_file"
+}

@@ -1,0 +1,58 @@
+#!/bin/bash
+
+source "$(dirname "$0")/__helpers.sh"
+
+{{- if .is_work }}
+echo "Installing MongoDB (work machine)..."
+
+if [ "$(get_distro)" = "fedora" ]; then
+    # Add MongoDB repository
+    if [ ! -f /etc/yum.repos.d/mongodb-org-8.0.repo ]; then
+        echo "[mongodb-org-8.0]
+name=MongoDB Repository
+baseurl=https://repo.mongodb.org/yum/redhat/9/mongodb-org/8.0/x86_64/
+gpgcheck=1
+enabled=1
+gpgkey=https://pgp.mongodb.com/server-8.0.asc" | sudo tee /etc/yum.repos.d/mongodb-org-8.0.repo
+    fi
+    
+    # Install MongoDB
+    install_packages "mongodb-org mongodb-mongosh" ""
+    
+    # Configure MongoDB
+    sudo systemctl start mongod
+    sudo systemctl enable mongod
+    
+    # Initialize replica set
+    if ! mongosh --quiet --eval "rs.status()" &> /dev/null; then
+        echo "Initializing MongoDB replica set..."
+        mongosh --eval "rs.initiate({_id: 'rs0', members: [{_id: 0, host: 'localhost:27017'}]})"
+    fi
+    
+    # Install MongoDB Compass
+    if ! command -v mongodb-compass &> /dev/null; then
+        echo "Installing MongoDB Compass..."
+        wget -O /tmp/mongodb-compass.rpm https://downloads.mongodb.com/compass/mongodb-compass-1.44.5.x86_64.rpm
+        sudo dnf install -y /tmp/mongodb-compass.rpm
+        rm /tmp/mongodb-compass.rpm
+    fi
+
+elif [ "$(get_distro)" = "arch" ]; then
+    # Install via AUR
+    install_aur_packages "mongodb-bin mongodb-tools-bin mongodb-compass"
+    
+    # Enable and start service
+    sudo systemctl enable mongodb
+    sudo systemctl start mongodb
+    
+    # Initialize replica set
+    if ! mongosh --quiet --eval "rs.status()" &> /dev/null; then
+        echo "Initializing MongoDB replica set..."
+        mongosh --eval "rs.initiate({_id: 'rs0', members: [{_id: 0, host: 'localhost:27017'}]})"
+    fi
+fi
+
+echo "MongoDB installation complete!"
+{{- else }}
+echo "Skipped MongoDB installation (not a work machine)"
+{{- end }}
