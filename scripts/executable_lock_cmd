@@ -1,0 +1,18 @@
+#!/bin/bash
+
+hyprlock
+# swaylock \
+#   --image "$HOME/Pictures/forrest.png" \
+#   --clock \
+#   --indicator \
+#   --indicator-radius 100 \
+#   --indicator-thickness 7 \
+#   --effect-blur 7x5 \
+#   --effect-vignette 0.75:0.75 \
+#   --ring-color ffdcba \
+#   --key-hl-color 3a9ead \
+#   --line-color 742e4d \
+#   --inside-color 742e4d \
+#   --separator-color 00000000 \
+#   --grace 10 \
+#   --fade-in 5

@@ -1,0 +1,26 @@
+{
+  "name": "astral-timing",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "watch": "nodemon ./src/index.ts"
+  },
+  "author": "Mason Rhodes",
+  "license": "ISC",
+  "dependencies": {
+    "astronomy-bundle": "^7.7.2",
+    "eslint": "^8.38.0",
+    "node-dir": "^0.1.17",
+    "node-geocoder": "^4.2.0",
+    "xmlbuilder2": "^3.0.2"
+  },
+  "devDependencies": {
+    "@types/node": "^18.15.11",
+    "@types/node-dir": "^0.0.34",
+    "@types/node-geocoder": "^4.2.1",
+    "nodemon": "^2.0.22",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.0.4"
+  }
+}

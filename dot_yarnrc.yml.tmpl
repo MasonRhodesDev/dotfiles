@@ -1,0 +1,6 @@
+{{- if env "GITHUB_NPM_TOKEN" }}
+npmScopes:
+  redacted-org:
+    npmRegistryServer: https://npm.pkg.github.com
+    npmAuthToken: {{ env "GITHUB_NPM_TOKEN" }}
+{{- end }}

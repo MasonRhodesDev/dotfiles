@@ -1,0 +1,38 @@
+#!/bin/bash
+
+source "$(dirname "$0")/__helpers.sh"
+
+{{- if .is_work }}
+echo "Installing Docker (work machine)..."
+
+if ! command -v docker &> /dev/null; then
+    if [ "$(get_distro)" = "fedora" ]; then
+        # Add Docker repository
+        sudo dnf install -y dnf-plugins-core
+        sudo dnf config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
+        
+        # Install Docker
+        install_packages "docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin" ""
+        
+    elif [ "$(get_distro)" = "arch" ]; then
+        # Install Docker via pacman
+        install_packages "" "docker docker-compose"
+    fi
+    
+    # Start Docker service
+    sudo systemctl start docker
+    sudo systemctl enable docker
+    sudo systemctl start containerd
+    sudo systemctl enable containerd
+    
+    # Create docker group and add user
+    sudo groupadd -f docker
+    sudo usermod -aG docker $USER
+    
+    echo "Docker installed! Please log out and log back in for group membership to take effect."
+fi
+
+echo "Docker installation complete!"
+{{- else }}
+echo "Skipped Docker installation (not a work machine)"
+{{- end }}

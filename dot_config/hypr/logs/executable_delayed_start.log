@@ -1,0 +1,11 @@
+2561
+2577
+cat: /proc/acpi/button/lid/LID0/state: No such file or directory
+The lid is open
+eDP-1 is disabled
+2025-01-18 17:28:36 - [main.c:282] Found config * for output DP-2 (Dell Inc. DELL S2721QS 6VSGM43)
+2025-01-18 17:28:36 - [main.c:282] Found config * for output DP-3 (Dell Inc. DELL S3422DWG HSRTS63)
+2025-01-18 23:47:29 - [main.c:226] Destroying output DP-3 (Dell Inc. DELL S3422DWG HSRTS63)
+2025-01-18 23:47:29 - [main.c:226] Destroying output DP-2 (Dell Inc. DELL S2721QS 6VSGM43)
+2025-01-19 09:56:46 - [main.c:282] Found config * for output DP-3 (Dell Inc. DELL S3422DWG HSRTS63)
+2025-01-19 09:56:47 - [main.c:282] Found config * for output DP-2 (Dell Inc. DELL S2721QS 6VSGM43)

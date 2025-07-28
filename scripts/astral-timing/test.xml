@@ -1,0 +1,71 @@
+<?xml version="1.0"?>
+<background>
+  <starttime>
+    <year>2023</year>
+    <month>4</month>
+    <day>17</day>
+    <hour>0</hour>
+    <minute>0</minute>
+    <second>0</second>
+  </starttime>
+  <static>
+    <duration>2182</duration>
+    <file>/home/mason/Pictures/Dynamic Wallpapers/Pixel_Landscape_sections/Morning/Astronomical start/0.png</file>
+  </static>
+  <static>
+    <duration>2130</duration>
+    <file>/home/mason/Pictures/Dynamic Wallpapers/Pixel_Landscape_sections/Morning/Nautical start/1.png</file>
+  </static>
+  <static>
+    <duration>2111</duration>
+    <file>/home/mason/Pictures/Dynamic Wallpapers/Pixel_Landscape_sections/Morning/Civil start/2.png</file>
+  </static>
+  <static>
+    <duration>10630</duration>
+    <file>/home/mason/Pictures/Dynamic Wallpapers/Pixel_Landscape_sections/Midday/Daylight start/3.png</file>
+  </static>
+  <static>
+    <duration>10630</duration>
+    <file>/home/mason/Pictures/Dynamic Wallpapers/Pixel_Landscape_sections/Midday/Daylight start/4.png</file>
+  </static>
+  <static>
+    <duration>21310</duration>
+    <file>/home/mason/Pictures/Dynamic Wallpapers/Pixel_Landscape_sections/Midday/Solar noon/5.png</file>
+  </static>
+  <static>
+    <duration>1058</duration>
+    <file>/home/mason/Pictures/Dynamic Wallpapers/Pixel_Landscape_sections/Midday/Daylight end/6.png</file>
+  </static>
+  <static>
+    <duration>1058</duration>
+    <file>/home/mason/Pictures/Dynamic Wallpapers/Pixel_Landscape_sections/Midday/Daylight end/7.png</file>
+  </static>
+  <static>
+    <duration>1068</duration>
+    <file>/home/mason/Pictures/Dynamic Wallpapers/Pixel_Landscape_sections/Evening/8.png</file>
+  </static>
+  <static>
+    <duration>1068</duration>
+    <file>/home/mason/Pictures/Dynamic Wallpapers/Pixel_Landscape_sections/Evening/9.png</file>
+  </static>
+  <static>
+    <duration>1095</duration>
+    <file>/home/mason/Pictures/Dynamic Wallpapers/Pixel_Landscape_sections/Evening/8.png</file>
+  </static>
+  <static>
+    <duration>1095</duration>
+    <file>/home/mason/Pictures/Dynamic Wallpapers/Pixel_Landscape_sections/Evening/9.png</file>
+  </static>
+  <static>
+    <duration>7722</duration>
+    <file>/home/mason/Pictures/Dynamic Wallpapers/Pixel_Landscape_sections/Evening/8.png</file>
+  </static>
+  <static>
+    <duration>7722</duration>
+    <file>/home/mason/Pictures/Dynamic Wallpapers/Pixel_Landscape_sections/Evening/9.png</file>
+  </static>
+  <static>
+    <duration>15521</duration>
+    <file>/home/mason/Pictures/Dynamic Wallpapers/Pixel_Landscape_sections/Night/Midnight/11.png</file>
+  </static>
+</background>

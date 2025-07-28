@@ -1,0 +1,36 @@
+# exec = killall waybar > /dev/null 2>&1
+# exec = gsettings set org.gnome.desktop.interface gtk-theme "Breeze"   # for GTK3 apps
+# exec = gsettings set org.gnome.desktop.interface color-scheme "prefer-light"   # for GTK4 apps
+
+# Set default theme on startup (will be overridden by theme-toggle.sh if different)
+exec = gsettings set org.gnome.desktop.interface gtk-theme "Breeze-Dark"   # for GTK3 apps
+exec = gsettings set org.gnome.desktop.interface color-scheme "prefer-dark"   # for GTK4 apps
+
+# Initialize theme state and apply current theme
+exec-once = /home/{{ .username }}/scripts/theme-toggle.sh $(cat ~/.cache/theme_state 2>/dev/null || echo "dark") >/dev/null 2>&1
+
+exec-once = dbus-update-activation-environment --all
+exec-once=sleep 1 & dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP
+exec-once = systemctl --user start hyprpolkitagent
+exec-once = ~/.config/hypr/configs/monitors.sh > /home/{{ .username }}/.config/hypr/logs/monitors.log 2>&1
+
+exec-once=/home/{{ .username }}/.config/hypr/idle.sh
+exec-once=udiskie
+
+exec-once=hyprls
+exec-once=swaybg -i $WALLPAPER_PATH -m fill
+
+# Generate material you colors from wallpaper
+exec-once=matugen image $WALLPAPER_PATH -m dark
+
+# Update hyprpanel wallpaper config and launch
+exec=sed -i "s|\"wallpaper.image\": \".*\"|\"wallpaper.image\": \"$WALLPAPER_PATH\"|" ~/.config/hyprpanel/config.json && uwsm app -- hyprpanel
+
+# Input method
+# exec-once = fcitx5
+exec-once = /usr/libexec/ibus-ui-gtk3 --enable-wayland-im --exec-daemon --daemon-args "--xim --panel disable"
+
+# Launch Slack via desktop file
+exec-once = gtk-launch slack_slack
+
+

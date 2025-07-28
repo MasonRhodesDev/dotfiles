@@ -1,0 +1,4 @@
+# Oh My Posh - skip in Cursor integrated terminal
+if [[ "$TERM_PROGRAM" != "vscode" ]]; then
+    eval "$(oh-my-posh init bash --config {{ .chezmoi.homeDir }}/.cache/oh-my-posh/themes/bubbles.omp.json)"
+fi
