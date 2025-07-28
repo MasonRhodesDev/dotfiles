@@ -1,0 +1,33 @@
+#!/bin/bash
+
+source "$(dirname "$0")/__helpers.sh"
+
+echo "Installing IDEs..."
+
+# Install Visual Studio Code
+if [ "$(get_distro)" = "fedora" ]; then
+    if ! command -v code &> /dev/null; then
+        echo "Installing VS Code..."
+        sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc
+        echo -e "[code]\nname=Visual Studio Code\nbaseurl=https://packages.microsoft.com/yumrepos/vscode\nenabled=1\ngpgcheck=1\ngpgkey=https://packages.microsoft.com/keys/microsoft.asc" | sudo tee /etc/yum.repos.d/vscode.repo > /dev/null
+        install_packages "code" ""
+    fi
+elif [ "$(get_distro)" = "arch" ]; then
+    install_aur_packages "visual-studio-code-bin"
+fi
+
+# Install Cursor AppImage
+if ! command -v cursor &> /dev/null && [ ! -f "{{ .chezmoi.homeDir }}/Applications/Cursor.AppImage" ]; then
+    echo "Installing Cursor..."
+    
+    # Get latest Cursor AppImage URL
+    cursor_url=$(curl -s "https://api.github.com/repos/getcursor/cursor/releases/latest" | jq -r '.assets[] | select(.name | contains("AppImage")) | .browser_download_url')
+    
+    if [ "$cursor_url" != "null" ] && [ -n "$cursor_url" ]; then
+        install_appimage "Cursor" "$cursor_url"
+    else
+        echo "Could not find Cursor AppImage download URL"
+    fi
+fi
+
+echo "IDE installation complete!"

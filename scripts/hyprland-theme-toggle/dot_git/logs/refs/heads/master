@@ -1,0 +1,4 @@
+0000000000000000000000000000000000000000 635bac90190ce19fdd2246ef99fd65890faef44b Mason Rhodes <mason@lifemd.com> 1753554136 -0700	commit (initial): Initial commit: Hyprland theme toggle system
+635bac90190ce19fdd2246ef99fd65890faef44b db203dd40eeab1826c658e58e8a71546921cb7da Mason Rhodes <mason@lifemd.com> 1753567629 -0700	commit: Add modular theme system
+db203dd40eeab1826c658e58e8a71546921cb7da d7c1aefcfc0300129612d4fa017818fbadb46c4a Mason Rhodes <mason@lifemd.com> 1753568467 -0700	commit: Add tmux theme module
+d7c1aefcfc0300129612d4fa017818fbadb46c4a a174c80caf26980abd019c60a785d9b1c5854a75 Mason Rhodes <mason@lifemd.com> 1753569450 -0700	commit: Add Claude Code module and performance monitoring system

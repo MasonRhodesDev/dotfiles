@@ -1,0 +1,147 @@
+local wezterm = require 'wezterm'
+local config = {}
+
+-- Hide tab bar when only one tab is open
+config.hide_tab_bar_if_only_one_tab = true
+
+-- Set window opacity
+config.window_background_opacity = 0.95
+
+-- Material You colors generated from wallpaper
+config.colors = {
+  foreground = '{{colors.on_surface.hex}}',
+  background = '{{colors.surface.hex}}',
+  cursor_bg = '{{colors.primary.hex}}',
+  cursor_fg = '{{colors.on_primary.hex}}',
+  cursor_border = '{{colors.primary.hex}}',
+  selection_fg = '{{colors.on_primary_container.hex}}',
+  selection_bg = '{{colors.primary_container.hex}}',
+
+  ansi = {
+    '{{colors.surface.hex}}', -- black (surface)
+    '{{colors.error.hex}}', -- red (error)
+    '{{colors.secondary.hex}}', -- green (secondary)
+    '{{colors.tertiary.hex}}', -- yellow (tertiary)
+    '{{colors.primary.hex}}', -- blue (primary)
+    '{{colors.secondary_container.hex}}', -- magenta (secondary_container)
+    '{{colors.tertiary_container.hex}}', -- cyan (tertiary_container)
+    '{{colors.on_surface.hex}}', -- white (on_surface)
+  },
+
+  brights = {
+    '{{colors.surface_variant.hex}}', -- bright black (surface_variant)
+    '{{colors.error.hex}}', -- bright red (error)
+    '{{colors.secondary.hex}}', -- bright green (secondary)
+    '{{colors.tertiary.hex}}', -- bright yellow (tertiary)
+    '{{colors.primary.hex}}', -- bright blue (primary)
+    '{{colors.secondary_container.hex}}', -- bright magenta (secondary_container)
+    '{{colors.tertiary_container.hex}}', -- bright cyan (tertiary_container)
+    '{{colors.on_surface.hex}}', -- bright white (on_surface)
+  },
+}
+
+-- Use default hyperlink rules and add file path detection
+config.hyperlink_rules = wezterm.default_hyperlink_rules()
+
+-- Add rules for file paths with line numbers
+table.insert(config.hyperlink_rules, {
+  regex = [[([\w\.\-_/]+):(\d+):?(\d+)?]],
+  format = 'file://$1:$2',
+  highlight = 1,
+})
+
+-- Add rules for simple file paths
+table.insert(config.hyperlink_rules, {
+  regex = [[\b([\w\.\-_/]*[\w\.\-_]+\.(js|ts|jsx|tsx|py|rs|go|java|cpp|c|h|vue|svelte|html|css|scss|sass|less|json|yaml|yml|toml|md|txt))\b]],
+  format = 'file://$1',
+  highlight = 1,
+})
+
+-- Key bindings for copy/paste with system clipboard
+config.keys = {
+  -- Copy to system clipboard
+  {
+    key = 'c',
+    mods = 'CTRL|SHIFT',
+    action = wezterm.action.CopyTo 'Clipboard',
+  },
+  -- Paste from system clipboard
+  {
+    key = 'v',
+    mods = 'CTRL|SHIFT',
+    action = wezterm.action.PasteFrom 'Clipboard',
+  },
+}
+
+-- Mouse bindings for link handling  
+config.mouse_bindings = {
+  -- Double-click to select word and open if it's a file path
+  {
+    event = { Up = { streak = 2, button = 'Left' } },
+    mods = 'NONE',
+    action = wezterm.action_callback(function(window, pane)
+      -- Get the selected text (which should be the word we double-clicked)
+      local selection = window:get_selection_text_for_pane(pane)
+      
+      -- Debug: write to file
+      local debug_file = io.open('/tmp/wezterm-debug.log', 'a')
+      if debug_file then
+        debug_file:write('Double-click detected\n')
+        debug_file:write('Selection: ' .. tostring(selection) .. '\n')
+        debug_file:close()
+      end
+      
+      if selection and selection:match('%.%w+:%d+') then
+        local cwd = pane:get_current_working_dir()
+        if cwd then
+          cwd = cwd.file_path
+        end
+        
+        -- Parse file:line:column format
+        local file, line, column = selection:match('^(.+):(%d+):(%d+)$')
+        if not file then
+          file, line = selection:match('^(.+):(%d+)$')
+        end
+        if not file then
+          file = selection
+        end
+        
+        -- Make absolute path if relative
+        if not file:match('^/') and cwd then
+          -- Remove trailing slash from cwd if present
+          cwd = cwd:gsub('/$', '')
+          file = cwd .. '/' .. file
+        end
+        
+        local visual = os.getenv('VISUAL') or os.getenv('EDITOR') or 'vim'
+        local cmd
+        if line and column then
+          cmd = string.format('%s "%s:%s:%s"', visual, file, line, column)
+        elseif line then
+          cmd = string.format('%s "%s:%s"', visual, file, line)
+        else
+          cmd = string.format('%s "%s"', visual, file)
+        end
+        
+        -- Debug: log command
+        local debug_file2 = io.open('/tmp/wezterm-debug.log', 'a')
+        if debug_file2 then
+          debug_file2:write('Command: ' .. cmd .. '\n')
+          debug_file2:write('---\n')
+          debug_file2:close()
+        end
+        
+        os.execute(cmd .. ' &')
+      end
+    end),
+  },
+  -- Regular click for other hyperlinks
+  {
+    event = { Up = { streak = 1, button = 'Left' } },
+    mods = 'CTRL',
+    action = wezterm.action.OpenLinkAtMouseCursor,
+  },
+}
+
+
+return config

@@ -1,0 +1,18 @@
+#!/bin/bash
+url="$1"
+slack_domain="immudyne.slack.com"
+
+if [[ "$url" =~ ^https?://($slack_domain|www\.$slack_domain) ]]; then
+    # Extract team and channel IDs from the URL (this is a simplified example)
+    team_id=$(echo "$url" | sed -n 's/.*slack\.com\/\([^/]*\).*/\1/p')
+    channel_id=$(echo "$url" | sed -n 's/.*\/\([^/]*\)$/\1/p')
+    
+    # Use the app_redirect URL
+    redirect_url="https://slack.com/app_redirect?team=${team_id}&channel=${channel_id}"
+    
+    # Open the redirect URL in the default browser
+    xdg-open "$redirect_url"
+else
+    echo 'fail'
+    /usr/bin/xdg-open "$url"
+fi

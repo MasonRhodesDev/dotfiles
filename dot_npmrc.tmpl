@@ -1,0 +1,11 @@
+init-author-name=Mason Rhodes
+{{- if contains "work" .chezmoi.hostname }}
+init-author-email=mason@lifemd.com
+{{- else }}
+init-author-email=mrhodesdev@gmail.com
+{{- end }}
+{{- if env "GITHUB_NPM_TOKEN" }}
+always-auth=true
+@thecvlb:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken={{ env "GITHUB_NPM_TOKEN" }}
+{{- end }}
