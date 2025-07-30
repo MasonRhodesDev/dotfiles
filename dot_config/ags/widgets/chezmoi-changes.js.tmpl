@@ -1,0 +1,292 @@
+import Widget from 'resource:///com/github/Aylur/ags/widget.js';
+import App from 'resource:///com/github/Aylur/ags/app.js';
+import Utils from 'resource:///com/github/Aylur/ags/utils.js';
+
+const DAEMON_DIR = `{{ .chezmoi.homeDir }}/.cache/chezmoi-daemon`;
+const HASH_FILE = `${DAEMON_DIR}/ignore-hash`;
+
+// Function to get chezmoi status and create file list
+function getChezmoisStatus() {
+    try {
+        const statusResult = Utils.exec('bash -c "cd {{ .chezmoi.homeDir }}/.local/share/chezmoi && chezmoi status 2>/dev/null"');
+        
+        if (!statusResult.trim()) {
+            return { files: [], count: 0, hasChanges: false };
+        }
+
+        const lines = statusResult.trim().split('\n');
+        const files = lines.map(line => {
+            if (!line.trim()) return null;
+            
+            const status = line.substring(0, 2);
+            const file = line.substring(3);
+            
+            let statusText = '';
+            let statusClass = '';
+            
+            switch (status) {
+                case 'A ':
+                    statusText = 'Added';
+                    statusClass = 'added';
+                    break;
+                case 'M ':
+                    statusText = 'Modified';
+                    statusClass = 'modified';
+                    break;
+                case 'D ':
+                    statusText = 'Deleted';
+                    statusClass = 'deleted';
+                    break;
+                default:
+                    statusText = 'Changed';
+                    statusClass = 'changed';
+            }
+            
+            return { status: statusText, file, statusClass };
+        }).filter(item => item !== null);
+
+        return { files, count: files.length, hasChanges: true };
+    } catch (error) {
+        console.error('Error getting chezmoi status:', error);
+        return { files: [], count: 0, hasChanges: false };
+    }
+}
+
+// Function to save ignore hash
+function saveIgnoreHash() {
+    try {
+        Utils.exec(`mkdir -p ${DAEMON_DIR}`);
+        const statusOutput = Utils.exec('bash -c "cd {{ .chezmoi.homeDir }}/.local/share/chezmoi && chezmoi status 2>/dev/null"');
+        const diffOutput = Utils.exec('bash -c "cd {{ .chezmoi.homeDir }}/.local/share/chezmoi && chezmoi diff 2>/dev/null"');
+        const hash = Utils.exec(`echo '${statusOutput}${diffOutput}' | sha256sum | cut -d' ' -f1`);
+        Utils.exec(`echo '${hash}' > ${HASH_FILE}`);
+        console.log('Ignore hash saved:', hash);
+    } catch (error) {
+        console.error('Error saving ignore hash:', error);
+    }
+}
+
+// Function to commit changes
+function commitChanges() {
+    try {
+        // Add all changes
+        Utils.exec('bash -c "cd {{ .chezmoi.homeDir }}/.local/share/chezmoi && git add -A"');
+        
+        // Create commit message
+        const date = new Date().toISOString().slice(0, 19).replace('T', ' ');
+        const commitMsg = `Update dotfiles - ${date}
+
+Automatically committed by chezmoi-daemon`;
+
+        // Commit
+        Utils.exec(`bash -c "cd {{ .chezmoi.homeDir }}/.local/share/chezmoi && git commit -m '${commitMsg}'"`);
+        
+        // Show push dialog
+        const pushDialog = Widget.Window({
+            name: 'chezmoi-push-dialog',
+            class_name: 'chezmoi-push-dialog',
+            layer: 'overlay',
+            anchor: ['top', 'bottom', 'left', 'right'],
+            child: Widget.Box({
+                class_name: 'dialog-container',
+                vertical: true,
+                children: [
+                    Widget.Label({
+                        label: 'Changes committed locally.',
+                        class_name: 'dialog-title'
+                    }),
+                    Widget.Label({
+                        label: 'Push to remote repository?',
+                        class_name: 'dialog-text'
+                    }),
+                    Widget.Box({
+                        class_name: 'dialog-buttons',
+                        children: [
+                            Widget.Button({
+                                label: 'Push',
+                                class_name: 'dialog-button primary',
+                                on_clicked: () => {
+                                    try {
+                                        Utils.exec('bash -c "cd {{ .chezmoi.homeDir }}/.local/share/chezmoi && git push origin main"');
+                                        App.closeWindow('chezmoi-push-dialog');
+                                        showSuccessNotification('Changes committed and pushed successfully!');
+                                    } catch (error) {
+                                        App.closeWindow('chezmoi-push-dialog');
+                                        showErrorNotification('Push failed. Changes are committed locally.');
+                                    }
+                                }
+                            }),
+                            Widget.Button({
+                                label: 'Keep Local',
+                                class_name: 'dialog-button',
+                                on_clicked: () => {
+                                    App.closeWindow('chezmoi-push-dialog');
+                                    showSuccessNotification('Changes committed locally.');
+                                }
+                            })
+                        ]
+                    })
+                ]
+            })
+        });
+        
+        App.addWindow(pushDialog);
+        
+    } catch (error) {
+        console.error('Error committing changes:', error);
+        showErrorNotification('Failed to commit changes. Check logs.');
+    }
+}
+
+// Success notification
+function showSuccessNotification(message) {
+    const notification = Widget.Window({
+        name: 'chezmoi-success-notification',
+        class_name: 'chezmoi-notification success',
+        layer: 'overlay',
+        anchor: ['top'],
+        margins: [50, 0, 0, 0],
+        child: Widget.Box({
+            class_name: 'notification-container',
+            children: [
+                Widget.Label({
+                    label: '✓',
+                    class_name: 'notification-icon'
+                }),
+                Widget.Label({
+                    label: message,
+                    class_name: 'notification-text'
+                })
+            ]
+        })
+    });
+    
+    App.addWindow(notification);
+    Utils.timeout(3000, () => App.closeWindow('chezmoi-success-notification'));
+}
+
+// Error notification
+function showErrorNotification(message) {
+    const notification = Widget.Window({
+        name: 'chezmoi-error-notification',
+        class_name: 'chezmoi-notification error',
+        layer: 'overlay',
+        anchor: ['top'],
+        margins: [50, 0, 0, 0],
+        child: Widget.Box({
+            class_name: 'notification-container',
+            children: [
+                Widget.Label({
+                    label: '✗',
+                    class_name: 'notification-icon'
+                }),
+                Widget.Label({
+                    label: message,
+                    class_name: 'notification-text'
+                })
+            ]
+        })
+    });
+    
+    App.addWindow(notification);
+    Utils.timeout(5000, () => App.closeWindow('chezmoi-error-notification'));
+}
+
+// Main changes dialog
+export function createChangesDialog() {
+    const { files, count, hasChanges } = getChezmoisStatus();
+    
+    if (!hasChanges) {
+        console.log('No changes detected');
+        return null;
+    }
+
+    const fileList = Widget.ScrolledWindow({
+        class_name: 'file-list-container',
+        hscroll: 'never',
+        vscroll: 'automatic',
+        child: Widget.Box({
+            vertical: true,
+            class_name: 'file-list',
+            children: files.map(({ status, file, statusClass }) => 
+                Widget.Box({
+                    class_name: `file-item ${statusClass}`,
+                    children: [
+                        Widget.Label({
+                            label: status,
+                            class_name: 'file-status',
+                            xalign: 0
+                        }),
+                        Widget.Label({
+                            label: file,
+                            class_name: 'file-name',
+                            xalign: 0,
+                            hexpand: true
+                        })
+                    ]
+                })
+            )
+        })
+    });
+
+    return Widget.Window({
+        name: 'chezmoi-changes-dialog',
+        class_name: 'chezmoi-changes-dialog',
+        layer: 'overlay',
+        anchor: ['top', 'bottom', 'left', 'right'],
+        child: Widget.Box({
+            class_name: 'dialog-container',
+            vertical: true,
+            children: [
+                Widget.Box({
+                    class_name: 'dialog-header',
+                    children: [
+                        Widget.Label({
+                            label: 'Chezmoi Changes Detected',
+                            class_name: 'dialog-title',
+                            hexpand: true,
+                            xalign: 0
+                        }),
+                        Widget.Button({
+                            label: '×',
+                            class_name: 'dialog-close',
+                            on_clicked: () => {
+                                saveIgnoreHash();
+                                App.closeWindow('chezmoi-changes-dialog');
+                            }
+                        })
+                    ]
+                }),
+                Widget.Label({
+                    label: `Changes detected in ${count} file(s):`,
+                    class_name: 'dialog-subtitle',
+                    xalign: 0
+                }),
+                fileList,
+                Widget.Box({
+                    class_name: 'dialog-buttons',
+                    children: [
+                        Widget.Button({
+                            label: 'Ignore Changes',
+                            class_name: 'dialog-button secondary',
+                            hexpand: true,
+                            on_clicked: () => {
+                                saveIgnoreHash();
+                                App.closeWindow('chezmoi-changes-dialog');
+                            }
+                        }),
+                        Widget.Button({
+                            label: 'Commit Changes',
+                            class_name: 'dialog-button primary',
+                            hexpand: true,
+                            on_clicked: () => {
+                                App.closeWindow('chezmoi-changes-dialog');
+                                commitChanges();
+                            }
+                        })
+                    ]
+                })
+            ]
+        })
+    });
+}

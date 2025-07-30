@@ -1,0 +1,12 @@
+[Unit]
+Description=Chezmoi Change Check (One-shot)
+After=graphical-session.target
+
+[Service]
+Type=oneshot
+ExecStart={{ .chezmoi.homeDir }}/scripts/chezmoi-daemon.sh check
+Environment=DISPLAY=:0
+Environment=WAYLAND_DISPLAY=wayland-0
+
+[Install]
+WantedBy=default.target
