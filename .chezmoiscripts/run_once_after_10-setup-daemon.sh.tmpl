@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# Post-install script to set up chezmoi daemon
+# This runs automatically after chezmoi apply
+
+echo "Setting up chezmoi daemon..."
+
+# Make sure script is executable
+chmod +x "{{ .chezmoi.homeDir }}/scripts/chezmoi-daemon.sh"
+
+# Run daemon setup
+"{{ .chezmoi.homeDir }}/scripts/chezmoi-daemon.sh" setup
+
+echo "Chezmoi daemon setup complete!"
+echo "The daemon will now:"
+echo "  - Check for changes daily at 10 AM"
+echo "  - Check on login/screen unlock"
+echo "  - Show AGS-based GUI for change review"
+echo "  - Allow you to ignore or commit changes"
+echo ""
+echo "Use 'chezmoi-daemon.sh force' to trigger a manual check"

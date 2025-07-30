@@ -1,0 +1,16 @@
+[Unit]
+Description=Laptop lid switch handler
+After=graphical-session.target
+After=kanshi.service
+
+[Service]
+ExecStart=/home/mason/.local/bin/lid-handler.sh
+Restart=always
+RestartSec=5
+Environment=DISPLAY=:0
+Environment=WAYLAND_DISPLAY=wayland-1
+Environment=XDG_RUNTIME_DIR=/run/user/%U
+Environment=PATH=/home/mason/.local/bin:/usr/local/bin:/usr/bin:/bin
+
+[Install]
+WantedBy=default.target
