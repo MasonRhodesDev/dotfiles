@@ -1,0 +1,232 @@
+// Chezmoi Changes Dialog Styles
+
+.chezmoi-changes-dialog {
+  background-color: rgba(0, 0, 0, 0.5);
+  
+  .dialog-container {
+    background-color: #1e1e2e;
+    border-radius: 12px;
+    border: 1px solid #45475a;
+    padding: 24px;
+    margin: 80px;
+    min-width: 600px;
+    max-width: 800px;
+    min-height: 400px;
+    max-height: 70vh;
+    color: #cdd6f4;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  }
+  
+  .dialog-header {
+    margin-bottom: 16px;
+    
+    .dialog-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #f38ba8;
+    }
+    
+    .dialog-close {
+      background: none;
+      border: none;
+      color: #6c7086;
+      font-size: 20px;
+      padding: 4px 8px;
+      border-radius: 6px;
+      min-width: 32px;
+      
+      &:hover {
+        background-color: #45475a;
+        color: #f38ba8;
+      }
+    }
+  }
+  
+  .dialog-subtitle {
+    font-size: 14px;
+    color: #a6adc8;
+    margin-bottom: 16px;
+  }
+  
+  .file-list-container {
+    border: 1px solid #45475a;
+    border-radius: 8px;
+    background-color: #181825;
+    margin-bottom: 20px;
+    min-height: 200px;
+    max-height: 300px;
+  }
+  
+  .file-list {
+    padding: 12px;
+    
+    .file-item {
+      padding: 8px 12px;
+      border-radius: 6px;
+      margin-bottom: 4px;
+      border-left: 3px solid transparent;
+      
+      &:last-child {
+        margin-bottom: 0;
+      }
+      
+      &.added {
+        background-color: rgba(166, 227, 161, 0.1);
+        border-left-color: #a6e3a1;
+        
+        .file-status {
+          color: #a6e3a1;
+          font-weight: 600;
+        }
+      }
+      
+      &.modified {
+        background-color: rgba(249, 226, 175, 0.1);
+        border-left-color: #f9e2af;
+        
+        .file-status {
+          color: #f9e2af;
+          font-weight: 600;
+        }
+      }
+      
+      &.deleted {
+        background-color: rgba(243, 139, 168, 0.1);
+        border-left-color: #f38ba8;
+        
+        .file-status {
+          color: #f38ba8;
+          font-weight: 600;
+        }
+      }
+      
+      &.changed {
+        background-color: rgba(137, 180, 250, 0.1);
+        border-left-color: #89b4fa;
+        
+        .file-status {
+          color: #89b4fa;
+          font-weight: 600;
+        }
+      }
+      
+      .file-status {
+        font-family: 'FiraCode Nerd Font', monospace;
+        font-size: 12px;
+        min-width: 80px;
+        margin-right: 12px;
+      }
+      
+      .file-name {
+        font-family: 'FiraCode Nerd Font', monospace;
+        font-size: 13px;
+        color: #cdd6f4;
+      }
+    }
+  }
+  
+  .dialog-buttons {
+    gap: 12px;
+    
+    .dialog-button {
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      border: none;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      
+      &.primary {
+        background-color: #a6e3a1;
+        color: #1e1e2e;
+        
+        &:hover {
+          background-color: #94d3a2;
+          transform: translateY(-1px);
+        }
+      }
+      
+      &.secondary {
+        background-color: #45475a;
+        color: #cdd6f4;
+        
+        &:hover {
+          background-color: #585b70;
+        }
+      }
+    }
+  }
+}
+
+// Push dialog
+.chezmoi-push-dialog {
+  background-color: rgba(0, 0, 0, 0.5);
+  
+  .dialog-container {
+    background-color: #1e1e2e;
+    border-radius: 12px;
+    border: 1px solid #45475a;
+    padding: 24px;
+    min-width: 400px;
+    color: #cdd6f4;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  }
+  
+  .dialog-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #a6e3a1;
+    margin-bottom: 8px;
+  }
+  
+  .dialog-text {
+    font-size: 14px;
+    color: #a6adc8;
+    margin-bottom: 20px;
+  }
+}
+
+// Notifications
+.chezmoi-notification {
+  &.success {
+    .notification-container {
+      background-color: #a6e3a1;
+      color: #1e1e2e;
+      border: 1px solid #94d3a2;
+    }
+    
+    .notification-icon {
+      color: #1e1e2e;
+    }
+  }
+  
+  &.error {
+    .notification-container {
+      background-color: #f38ba8;
+      color: #1e1e2e;
+      border: 1px solid #f170a4;
+    }
+    
+    .notification-icon {
+      color: #1e1e2e;
+    }
+  }
+  
+  .notification-container {
+    padding: 12px 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    gap: 12px;
+  }
+  
+  .notification-icon {
+    font-weight: 600;
+    font-size: 16px;
+  }
+  
+  .notification-text {
+    font-size: 14px;
+    font-weight: 500;
+  }
+}
