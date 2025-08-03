@@ -1,5 +1,6 @@
 #!/bin/bash
 
+<<<<<<< Updated upstream
 source "$(dirname "$0")/__helpers.sh"
 
 echo "Installing Hyprland ecosystem..."
@@ -28,6 +29,43 @@ elif [ "$(get_distro)" = "arch" ]; then
     # Arch: Install via yay with -git variants
     install_aur_packages \
         "hyprcursor-git hypridle-git hyprland-git hyprland-protocols-git hyprlang-git hyprlock-git hyprpicker-git hyprutils-git xdg-desktop-portal-hyprland-git wofi pavucontrol swaybg hyprls-git"
+=======
+# hyprland
+if ! command -v hyprland &> /dev/null; then
+    echo "Installing Hyprland Tooling"
+    sudo dnf copr enable -y solopasha/hyprland
+    sudo dnf install -y hyprcursor hypridle hyprland hyprland-protocols-devel hyprlang hyprlock hyprpicker hyprutils xdg-desktop-portal-hyprland
+    sudo dnf install -y wofi waybar dunst pavucontrol swaybg
+fi
+
+if ! command -v gvm &> /dev/null; then
+    echo "Installing GVM"
+    bash < <(curl -s -S -L https://raw.githubusercontent.com/moovweb/gvm/master/binscripts/gvm-installer)
+    source ~/.gvm/scripts/gvm
+fi
+
+# gvm check version 1.20
+if ! gvm list | grep -q "go1.20.6"; then
+    echo "Installing Go 1.20.6"
+    gvm install go1.20.6
+    gvm use go1.20.6 --default
+fi
+
+if ! gvm list | grep -q "go1.23.4"; then
+    echo "Installing Go 1.23.4"
+    gvm install go1.23.4
+    gvm use go1.23.4 --default
+fi
+
+if  ! command -v hyprls &> /dev/null; then
+    sudo dnf install -y bison gcc make
+    gvm use go1.23.4
+
+    go install github.com/ewen-lbh/hyprls/cmd/hyprls@latest
+
+    # make hyprls globally available using which hyprls
+    sudo ln -s $(which hyprls) /usr/local/bin/hyprls
+>>>>>>> Stashed changes
 fi
 
 # Install hyprpanel (cross-distro via AUR for Arch, manual for Fedora)
