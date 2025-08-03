@@ -1,6 +1,20 @@
 #!/bin/bash
 
+<<<<<<< Updated upstream
 source "$(dirname "$0")/__helpers.sh"
+=======
+# Utils
+echo "Installing Utils"
+sudo dnf install -y vim snap curl git jq Thunar solaar wireplumber NetworkManager go gcc-go keychain powerline-fonts fira-code-fonts piper headsetcontrol
+sudo mkdir -p /usr/local/share/fonts/
+
+curl -OL https://github.com/ryanoasis/nerd-fonts/releases/latest/download/FiraCode.tar.xz
+sudo mkdir -p /usr/local/share/fonts/FiraCode/
+sudo tar -xvf FiraCode.tar.xz -C /usr/local/share/fonts/FiraCode
+rm FiraCode.tar.xz
+
+sudo fc-cache -f -v
+>>>>>>> Stashed changes
 
 echo "Installing core utilities..."
 
@@ -35,4 +49,8 @@ if ! command -v oh-my-posh &> /dev/null; then
     brew install oh-my-posh
 fi
 
+<<<<<<< Updated upstream
 echo "Core utilities installation complete!"
+=======
+exit 0
+>>>>>>> Stashed changes
