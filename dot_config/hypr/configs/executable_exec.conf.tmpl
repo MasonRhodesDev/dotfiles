@@ -7,14 +7,14 @@ exec = gsettings set org.gnome.desktop.interface gtk-theme "Breeze-Dark"   # for
 exec = gsettings set org.gnome.desktop.interface color-scheme "prefer-dark"   # for GTK4 apps
 
 # Initialize theme state and apply current theme
-exec-once = /home/{{ .username }}/scripts/theme-toggle.sh $(cat ~/.cache/theme_state 2>/dev/null || echo "dark") >/dev/null 2>&1
+exec-once = /home/{{ .chezmoi.username }}/scripts/theme-toggle.sh $(cat ~/.cache/theme_state 2>/dev/null || echo "dark") >/dev/null 2>&1
 
 exec-once = dbus-update-activation-environment --all
 exec-once=sleep 1 & dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP
 exec-once = systemctl --user start hyprpolkitagent
-exec-once = ~/.config/hypr/configs/monitors.sh > /home/{{ .username }}/.config/hypr/logs/monitors.log 2>&1
+exec-once = ~/.config/hypr/configs/monitors.sh > /home/{{ .chezmoi.username }}/.config/hypr/logs/monitors.log 2>&1
 
-exec-once=/home/{{ .username }}/.config/hypr/idle.sh
+exec-once=/home/{{ .chezmoi.username }}/.config/hypr/idle.sh
 exec-once=udiskie
 
 exec-once=hyprls

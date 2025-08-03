@@ -1,0 +1,360 @@
+Installing Utils
+Updating and loading repositories:
+Repositories loaded.
+Package "vim-enhanced-2:9.1.919-1.fc41.x86_64" is already installed.
+Package "snapd-2.66.1-1.fc41.x86_64" is already installed.
+Package "curl-8.9.1-2.fc41.x86_64" is already installed.
+Package "git-2.47.1-1.fc41.x86_64" is already installed.
+Package "jq-1.7.1-8.fc41.x86_64" is already installed.
+Package "Thunar-4.18.11-1.fc41.x86_64" is already installed.
+Package "solaar-1.1.13-3.fc41.noarch" is already installed.
+Package "wireplumber-0.5.5-2.fc41.x86_64" is already installed.
+Package "NetworkManager-1:1.50.0-1.fc41.x86_64" is already installed.
+Package "golang-1.23.4-1.fc41.x86_64" is already installed.
+Package "gcc-go-14.2.1-3.fc41.x86_64" is already installed.
+Package "keychain-2.8.5-12.fc41.noarch" is already installed.
+Package "powerline-fonts-2.8.4-1.fc41.noarch" is already installed.
+Package "fira-code-fonts-6.2-9.fc41.noarch" is already installed.
+Package "headsetcontrol-3.0.0-2.fc41.x86_64" is already installed.
+
+Package            Arch   Version     Repository      Size
+Installing:
+ piper             noarch 0.7-9.fc41  fedora       1.9 MiB
+Installing dependencies:
+ libratbag-ratbagd x86_64 0.17-7.fc41 fedora     366.6 KiB
+
+Transaction Summary:
+ Installing:         2 packages
+
+Total size of inbound packages is 440 KiB. Need to download 440 KiB.
+After this operation, 2 MiB extra will be used (install 2 MiB, remove 0 B).
+[1/2] libratbag-ratbagd-0:0.17-7.fc41.x 100% | 437.3 KiB/s | 168.8 KiB |  00m00s
+[2/2] piper-0:0.7-9.fc41.noarch         100% | 679.2 KiB/s | 271.7 KiB |  00m00s
+--------------------------------------------------------------------------------
+[2/2] Total                             100% | 426.8 KiB/s | 440.5 KiB |  00m01s
+Running transaction
+[1/4] Verify package files              100% | 666.0   B/s |   2.0   B |  00m00s
+[2/4] Prepare transaction               100% |   7.0   B/s |   2.0   B |  00m00s
+[3/4] Installing libratbag-ratbagd-0:0. 100% |   6.1 MiB/s | 384.0 KiB |  00m00s
+[4/4] Installing piper-0:0.7-9.fc41.noa 100% |   2.7 MiB/s |   1.9 MiB |  00m01s
+Complete!
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+ 33 2700k   33  910k    0     0   972k      0  0:00:02 --:--:--  0:00:02  972k100 2700k  100 2700k    0     0  2026k      0  0:00:01  0:00:01 --:--:-- 4520k
+FiraCodeNerdFont-Bold.ttf
+FiraCodeNerdFontMono-Bold.ttf
+FiraCodeNerdFontPropo-Bold.ttf
+LICENSE
+FiraCodeNerdFont-Light.ttf
+FiraCodeNerdFontMono-Light.ttf
+FiraCodeNerdFontPropo-Light.ttf
+FiraCodeNerdFont-Medium.ttf
+FiraCodeNerdFontMono-Medium.ttf
+FiraCodeNerdFontPropo-Medium.ttf
+FiraCodeNerdFont-Regular.ttf
+FiraCodeNerdFontMono-Regular.ttf
+FiraCodeNerdFontPropo-Regular.ttf
+FiraCodeNerdFont-Retina.ttf
+FiraCodeNerdFontMono-Retina.ttf
+FiraCodeNerdFontPropo-Retina.ttf
+FiraCodeNerdFont-SemiBold.ttf
+FiraCodeNerdFontMono-SemiBold.ttf
+FiraCodeNerdFontPropo-SemiBold.ttf
+README.md
+Font directories:
+	/usr/share/X11/fonts/Type1
+	/usr/share/X11/fonts/TTF
+	/root/.local/share/fonts
+	/usr/local/share/fonts
+	/usr/share/fonts
+	/root/.fonts
+	/usr/local/share/fonts/FiraCode
+	/usr/share/fonts/aajohan-comfortaa-fonts
+	/usr/share/fonts/abattis-cantarell-fonts
+	/usr/share/fonts/abattis-cantarell-vf-fonts
+	/usr/share/fonts/adobe-source-code-pro-fonts
+	/usr/share/fonts/fira-code
+	/usr/share/fonts/fontawesome-6-brands-fonts
+	/usr/share/fonts/fontawesome-6-free-fonts
+	/usr/share/fonts/gdouros-symbola
+	/usr/share/fonts/google-carlito-fonts
+	/usr/share/fonts/google-crosextra-caladea-fonts
+	/usr/share/fonts/google-droid-sans-fonts
+	/usr/share/fonts/google-noto
+	/usr/share/fonts/google-noto-color-emoji-fonts
+	/usr/share/fonts/google-noto-sans-cjk-vf-fonts
+	/usr/share/fonts/google-noto-sans-mono-cjk-vf-fonts
+	/usr/share/fonts/google-noto-serif-cjk-vf-fonts
+	/usr/share/fonts/google-noto-vf
+	/usr/share/fonts/jomolhari-fonts
+	/usr/share/fonts/julietaula-montserrat-fonts
+	/usr/share/fonts/liberation-mono-fonts
+	/usr/share/fonts/liberation-sans-fonts
+	/usr/share/fonts/liberation-serif-fonts
+	/usr/share/fonts/madan-fonts
+	/usr/share/fonts/open-sans
+	/usr/share/fonts/opensymbol
+	/usr/share/fonts/paktype-naskh-basic-fonts
+	/usr/share/fonts/redhat
+	/usr/share/fonts/rit-meera-new-fonts
+	/usr/share/fonts/rit-rachana-fonts
+	/usr/share/fonts/sil-padauk-fonts
+	/usr/share/fonts/stix-fonts
+	/usr/share/fonts/truetype
+	/usr/share/fonts/urw-base35
+	/usr/share/fonts/vazirmatn-vf-fonts
+/usr/share/X11/fonts/Type1: skipping, no such directory
+/usr/share/X11/fonts/TTF: skipping, no such directory
+/root/.local/share/fonts: skipping, no such directory
+/usr/local/share/fonts: caching, new cache contents: 0 fonts, 1 dirs
+/usr/local/share/fonts/FiraCode: caching, new cache contents: 18 fonts, 0 dirs
+/usr/share/fonts: caching, new cache contents: 0 fonts, 34 dirs
+/usr/share/fonts/aajohan-comfortaa-fonts: caching, new cache contents: 5 fonts, 0 dirs
+/usr/share/fonts/abattis-cantarell-fonts: caching, new cache contents: 5 fonts, 0 dirs
+/usr/share/fonts/abattis-cantarell-vf-fonts: caching, new cache contents: 6 fonts, 0 dirs
+/usr/share/fonts/adobe-source-code-pro-fonts: caching, new cache contents: 14 fonts, 0 dirs
+/usr/share/fonts/fira-code: caching, new cache contents: 6 fonts, 0 dirs
+/usr/share/fonts/fontawesome-6-brands-fonts: caching, new cache contents: 1 fonts, 0 dirs
+/usr/share/fonts/fontawesome-6-free-fonts: caching, new cache contents: 2 fonts, 0 dirs
+/usr/share/fonts/gdouros-symbola: caching, new cache contents: 1 fonts, 0 dirs
+/usr/share/fonts/google-carlito-fonts: caching, new cache contents: 4 fonts, 0 dirs
+/usr/share/fonts/google-crosextra-caladea-fonts: caching, new cache contents: 4 fonts, 0 dirs
+/usr/share/fonts/google-droid-sans-fonts: caching, new cache contents: 16 fonts, 0 dirs
+/usr/share/fonts/google-noto: caching, new cache contents: 2 fonts, 0 dirs
+/usr/share/fonts/google-noto-color-emoji-fonts: caching, new cache contents: 1 fonts, 0 dirs
+/usr/share/fonts/google-noto-sans-cjk-vf-fonts: caching, new cache contents: 40 fonts, 0 dirs
+/usr/share/fonts/google-noto-sans-mono-cjk-vf-fonts: caching, new cache contents: 20 fonts, 0 dirs
+/usr/share/fonts/google-noto-serif-cjk-vf-fonts: caching, new cache contents: 40 fonts, 0 dirs
+/usr/share/fonts/google-noto-vf: caching, new cache contents: 279 fonts, 0 dirs
+/usr/share/fonts/jomolhari-fonts: caching, new cache contents: 1 fonts, 0 dirs
+/usr/share/fonts/julietaula-montserrat-fonts: caching, new cache contents: 18 fonts, 0 dirs
+/usr/share/fonts/liberation-mono-fonts: caching, new cache contents: 4 fonts, 0 dirs
+/usr/share/fonts/liberation-sans-fonts: caching, new cache contents: 4 fonts, 0 dirs
+/usr/share/fonts/liberation-serif-fonts: caching, new cache contents: 4 fonts, 0 dirs
+/usr/share/fonts/madan-fonts: caching, new cache contents: 1 fonts, 0 dirs
+/usr/share/fonts/open-sans: caching, new cache contents: 10 fonts, 0 dirs
+/usr/share/fonts/opensymbol: caching, new cache contents: 1 fonts, 0 dirs
+/usr/share/fonts/paktype-naskh-basic-fonts: caching, new cache contents: 1 fonts, 0 dirs
+/usr/share/fonts/redhat: caching, new cache contents: 18 fonts, 0 dirs
+/usr/share/fonts/rit-meera-new-fonts: caching, new cache contents: 1 fonts, 0 dirs
+/usr/share/fonts/rit-rachana-fonts: caching, new cache contents: 4 fonts, 0 dirs
+/usr/share/fonts/sil-padauk-fonts: caching, new cache contents: 2 fonts, 0 dirs
+/usr/share/fonts/stix-fonts: caching, new cache contents: 9 fonts, 0 dirs
+/usr/share/fonts/truetype: caching, new cache contents: 1 fonts, 0 dirs
+/usr/share/fonts/urw-base35: caching, new cache contents: 70 fonts, 0 dirs
+/usr/share/fonts/vazirmatn-vf-fonts: caching, new cache contents: 10 fonts, 0 dirs
+/root/.fonts: skipping, no such directory
+/usr/local/share/fonts/FiraCode: skipping, looped directory detected
+/usr/share/fonts/aajohan-comfortaa-fonts: skipping, looped directory detected
+/usr/share/fonts/abattis-cantarell-fonts: skipping, looped directory detected
+/usr/share/fonts/abattis-cantarell-vf-fonts: skipping, looped directory detected
+/usr/share/fonts/adobe-source-code-pro-fonts: skipping, looped directory detected
+/usr/share/fonts/fira-code: skipping, looped directory detected
+/usr/share/fonts/fontawesome-6-brands-fonts: skipping, looped directory detected
+/usr/share/fonts/fontawesome-6-free-fonts: skipping, looped directory detected
+/usr/share/fonts/gdouros-symbola: skipping, looped directory detected
+/usr/share/fonts/google-carlito-fonts: skipping, looped directory detected
+/usr/share/fonts/google-crosextra-caladea-fonts: skipping, looped directory detected
+/usr/share/fonts/google-droid-sans-fonts: skipping, looped directory detected
+/usr/share/fonts/google-noto: skipping, looped directory detected
+/usr/share/fonts/google-noto-color-emoji-fonts: skipping, looped directory detected
+/usr/share/fonts/google-noto-sans-cjk-vf-fonts: skipping, looped directory detected
+/usr/share/fonts/google-noto-sans-mono-cjk-vf-fonts: skipping, looped directory detected
+/usr/share/fonts/google-noto-serif-cjk-vf-fonts: skipping, looped directory detected
+/usr/share/fonts/google-noto-vf: skipping, looped directory detected
+/usr/share/fonts/jomolhari-fonts: skipping, looped directory detected
+/usr/share/fonts/julietaula-montserrat-fonts: skipping, looped directory detected
+/usr/share/fonts/liberation-mono-fonts: skipping, looped directory detected
+/usr/share/fonts/liberation-sans-fonts: skipping, looped directory detected
+/usr/share/fonts/liberation-serif-fonts: skipping, looped directory detected
+/usr/share/fonts/madan-fonts: skipping, looped directory detected
+/usr/share/fonts/open-sans: skipping, looped directory detected
+/usr/share/fonts/opensymbol: skipping, looped directory detected
+/usr/share/fonts/paktype-naskh-basic-fonts: skipping, looped directory detected
+/usr/share/fonts/redhat: skipping, looped directory detected
+/usr/share/fonts/rit-meera-new-fonts: skipping, looped directory detected
+/usr/share/fonts/rit-rachana-fonts: skipping, looped directory detected
+/usr/share/fonts/sil-padauk-fonts: skipping, looped directory detected
+/usr/share/fonts/stix-fonts: skipping, looped directory detected
+/usr/share/fonts/truetype: skipping, looped directory detected
+/usr/share/fonts/urw-base35: skipping, looped directory detected
+/usr/share/fonts/vazirmatn-vf-fonts: skipping, looped directory detected
+/usr/lib/fontconfig/cache: cleaning cache directory
+/root/.cache/fontconfig: not cleaning non-existent cache directory
+/root/.fontconfig: not cleaning non-existent cache directory
+/usr/bin/fc-cache-32: succeeded
+Font directories:
+	/usr/share/X11/fonts/Type1
+	/usr/share/X11/fonts/TTF
+	/root/.local/share/fonts
+	/usr/local/share/fonts
+	/usr/share/fonts
+	/root/.fonts
+	/usr/local/share/fonts/FiraCode
+	/usr/share/fonts/aajohan-comfortaa-fonts
+	/usr/share/fonts/abattis-cantarell-fonts
+	/usr/share/fonts/abattis-cantarell-vf-fonts
+	/usr/share/fonts/adobe-source-code-pro-fonts
+	/usr/share/fonts/fira-code
+	/usr/share/fonts/fontawesome-6-brands-fonts
+	/usr/share/fonts/fontawesome-6-free-fonts
+	/usr/share/fonts/gdouros-symbola
+	/usr/share/fonts/google-carlito-fonts
+	/usr/share/fonts/google-crosextra-caladea-fonts
+	/usr/share/fonts/google-droid-sans-fonts
+	/usr/share/fonts/google-noto
+	/usr/share/fonts/google-noto-color-emoji-fonts
+	/usr/share/fonts/google-noto-sans-cjk-vf-fonts
+	/usr/share/fonts/google-noto-sans-mono-cjk-vf-fonts
+	/usr/share/fonts/google-noto-serif-cjk-vf-fonts
+	/usr/share/fonts/google-noto-vf
+	/usr/share/fonts/jomolhari-fonts
+	/usr/share/fonts/julietaula-montserrat-fonts
+	/usr/share/fonts/liberation-mono-fonts
+	/usr/share/fonts/liberation-sans-fonts
+	/usr/share/fonts/liberation-serif-fonts
+	/usr/share/fonts/madan-fonts
+	/usr/share/fonts/open-sans
+	/usr/share/fonts/opensymbol
+	/usr/share/fonts/paktype-naskh-basic-fonts
+	/usr/share/fonts/redhat
+	/usr/share/fonts/rit-meera-new-fonts
+	/usr/share/fonts/rit-rachana-fonts
+	/usr/share/fonts/sil-padauk-fonts
+	/usr/share/fonts/stix-fonts
+	/usr/share/fonts/truetype
+	/usr/share/fonts/urw-base35
+	/usr/share/fonts/vazirmatn-vf-fonts
+/usr/share/X11/fonts/Type1: skipping, no such directory
+/usr/share/X11/fonts/TTF: skipping, no such directory
+/root/.local/share/fonts: skipping, no such directory
+/usr/local/share/fonts: caching, new cache contents: 0 fonts, 1 dirs
+/usr/local/share/fonts/FiraCode: caching, new cache contents: 18 fonts, 0 dirs
+/usr/share/fonts: caching, new cache contents: 0 fonts, 34 dirs
+/usr/share/fonts/aajohan-comfortaa-fonts: caching, new cache contents: 5 fonts, 0 dirs
+/usr/share/fonts/abattis-cantarell-fonts: caching, new cache contents: 5 fonts, 0 dirs
+/usr/share/fonts/abattis-cantarell-vf-fonts: caching, new cache contents: 6 fonts, 0 dirs
+/usr/share/fonts/adobe-source-code-pro-fonts: caching, new cache contents: 14 fonts, 0 dirs
+/usr/share/fonts/fira-code: caching, new cache contents: 6 fonts, 0 dirs
+/usr/share/fonts/fontawesome-6-brands-fonts: caching, new cache contents: 1 fonts, 0 dirs
+/usr/share/fonts/fontawesome-6-free-fonts: caching, new cache contents: 2 fonts, 0 dirs
+/usr/share/fonts/gdouros-symbola: caching, new cache contents: 1 fonts, 0 dirs
+/usr/share/fonts/google-carlito-fonts: caching, new cache contents: 4 fonts, 0 dirs
+/usr/share/fonts/google-crosextra-caladea-fonts: caching, new cache contents: 4 fonts, 0 dirs
+/usr/share/fonts/google-droid-sans-fonts: caching, new cache contents: 16 fonts, 0 dirs
+/usr/share/fonts/google-noto: caching, new cache contents: 2 fonts, 0 dirs
+/usr/share/fonts/google-noto-color-emoji-fonts: caching, new cache contents: 1 fonts, 0 dirs
+/usr/share/fonts/google-noto-sans-cjk-vf-fonts: caching, new cache contents: 40 fonts, 0 dirs
+/usr/share/fonts/google-noto-sans-mono-cjk-vf-fonts: caching, new cache contents: 20 fonts, 0 dirs
+/usr/share/fonts/google-noto-serif-cjk-vf-fonts: caching, new cache contents: 40 fonts, 0 dirs
+/usr/share/fonts/google-noto-vf: caching, new cache contents: 279 fonts, 0 dirs
+/usr/share/fonts/jomolhari-fonts: caching, new cache contents: 1 fonts, 0 dirs
+/usr/share/fonts/julietaula-montserrat-fonts: caching, new cache contents: 18 fonts, 0 dirs
+/usr/share/fonts/liberation-mono-fonts: caching, new cache contents: 4 fonts, 0 dirs
+/usr/share/fonts/liberation-sans-fonts: caching, new cache contents: 4 fonts, 0 dirs
+/usr/share/fonts/liberation-serif-fonts: caching, new cache contents: 4 fonts, 0 dirs
+/usr/share/fonts/madan-fonts: caching, new cache contents: 1 fonts, 0 dirs
+/usr/share/fonts/open-sans: caching, new cache contents: 10 fonts, 0 dirs
+/usr/share/fonts/opensymbol: caching, new cache contents: 1 fonts, 0 dirs
+/usr/share/fonts/paktype-naskh-basic-fonts: caching, new cache contents: 1 fonts, 0 dirs
+/usr/share/fonts/redhat: caching, new cache contents: 18 fonts, 0 dirs
+/usr/share/fonts/rit-meera-new-fonts: caching, new cache contents: 1 fonts, 0 dirs
+/usr/share/fonts/rit-rachana-fonts: caching, new cache contents: 4 fonts, 0 dirs
+/usr/share/fonts/sil-padauk-fonts: caching, new cache contents: 2 fonts, 0 dirs
+/usr/share/fonts/stix-fonts: caching, new cache contents: 9 fonts, 0 dirs
+/usr/share/fonts/truetype: caching, new cache contents: 1 fonts, 0 dirs
+/usr/share/fonts/urw-base35: caching, new cache contents: 70 fonts, 0 dirs
+/usr/share/fonts/vazirmatn-vf-fonts: caching, new cache contents: 10 fonts, 0 dirs
+/root/.fonts: skipping, no such directory
+/usr/local/share/fonts/FiraCode: skipping, looped directory detected
+/usr/share/fonts/aajohan-comfortaa-fonts: skipping, looped directory detected
+/usr/share/fonts/abattis-cantarell-fonts: skipping, looped directory detected
+/usr/share/fonts/abattis-cantarell-vf-fonts: skipping, looped directory detected
+/usr/share/fonts/adobe-source-code-pro-fonts: skipping, looped directory detected
+/usr/share/fonts/fira-code: skipping, looped directory detected
+/usr/share/fonts/fontawesome-6-brands-fonts: skipping, looped directory detected
+/usr/share/fonts/fontawesome-6-free-fonts: skipping, looped directory detected
+/usr/share/fonts/gdouros-symbola: skipping, looped directory detected
+/usr/share/fonts/google-carlito-fonts: skipping, looped directory detected
+/usr/share/fonts/google-crosextra-caladea-fonts: skipping, looped directory detected
+/usr/share/fonts/google-droid-sans-fonts: skipping, looped directory detected
+/usr/share/fonts/google-noto: skipping, looped directory detected
+/usr/share/fonts/google-noto-color-emoji-fonts: skipping, looped directory detected
+/usr/share/fonts/google-noto-sans-cjk-vf-fonts: skipping, looped directory detected
+/usr/share/fonts/google-noto-sans-mono-cjk-vf-fonts: skipping, looped directory detected
+/usr/share/fonts/google-noto-serif-cjk-vf-fonts: skipping, looped directory detected
+/usr/share/fonts/google-noto-vf: skipping, looped directory detected
+/usr/share/fonts/jomolhari-fonts: skipping, looped directory detected
+/usr/share/fonts/julietaula-montserrat-fonts: skipping, looped directory detected
+/usr/share/fonts/liberation-mono-fonts: skipping, looped directory detected
+/usr/share/fonts/liberation-sans-fonts: skipping, looped directory detected
+/usr/share/fonts/liberation-serif-fonts: skipping, looped directory detected
+/usr/share/fonts/madan-fonts: skipping, looped directory detected
+/usr/share/fonts/open-sans: skipping, looped directory detected
+/usr/share/fonts/opensymbol: skipping, looped directory detected
+/usr/share/fonts/paktype-naskh-basic-fonts: skipping, looped directory detected
+/usr/share/fonts/redhat: skipping, looped directory detected
+/usr/share/fonts/rit-meera-new-fonts: skipping, looped directory detected
+/usr/share/fonts/rit-rachana-fonts: skipping, looped directory detected
+/usr/share/fonts/sil-padauk-fonts: skipping, looped directory detected
+/usr/share/fonts/stix-fonts: skipping, looped directory detected
+/usr/share/fonts/truetype: skipping, looped directory detected
+/usr/share/fonts/urw-base35: skipping, looped directory detected
+/usr/share/fonts/vazirmatn-vf-fonts: skipping, looped directory detected
+/usr/lib/fontconfig/cache: cleaning cache directory
+/root/.cache/fontconfig: not cleaning non-existent cache directory
+/root/.fontconfig: not cleaning non-existent cache directory
+/usr/bin/fc-cache-64: succeeded
+Setting up udev rules for headset control
+# SteelSeries Arctis Nova 7
+KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="2202", MODE="0666"
+KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="12ad", MODE="0666"
+
+# General SteelSeries devices
+SUBSYSTEM=="usb", ATTRS{idVendor}=="1038", MODE="0666"
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="1038", MODE="0666"
+==> Auto-updating Homebrew...
+Adjust how often this is run with HOMEBREW_AUTO_UPDATE_SECS or disable with
+HOMEBREW_NO_AUTO_UPDATE. Hide these hints with HOMEBREW_NO_ENV_HINTS (see `man brew`).
+==> Homebrew collects anonymous analytics.
+Read the analytics documentation (and how to opt-out) here:
+  https://docs.brew.sh/Analytics
+No analytics have been recorded yet (nor will be during this `brew` run).
+
+==> Homebrew is run entirely by unpaid volunteers. Please consider donating:
+  https://github.com/Homebrew/brew#donations
+
+==> Auto-updated Homebrew!
+Updated 2 taps (homebrew/core and homebrew/cask).
+==> New Formulae
+acronym
+atac
+codevis
+neverest
+oranda
+pipelight
+slumber
+swctl
+
+You have 1 outdated formula installed.
+
+oh-my-posh 24.16.1 is already installed but outdated (so it will be upgraded).
+==> Downloading https://ghcr.io/v2/homebrew/core/oh-my-posh/manifests/24.17.1
+==> Fetching oh-my-posh
+==> Downloading https://ghcr.io/v2/homebrew/core/oh-my-posh/blobs/sha256:a9a1c67eb8f0f864851e0185f5528ca65c4b0b3b99beacc1306fd81a11aa46d1
+==> Upgrading oh-my-posh
+  24.16.1 -> 24.17.1 
+==> Pouring oh-my-posh--24.17.1.x86_64_linux.bottle.tar.gz
+==> Caveats
+Bash completion has been installed to:
+  /home/linuxbrew/.linuxbrew/etc/bash_completion.d
+==> Summary
+🍺  /home/linuxbrew/.linuxbrew/Cellar/oh-my-posh/24.17.1: 134 files, 17.5MB
+==> Running `brew cleanup oh-my-posh`...
+Disable this behaviour by setting HOMEBREW_NO_INSTALL_CLEANUP.
+Hide these hints with HOMEBREW_NO_ENV_HINTS (see `man brew`).
+Removing: /home/linuxbrew/.linuxbrew/Cellar/oh-my-posh/24.16.1... (134 files, 17.5MB)
+Removing: /home/mason/.cache/Homebrew/oh-my-posh_bottle_manifest--24.16.1... (7.2KB)
+Removing: /home/mason/.cache/Homebrew/oh-my-posh--24.16.1... (6.5MB)

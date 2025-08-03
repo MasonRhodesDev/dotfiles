@@ -1,0 +1,16 @@
+# .chezmoi.toml
+[edit]
+    command="nvim"
+[merge]
+    command="nvim"
+    args = ["-d", "{{ .Destination }}", "{{ .Source }}", "{{ .Target }}"]
+[git]
+    autoCommit = true
+    autoPush = true
+[data]
+    work_machine = "mason-work"
+    wallpaper = "/home/mason/Pictures/landscape.png"
+    is_work = "{{ if .chezmoi.hostname == .work-machine }}true{{ else }}false{{ end }}"
+[data.paths]
+    config = "/home/mason/.config/hypr"
+    scripts = "/home/mason/scripts"

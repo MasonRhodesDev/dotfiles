@@ -6,6 +6,7 @@ echo "Installing browsers..."
 
 # Install Vivaldi
 if ! command -v vivaldi &> /dev/null; then
+<<<<<<< Updated upstream
     echo "Installing Vivaldi..."
     
     if [ "$(get_distro)" = "fedora" ]; then
@@ -18,6 +19,11 @@ if ! command -v vivaldi &> /dev/null; then
     if command -v xdg-settings &> /dev/null; then
         xdg-settings set default-web-browser vivaldi-stable.desktop
     fi
+=======
+    echo "Installing Vivaldi Browser"
+    
+    xdg-settings set default-web-browser vivaldi.desktop
+>>>>>>> Stashed changes
 fi
 
 echo "Browser installation complete!"
