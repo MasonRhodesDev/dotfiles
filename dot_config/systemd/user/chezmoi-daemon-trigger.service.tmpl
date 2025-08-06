@@ -1,0 +1,16 @@
+[Unit]
+Description=Manual Chezmoi Change Detection Trigger
+Documentation=man:chezmoi(1)
+
+[Service]
+Type=oneshot
+ExecStart={{ .chezmoi.homeDir }}/scripts/chezmoi-daemon.sh trigger
+Environment=DISPLAY=:0
+Environment=WAYLAND_DISPLAY=wayland-1
+
+# Ensure we have access to user session
+Environment=XDG_RUNTIME_DIR=%i
+Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=%i/bus
+
+[Install]
+WantedBy=default.target

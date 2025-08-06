@@ -1,12 +1,11 @@
 [Unit]
 Description=Daily Chezmoi Change Check
-Requires=chezmoi-daemon-check.service
 
 [Timer]
 # Run daily at 10 AM
 OnCalendar=*-*-* 10:00:00
-# If missed, run on next login
-OnStartup=300
+# Run 5 minutes after boot if missed
+OnBootSec=300
 Persistent=true
 
 [Install]

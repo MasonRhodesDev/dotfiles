@@ -8,6 +8,8 @@ HASH_FILE="$DAEMON_DIR/ignore-hash"
 LOCK_FILE="$DAEMON_DIR/daemon.lock"
 LOG_FILE="$DAEMON_DIR/daemon.log"
 
+USE_AGS=true
+
 # Ensure daemon directory exists
 mkdir -p "$DAEMON_DIR"
 
@@ -84,49 +86,39 @@ get_change_details() {
     echo -e "$synopsis$changed_files"
 }
 
-# Show AGS GUI notification for changes
+# Show GUI notification for changes
 show_change_notification() {
     local current_hash="$1"
     
-    # Check if AGS is running and available
-    if ! command -v ags &> /dev/null; then
-        log "AGS not found, falling back to zenity"
-        show_zenity_notification "$current_hash"
-        return $?
+    # Get change details for notification
+    local change_details=$(get_change_details)
+    if [ $? -ne 0 ]; then
+        log "No detailed changes found"
+        return 0
     fi
     
-    # Use AGS to show the changes dialog
-    log "Showing AGS changes dialog"
+    # Check if AGS should be used
+    if [ "${USE_AGS:-false}" = "true" ]; then
+        if command -v ags &> /dev/null; then
+            log "Using AGS for change notification"
+            "{{ .chezmoi.homeDir }}/.local/share/chezmoi/chezmoi-daemon/ags-notify.js" "$change_details" "$current_hash" &
+            return 0
+        else
+            log "AGS not available, falling back to notify-send"
+        fi
+    fi
     
-    # Create the dialog using AGS
-    ags -r "
-    import { createChangesDialog } from './config/ags/widgets/chezmoi-changes.js';
-    const dialog = createChangesDialog();
-    if (dialog) {
-        App.addWindow(dialog);
-    }
-    "
-    
-    return 0
-}
-
-# Fallback zenity notification
-show_zenity_notification() {
-    local current_hash="$1"
-    local change_details=$(get_change_details)
-    
-    if zenity --question \
-        --title="Chezmoi Changes Detected" \
-        --text="$change_details" \
-        --ok-label="Commit Changes" \
-        --cancel-label="Ignore Changes" \
-        --width=500 \
-        --height=300; then
+    # Use notify-send for simple notification
+    if command -v notify-send &> /dev/null; then
+        log "Using notify-send for change notification"
+        notify-send "Chezmoi Changes Detected" "$change_details" \
+            --icon=dialog-information \
+            --urgency=normal \
+            --expire-time=10000
         return 0
     else
-        # User chose to ignore - save hash
-        echo "$current_hash" > "$HASH_FILE"
-        log "Changes ignored, hash saved: $current_hash"
+        log "notify-send not available, logging changes instead"
+        log "Changes detected: $change_details"
         return 1
     fi
 }
@@ -220,8 +212,33 @@ main() {
             rm -f "$HASH_FILE"  # Remove ignore hash
             check_for_changes
             ;;
+        "trigger")
+            if [ "$2" = "--force" ]; then
+                log "Manual trigger requested (forced)"
+                rm -f "$HASH_FILE"  # Remove ignore hash
+            else
+                log "Manual trigger requested"
+            fi
+            check_for_changes
+            ;;
         "setup")
             log "Setting up chezmoi daemon"
+            
+            # Run git installers first
+            log "Running git installers..."
+            local git_installers_dir="{{ .chezmoi.homeDir }}/.local/share/chezmoi/git_installers"
+            if [ -d "$git_installers_dir" ]; then
+                for installer_dir in "$git_installers_dir"/*; do
+                    if [ -d "$installer_dir" ] && [ -f "$installer_dir/install.sh" ]; then
+                        local installer_name=$(basename "$installer_dir")
+                        log "Running installer: $installer_name"
+                        cd "$installer_dir"
+                        chmod +x install.sh
+                        ./install.sh 2>&1 | while read line; do log "[$installer_name] $line"; done
+                    fi
+                done
+            fi
+            
             setup_triggers
             # Enable systemd services
             systemctl --user enable chezmoi-daemon.timer
@@ -230,11 +247,13 @@ main() {
             log "Chezmoi daemon setup complete"
             ;;
         *)
-            echo "Usage: $0 [check|daemon|force|setup]"
-            echo "  check  - Check once and exit (default)"
-            echo "  daemon - Run continuously with hourly checks"  
-            echo "  force  - Force check ignoring previous ignore hash"
-            echo "  setup  - Set up daemon, triggers, and systemd services"
+            echo "Usage: $0 [check|daemon|force|trigger|setup]"
+            echo "  check         - Check once and exit (default)"
+            echo "  daemon        - Run continuously with hourly checks"  
+            echo "  force         - Force check ignoring previous ignore hash"
+            echo "  trigger       - Manual trigger for testing/API integration"
+            echo "  trigger --force - Force manual trigger ignoring ignore hash"
+            echo "  setup         - Set up daemon, triggers, and systemd services"
             exit 1
             ;;
     esac
