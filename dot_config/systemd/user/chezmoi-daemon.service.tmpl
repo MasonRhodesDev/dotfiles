@@ -1,12 +1,10 @@
 [Unit]
-Description=Chezmoi Change Monitor Daemon
+Description=Chezmoi Change Check (Triggered by Timer)
 After=graphical-session.target
 
 [Service]
-Type=simple
-ExecStart={{ .chezmoi.homeDir }}/scripts/chezmoi-daemon.sh daemon
-Restart=on-failure
-RestartSec=60
+Type=oneshot
+ExecStart={{ .chezmoi.homeDir }}/scripts/chezmoi-daemon.sh check
 Environment=DISPLAY=:0
 Environment=WAYLAND_DISPLAY=wayland-0
 
