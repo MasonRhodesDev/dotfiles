@@ -1,0 +1,50 @@
+
+{{ if eq .chezmoi.hostname .work_machine}}
+windowrule = noblur,.*  # Disables blur for windows. Substantially improves performance.
+{{ end }}
+
+#windowrulev2= move onscreen cursor, class:.*
+
+windowrulev2=tile,title:^(keep.google.com_/)$
+windowrulev2=workspace special:magic silent,class:^(discord)$
+windowrulev2=workspace special:magic silent,title:^(Spotify)
+windowrulev2=workspace special:magic silent,class:^(Slack)$
+windowrulev2=workspace special:magic silent,title:^(YouTube Music)
+windowrulev2=opacity 0.9 0.9,class:^(Slack)$
+windowrulev2=opacity 0.9 0.9,title:^(Spotify)
+windowrulev2=size 100 100,class:^(kitty)$
+windowrulev2=opacity 0.9 0.7,workspace:special:magic
+windowrulev2=float, title:^(Helvum)
+windowrulev2=float, title:^(_crx_nngceckbapebfimnlniiiahkandclblb)$
+windowrulev2=float, title:^(Picture in picture)$
+windowrulev2=pin, title:^(Picture in picture)$
+windowrulev2=opacity 0.9 0.9, title:^(Picture in picture)$
+windowrulev2=opacity 1 1, title:^(MainPicker)$
+windowrulev2=opacity 1 1, title:^(meet.google.com is sharing.*)
+windowrulev2=opacity 1 1, title:^(Huddle*)
+windowrulev2=float, title:^(meet.google.com is sharing.*)
+windowrulev2=pin, title:^(meet.google.com is sharing.*)
+windowrulev2=float, title:^(.*Bitwarden.*)$
+windowrulev2=pin, class:^(gcr-prompter)$
+windowrulev2=float, class:^(gcr-prompter)$
+windowrulev2=center, class:^(gcr-prompter)$
+windowrulev2=stayfocused, class:^(gcr-prompter)$
+windowrulev2=float, title:^(PRE_SLEEP_WINDOW)$
+windowrulev2=move -2000 -2000, title:^(PRE_SLEEP_WINDOW)$
+windowrulev2=size 10000 10000, title:^(PRE_SLEEP_WINDOW)$
+windowrulev2=opacity 0.95 override 0.95 override 0.95 override, title:^(PRE_SLEEP_WINDOW)$
+windowrulev2=xray off, title:^(PRE_SLEEP_WINDOW)$
+windowrulev2=float, title: ^(Sign in - Google Accounts*)$
+
+# pavucontrol rules
+windowrulev2=float,class:^(org.pulseaudio.pavucontrol)$
+windowrulev2=center,class:^(org.pulseaudio.pavucontrol)$
+windowrulev2=size 1000 600,class:^(org.pulseaudio.pavucontrol)$
+windowrulev2=stayfocused,class:^(org.pulseaudio.pavucontrol)$
+windowrulev2=pin,class:^(org.pulseaudio.pavucontrol)$
+
+#gamescope
+# always on workspace 7
+workspace=7, border:false, rounding:false
+windowrulev2=workspace 7,class:^(gamescope)$
+windowrulev2=workspace 7,class:^steam_app_\d+$

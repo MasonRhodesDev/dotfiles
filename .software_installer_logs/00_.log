@@ -1,0 +1,4 @@
+Testing sudo elevation...
+Sudo elevation successful. Running as: root
+Successfully created a file in /root
+Elevation test completed successfully.

@@ -1,0 +1,27 @@
+Installing NodeJS tooling
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100 16563  100 16563    0     0   141k      0 --:--:-- --:--:-- --:--:--  141k
+=> nvm is already installed in /home/mason/.nvm, trying to update using git
+=> => Compressing and cleaning up git repository
+
+=> Appending nvm source string to /home/mason/.bashrc
+=> Appending bash_completion source string to /home/mason/.bashrc
+=> You currently have modules installed globally with `npm`. These will no
+=> longer be linked to the active version of Node when you install a new node
+=> with `nvm`; and they may (depending on how you construct your `$PATH`)
+=> override the binaries of modules installed with `nvm`:
+
+/usr/local/lib
+└── sass@1.83.0
+=> If you wish to uninstall them at a later point (or re-install them under your
+=> `nvm` node installs), you can remove them from the system Node as follows:
+
+     $ nvm use system
+     $ npm uninstall -g a_module
+
+=> Close and reopen your terminal to start using nvm or run the following to use it now:
+
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
