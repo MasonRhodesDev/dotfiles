@@ -3,14 +3,14 @@
     command="nvim"
 [merge]
     command="nvim"
-    args = ["-d", "{{ .Destination }}", "{{ .Source }}", "{{ .Target }}"]
+    args = ["-d"]
 [git]
     autoCommit = true
     autoPush = true
 [data]
     work_machine = "mason-work"
     wallpaper = "/home/mason/Pictures/landscape.png"
-    is_work = "{{ if .chezmoi.hostname == .work-machine }}true{{ else }}false{{ end }}"
+    is_work = {{ if eq .chezmoi.hostname "mason-work" }}true{{ else }}false{{ end }}
 [data.paths]
     config = "/home/mason/.config/hypr"
     scripts = "/home/mason/scripts"

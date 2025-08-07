@@ -19,7 +19,7 @@ bindl=,switch:on:Lid Switch,exec,exec ~/.config/hypr/disable-or-suspend.js --sta
 # trigger when the switch is turning off
 bindl=,switch:off:Lid Switch,exec, exec ~/.config/hypr/disable-or-suspend.js --state=off --id=eDP-1
 
-{{ if ne .chezmoi.hostname .work_machine }}
+{{ if not .is_work }}
 # Move workspace 1 to DP-3 by default
 workspace = 1, monitor:DP-3, default:true
 workspace = 4, monitor:DP-3
