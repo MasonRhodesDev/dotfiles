@@ -1,6 +1,7 @@
 
-{{ if eq .chezmoi.hostname .work_machine}}
-windowrule = noblur,.*  # Disables blur for windows. Substantially improves performance.
+{{ if .is_work }}
+decoration:blur:enabled = false
+decoration:shadow:enabled = false
 {{ end }}
 
 #windowrulev2= move onscreen cursor, class:.*
