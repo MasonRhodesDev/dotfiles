@@ -1,0 +1,12 @@
+[Unit]
+Description=Watch Waybar files for changes
+
+[Path]
+PathModified=%h/.config/waybar/config
+PathModified=%h/.config/waybar/style.css
+PathModified=%h/.config/waybar/config.fulleaf
+PathModified=%h/.config/waybar/style.fulleaf.css
+PathModified=%h/.config/waybar/matugen.css
+
+[Install]
+WantedBy=default.target
