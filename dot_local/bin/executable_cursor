@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -euo pipefail
+appdir="$HOME/Applications"
+latest="$(ls -t "$appdir"/Cursor* 2>/dev/null | head -n1 || true)"
+if [[ -z "${latest:-}" ]]; then
+  echo "Cursor not found under $appdir" >&2
+  exit 1
+fi
+chmod +x "$latest" 2>/dev/null || true
+exec "$latest" "$@"
