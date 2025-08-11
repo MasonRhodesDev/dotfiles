@@ -23,7 +23,4 @@ else
   echo "Skipping HyprPanel (not Fedora)"
 fi
 
-# Marble Shell (supports Arch and Fedora)
-run_if_exists "$HOME/git_installers/marble-shell/executable_install.sh"
-
 exit 0
