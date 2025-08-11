@@ -5,7 +5,7 @@ set -euo pipefail
 # - Arch: follows official AUR-based instructions
 # - Fedora: best-effort dependency mapping + Astal from source via sibling installer
 
-REPO_URL="https://github.com/marble-shell/shell.git"
+REPO_URL="git@github.com:marble-shell/shell.git"
 INSTALL_ROOT="$HOME/git_installers/marble-shell"
 REPO_DIR="$INSTALL_ROOT/shell"
 
