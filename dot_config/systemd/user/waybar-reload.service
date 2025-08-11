@@ -1,0 +1,6 @@
+[Unit]
+Description=Reload Waybar on config/style changes
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/pkill -SIGUSR2 waybar

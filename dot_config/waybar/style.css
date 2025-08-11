@@ -1,0 +1,225 @@
+@import url('../../.cache/wal/colors-waybar.css');
+@import url('matugen.css');
+
+* {
+    font-size:19px;
+    font-family: "CodeNewRoman Nerd Font Propo";
+}
+window#waybar{
+    all:unset;
+}
+.modules-left {
+    padding:7px;
+    margin:10 0 5 10;
+    border-radius:10px;
+    background: alpha(@background,.6);
+    box-shadow: 0px 0px 2px rgba(0, 0, 0, .6);
+}
+.modules-center {
+    padding: 0;
+    margin: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+/* Style the media module itself so it matches when present */
+#custom-media{
+    padding:7px;
+    margin:10 0 5 0;
+    border-radius:10px;
+    background: alpha(@background,.6);
+    box-shadow: 0px 0px 2px rgba(0, 0, 0, .6);
+    color:@color7;
+    transition: all .3s ease;
+}
+#custom-media:hover{
+    color:@color9;
+}
+.modules-right {
+    padding:7px;
+    margin: 10 10 5 0;
+    border-radius:10px;
+    background: alpha(@background,.6);
+    box-shadow: 0px 0px 2px rgba(0, 0, 0, .6);
+}
+tooltip {
+    background:@background;
+    color: @color7;
+}
+#clock:hover, #custom-pacman:hover, #bluetooth:hover,#network:hover,#battery:hover, #cpu:hover,#memory:hover,#temperature:hover{
+    transition: all .3s ease;
+    color:@accent;
+}
+#custom-notification {
+    padding: 4px 8px;
+    margin: 0 4px;
+    border-radius: 10px;
+    background: alpha(@background, .25);
+    color: @foreground;
+    transition: background .2s ease;
+    border: none;
+    box-shadow: none;
+    outline: none;
+}
+#custom-notification:hover {
+    background: alpha(@background, .35);
+    color: @foreground; /* keep text color stable */
+    border: none;
+    box-shadow: none;
+    outline: none;
+}
+#clock{
+    padding: 0px 5px;
+    color:@foreground;
+    transition: all .3s ease;
+}
+#custom-pacman{
+    padding: 0px 5px;
+    transition: all .3s ease;
+    color:@foreground;
+
+}
+#workspaces {
+    padding: 0px 5px;
+}
+#workspaces button {
+    all:unset;
+    padding: 3px 8px 6px; /* ensure 1px underline sits fully inside hover outline */
+    border-radius: 8px;
+    color: alpha(@accent,.4);
+    transition: all .2s ease;
+}
+#workspaces button:hover {
+    color: @accent;
+    background-color: alpha(@background, .25);
+    /* don't touch background-image so underline remains visible */
+    box-shadow: none; /* remove green outline */
+    border-radius: 8px;
+    transition: all .2s ease;
+}
+
+#workspaces button.active:hover,
+#workspaces button.focused:hover,
+#workspaces button.visible:hover {
+    box-shadow: none; /* remove green outline */
+}
+
+#workspaces button.empty.active:hover,
+#workspaces button.empty.focused:hover,
+#workspaces button.empty.visible:hover {
+    box-shadow: none; /* remove green outline */
+}
+#workspaces button.active,
+#workspaces button.visible,
+#workspaces button.focused {
+    color: @accent;
+    border: none;
+    text-shadow: 0px 0px 2px rgba(0, 0, 0, .5);
+}
+
+/* Underline only the Hyprland active workspace (per monitor) using background-image */
+#workspaces button.active,
+#workspaces button.empty.active {
+    /* draw a 1px line at the bottom that survives hover */
+    background-image: linear-gradient(to bottom, transparent calc(100% - 1px), @accent calc(100% - 1px));
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    background-position: bottom left;
+}
+#workspaces button.empty {
+    color: rgba(0,0,0,0);
+    border: none;
+    text-shadow: 0px 0px 1.5px rgba(0, 0, 0, .2);
+}
+#workspaces button.empty:hover {
+    color: rgba(0,0,0,0);
+    border: none;
+    text-shadow: 0px 0px 1.5px rgba(0, 0, 0, .5);
+    transition: all 1s ease;
+}
+#workspaces button.empty.active,
+#workspaces button.empty.visible,
+#workspaces button.empty.focused {
+    color: @accent;
+    border: none;
+    text-shadow: 0px 0px 2px rgba(0, 0, 0, .5);
+}
+
+/* remove inset underline shadows entirely (handled by ::after now) */
+#bluetooth{
+    padding: 0px 5px;
+    transition: all .3s ease;
+    color:@foreground;
+
+}
+#network{
+    padding: 0px 5px;
+    transition: all .3s ease;
+    color:@foreground;
+
+}
+#battery{
+    padding: 0px 5px;
+    transition: all .3s ease;
+    color:@foreground;
+
+
+}
+#battery.charging {
+    color: #26A65B;
+}
+
+#battery.warning:not(.charging) {
+    color: #ffbe61;
+}
+
+#battery.critical:not(.charging) {
+    color: #f53c3c;
+    animation-name: blink;
+    animation-duration: 0.5s;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+    animation-direction: alternate;
+}
+#group-expand{
+    padding: 0px 5px;
+    transition: all .3s ease; 
+}
+#custom-expand{
+    padding: 0px 5px;
+    color:alpha(@foreground,.2);
+    text-shadow: 0px 0px 2px rgba(0, 0, 0, .7);
+    transition: all .3s ease; 
+}
+#custom-expand:hover{
+    color:rgba(255,255,255,.2);
+    text-shadow: 0px 0px 2px rgba(255, 255, 255, .5);
+}
+#custom-colorpicker{
+    padding: 0px 5px;
+}
+#cpu,#memory,#temperature{
+    padding: 0px 5px;
+    transition: all .3s ease; 
+    color:@foreground;
+
+}
+#custom-endpoint{
+    color:transparent;
+    text-shadow: 0px 0px 1.5px rgba(0, 0, 0, 1);
+
+}
+#tray{
+    padding: 0px 5px;
+    transition: all .3s ease; 
+
+}
+#tray menu * {
+    padding: 0px 5px;
+    transition: all .3s ease; 
+}
+
+#tray menu separator {
+    padding: 0px 5px;
+    transition: all .3s ease; 
+}
