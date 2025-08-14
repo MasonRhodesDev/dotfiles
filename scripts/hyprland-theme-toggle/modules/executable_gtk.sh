@@ -30,10 +30,17 @@ gtk_apply_theme() {
     # Update D-Bus environment  
     dbus-update-activation-environment --systemd GTK_THEME="$gtk_theme_var"
     
-    # Set color-scheme preference (modern GNOME approach)
+    # Set color-scheme preference (modern GNOME approach) 
     gsettings set org.gnome.desktop.interface color-scheme "prefer-$mode"
     
-    log_module "$module_name" "Environment updated with GTK_THEME=$gtk_theme_var"
+    # Set GTK theme via gsettings for better compatibility (from Hyprland discussion #5867)
+    if [[ "$mode" == "light" ]]; then
+        gsettings set org.gnome.desktop.interface gtk-theme "Adwaita"
+    else
+        gsettings set org.gnome.desktop.interface gtk-theme "Adwaita-dark"
+    fi
+    
+    log_module "$module_name" "Environment updated with GTK_THEME=$gtk_theme_var and gsettings"
     
     return 0
 }
