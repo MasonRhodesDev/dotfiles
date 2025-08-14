@@ -23,6 +23,7 @@ qt_apply_theme() {
     export QT_QPA_PLATFORMTHEME="qt6ct"
     systemctl --user set-environment QT_QPA_PLATFORMTHEME="qt6ct"
     dbus-update-activation-environment --systemd QT_QPA_PLATFORMTHEME="qt6ct"
+    hyprctl setenv QT_QPA_PLATFORMTHEME qt6ct
     
     # Update Qt6ct configuration file if it exists
     local qt6ct_config="$HOME/.config/qt6ct/qt6ct.conf"
@@ -43,6 +44,7 @@ qt_apply_theme() {
     if app_installed "qt5ct"; then
         export QT_QPA_PLATFORMTHEME="qt5ct"
         systemctl --user set-environment QT_QPA_PLATFORMTHEME="qt5ct"
+        hyprctl setenv QT_QPA_PLATFORMTHEME qt5ct
         
         local qt5ct_config="$HOME/.config/qt5ct/qt5ct.conf"
         if [[ -f "$qt5ct_config" ]]; then
