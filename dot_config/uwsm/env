@@ -1,0 +1,11 @@
+# GNOME Keyring environment variables for automatic unlock
+export GNOME_KEYRING_CONTROL=/run/user/1000/keyring
+export SSH_AUTH_SOCK=/run/user/1000/keyring/ssh
+
+# Theme and toolkit variables
+export WALLPAPER_PATH=/home/mason/Pictures/forrest.png
+export QT_QPA_PLATFORMTHEME=qt6ct
+export MOZ_ENABLE_WAYLAND=1
+export ELECTRON_OZONE_PLATFORM_HINT=wayland
+export QT_QPA_PLATFORM=wayland
+export XCURSOR_SIZE=24
