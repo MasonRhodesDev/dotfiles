@@ -17,12 +17,16 @@ hyprpanel_apply_theme() {
         return 0
     fi
     
-    log_module "$module_name" "Restarting for $mode theme"
+    log_module "$module_name" "Updating config for $mode theme"
     
-    # HyprPanel automatically picks up matugen colors, just restart it
-    pkill -f hyprpanel
-    sleep 2
-    hyprpanel &
+    # Update the HyprPanel config file
+    local config_file="$HOME/.config/hyprpanel/config.json"
+    
+    if [[ -f "$config_file" ]]; then
+        # Use jq to update the specific config value
+        /usr/bin/jq --arg mode "$mode" '.["theme.matugen_settings.mode"] = $mode' "$config_file" > "$config_file.tmp" && mv "$config_file.tmp" "$config_file"
+        log_module "$module_name" "Updated config: theme.matugen_settings.mode = $mode"
+    fi
     
     return 0
 }

@@ -9,18 +9,25 @@ MODULES_DIR="$SCRIPT_DIR/modules"
 # Source base functions
 source "$MODULES_DIR/base.sh"
 
-# Get current state and determine new state
-CURRENT_STATE=$(get_theme_state "$STATE_FILE")
-
-if [ "$CURRENT_STATE" = "light" ]; then
-    NEW_STATE="dark"
-    MATUGEN_MODE="dark"
+# Check if specific mode was provided as argument
+if [[ $# -eq 1 && ($1 == "dark" || $1 == "light") ]]; then
+    NEW_STATE="$1"
+    MATUGEN_MODE="$1"
+    echo "Setting to $NEW_STATE mode using modular approach..."
 else
-    NEW_STATE="light" 
-    MATUGEN_MODE="light"
+    # Toggle mode based on current state
+    CURRENT_STATE=$(get_theme_state "$STATE_FILE")
+    
+    if [ "$CURRENT_STATE" = "light" ]; then
+        NEW_STATE="dark"
+        MATUGEN_MODE="dark"
+    else
+        NEW_STATE="light" 
+        MATUGEN_MODE="light"
+    fi
+    
+    echo "Switching to $NEW_STATE mode using modular approach..."
 fi
-
-echo "Switching to $NEW_STATE mode using modular approach..."
 
 # Update state file
 echo "$NEW_STATE" > "$STATE_FILE"
@@ -81,5 +88,4 @@ done
 
 echo ""
 echo "Theme switched to $NEW_STATE mode!"
-echo "New applications will use the updated theme."
-echo "Note: Running Electron apps may need to be restarted to pick up the new theme."
+echo "All applications should automatically detect the theme change."
