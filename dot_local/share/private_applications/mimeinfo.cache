@@ -1,20 +1,4 @@
 [MIME Cache]
-application/pdf=vivaldi-stable.desktop;
-application/rdf+xml=vivaldi-stable.desktop;
-application/rss+xml=vivaldi-stable.desktop;
 application/x-cursor-workspace=appimagekit_10702c8a5f315ed6fcf18e5735354ea1-Cursor.desktop;appimagekit_813b402d28f09444d9c5d2367c29e10d-Cursor.desktop;
-application/xhtml+xml=vivaldi-stable.desktop;
-application/xhtml_xml=vivaldi-stable.desktop;
-application/xml=vivaldi-stable.desktop;
-image/gif=vivaldi-stable.desktop;
-image/jpeg=vivaldi-stable.desktop;
-image/png=vivaldi-stable.desktop;
-image/webp=vivaldi-stable.desktop;
-text/html=vivaldi-stable.desktop;
-text/xml=vivaldi-stable.desktop;
 x-scheme-handler/clickup=appimagekit_3ff16b613448e24fb5f50da707778e9f-ClickUp.desktop;clickup.desktop;
-x-scheme-handler/ftp=vivaldi-stable.desktop;
-x-scheme-handler/http=vivaldi-stable.desktop;
-x-scheme-handler/https=vivaldi-stable.desktop;
-x-scheme-handler/mailto=vivaldi-stable.desktop;
 x-scheme-handler/slack=slack_slack.desktop;
