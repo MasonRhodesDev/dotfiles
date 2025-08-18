@@ -10,7 +10,7 @@ mode = "symlink"
     autoPush = true
 [data]
     work_machine = "mason-work"
-    wallpaper = "/home/mason/Pictures/landscape.png"
+    wallpaper = {{ if eq .chezmoi.hostname "mason-work" }}"/home/mason/Pictures/forrest.png"{{ else }}"/home/mason/Pictures/landscape.png"{{ end }}
     is_work = {{ if eq .chezmoi.hostname "mason-work" }}true{{ else }}false{{ end }}
 [data.paths]
     config = "/home/mason/.config/hypr"
