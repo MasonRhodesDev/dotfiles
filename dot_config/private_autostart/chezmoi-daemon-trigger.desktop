@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Chezmoi Daemon Trigger
+Exec=/home/mason/scripts/chezmoi-daemon.sh check
+Hidden=false
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
+X-KDE-autostart-after=panel
+X-MATE-Autostart-enabled=true
+StartupNotify=false
