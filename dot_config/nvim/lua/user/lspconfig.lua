@@ -28,6 +28,11 @@ M.on_attach = function(client, bufnr)
 end
 
 function M.common_capabilities()
+  local status_ok, cmp_nvim_lsp = pcall(require, "cmp_nvim_lsp")
+  if status_ok then
+    return cmp_nvim_lsp.default_capabilities()
+  end
+  
   local capabilities = vim.lsp.protocol.make_client_capabilities()
   capabilities.textDocument.completion.completionItem.snippetSupport = true
   return capabilities
@@ -68,9 +73,9 @@ function M.config()
     "lua_ls",
     "cssls",
     "html",
+    "volar",
     "ts_ls",
     "eslint",
-    "ts_ls",
     "pyright",
     "bashls",
     "jsonls",
@@ -79,12 +84,11 @@ function M.config()
 
   local default_diagnostic_config = {
     signs = {
-      active = true,
-      values = {
-        { name = "DiagnosticSignError", text = icons.diagnostics.Error },
-        { name = "DiagnosticSignWarn", text = icons.diagnostics.Warning },
-        { name = "DiagnosticSignHint", text = icons.diagnostics.Hint },
-        { name = "DiagnosticSignInfo", text = icons.diagnostics.Information },
+      text = {
+        [vim.diagnostic.severity.ERROR] = icons.diagnostics.Error,
+        [vim.diagnostic.severity.WARN] = icons.diagnostics.Warning,
+        [vim.diagnostic.severity.HINT] = icons.diagnostics.Hint,
+        [vim.diagnostic.severity.INFO] = icons.diagnostics.Information,
       },
     },
     virtual_text = false,
@@ -102,10 +106,6 @@ function M.config()
   }
 
   vim.diagnostic.config(default_diagnostic_config)
-
-  for _, sign in ipairs(vim.tbl_get(vim.diagnostic.config(), "signs", "values") or {}) do
-    vim.fn.sign_define(sign.name, { texthl = sign.name, text = sign.text, numhl = sign.name })
-  end
 
   vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(vim.lsp.handlers.hover, { border = "rounded" })
   vim.lsp.handlers["textDocument/signatureHelp"] = vim.lsp.with(vim.lsp.handlers.signature_help, { border = "rounded" })
