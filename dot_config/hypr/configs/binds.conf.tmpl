@@ -48,15 +48,15 @@ bind=$mainMod, L, exec, /home/{{ .chezmoi.username }}/scripts/lock_cmd
 bind=$mainMod, M, exec, ~/.config/wofi/power-menu.sh
 bind=$mainMod, T, exec, /home/{{ .chezmoi.username }}/scripts/hyprland-theme-toggle/theme-toggle-modular.sh
 bind=$mainMod, XF86AudioPlay, exec, ~/.config/wofi/change-default-audio-device.js WofiListAudioDevices
-bindl=, XF86AudioPlay, exec, playerctl play-pause
-bindl=, XF86AudioStop, exec, playerctl stop
-bindl=, XF86AudioMute, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle
-bindl=, XF86AudioNext, exec, playerctl next 
-bindl=, XF86AudioPrev, exec, playerctl previous
-bindle=, XF86AudioRaiseVolume, exec, wpctl set-volume -l 1.5 @DEFAULT_AUDIO_SINK@ 1%+
-bindle=, XF86AudioLowerVolume, exec, wpctl set-volume -l 1.5 @DEFAULT_AUDIO_SINK@ 1%-
-bindle=, XF86MonBrightnessUp, exec, brightnessctl set +5%
-bindle=, XF86MonBrightnessDown, exec, brightnessctl set 5%-
+bindl=, XF86AudioPlay, exec, ~/.config/swaync/scripts/media-osd.sh play-pause
+bindl=, XF86AudioStop, exec, ~/.config/swaync/scripts/media-osd.sh stop
+bindl=, XF86AudioMute, exec, ~/.config/swaync/scripts/volume-osd.sh mute
+bindl=, XF86AudioNext, exec, ~/.config/swaync/scripts/media-osd.sh next
+bindl=, XF86AudioPrev, exec, ~/.config/swaync/scripts/media-osd.sh previous
+bindle=, XF86AudioRaiseVolume, exec, ~/.config/swaync/scripts/volume-osd.sh up
+bindle=, XF86AudioLowerVolume, exec, ~/.config/swaync/scripts/volume-osd.sh down
+bindle=, XF86MonBrightnessUp, exec, ~/.config/swaync/scripts/brightness-osd.sh up
+bindle=, XF86MonBrightnessDown, exec, ~/.config/swaync/scripts/brightness-osd.sh down
 
 # bind=SHIFT,TAB,exec, steam steam://open/friends
 

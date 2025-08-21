@@ -8,6 +8,7 @@
             "group/expand",
             "bluetooth",
             "network",
+            "pulseaudio",
             "tray",
             "custom/pacman",
             "clock",
@@ -22,9 +23,23 @@
             "show-special": false
         },
         "custom/notification": {
-            "tooltip": false,
-            "format": "",
+            "tooltip": true,
+            "format": "{} {icon}",
+            "format-icons": {
+                "notification": "<span foreground='red'><sup></sup></span>",
+                "none": "",
+                "dnd-notification": "<span foreground='red'><sup></sup></span>",
+                "dnd-none": "",
+                "inhibited-notification": "<span foreground='red'><sup></sup></span>",
+                "inhibited-none": "",
+                "dnd-inhibited-notification": "<span foreground='red'><sup></sup></span>",
+                "dnd-inhibited-none": ""
+            },
+            "return-type": "json",
+            "exec-if": "which swaync-client",
+            "exec": "swaync-client -swb",
             "on-click": "swaync-client -t -sw",
+            "on-click-right": "swaync-client -d -sw",
             "escape": true
         },
         "clock": {
@@ -134,6 +149,25 @@
             "exec": "$HOME/.config/waybar/mediaplayer.py 2> /dev/null",
             "exec-if": "playerctl status 2>/dev/null | grep -iq playing",
             "interval": 2
+        },
+        "pulseaudio": {
+            "format": "{volume}% {icon}",
+            "format-bluetooth": "{volume}% {icon}",
+            "format-bluetooth-muted": " {icon}",
+            "format-muted": "",
+            "format-source": "{volume}% ",
+            "format-source-muted": "",
+            "format-icons": {
+                "headphone": "",
+                "hands-free": "",
+                "headset": "",
+                "phone": "",
+                "portable": "",
+                "car": "",
+                "default": ["", "", ""]
+            },
+            "on-click": "pavucontrol",
+            "on-click-right": "~/.config/swaync/scripts/volume-osd.sh mute"
         },
         "tray": {
             "icon-size": 18,

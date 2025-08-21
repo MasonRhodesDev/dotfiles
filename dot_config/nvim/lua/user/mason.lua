@@ -12,9 +12,12 @@ function M.config()
     "cssls",
     "html",
     "tsserver",
+    "volar",
     "pyright",
     "bashls",
     "jsonls",
+    "eslint",
+    "yamlls",
   }
 
   require("mason").setup {

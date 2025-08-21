@@ -22,7 +22,7 @@ exec-once=matugen image $WALLPAPER_PATH -m dark
 exec-once = /home/mason/scripts/hyprland-theme-toggle/theme-toggle-modular.sh dark >/dev/null 2>&1
 
 # Update hyprpanel wallpaper config and launch
-exec=sed -i "s|\"wallpaper.image\": \".*\"|\"wallpaper.image\": \"$WALLPAPER_PATH\"|" ~/.config/hyprpanel/config.json && uwsm app -- hyprpanel
+#exec=sed -i "s|\"wallpaper.image\": \".*\"|\"wallpaper.image\": \"$WALLPAPER_PATH\"|" ~/.config/hyprpanel/config.json && uwsm app -- hyprpanel
 
 # Input method
 # exec-once = fcitx5
@@ -30,6 +30,9 @@ exec-once = /usr/libexec/ibus-ui-gtk3 --enable-wayland-im --exec-daemon --daemon
 
 exec=/home/mason/.config/hypr/configs/copy-monitor-layout-to-gdm.sh
 
+
+# Notification daemon
+exec-once = swaync
 
 # Launch Slack via desktop file
 exec-once = gtk-launch slack_slack

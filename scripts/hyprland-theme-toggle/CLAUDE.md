@@ -2,59 +2,86 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Commands
+# Hyprland Theme Toggle System
 
-### Primary Scripts
-- `./theme-toggle-modular.sh` - Main theme switching script
-- `./install.sh` - Installation script that makes scripts executable and sets up HyprPanel integration
-- `./generate-theme-configs.py <wallpaper_path> <mode>` - Python utility for generating Wofi CSS and WezTerm configs
+A modular theme management system that generates Material You colors from wallpapers and applies consistent theming across all desktop applications.
 
-### Testing & Development
-- No automated tests - this is a shell script-based system
-- Test by running `./theme-toggle-modular.sh` and verifying theme changes across applications
-- Check logs in terminal output for module performance warnings and errors
+## Key Commands
 
-## Architecture
+### Theme Switching
+```bash
+# Toggle between light/dark mode
+./executable_theme-toggle-modular.sh
 
-### Modular Theme System
-The codebase uses a modular architecture centered around `theme-toggle-modular.sh` that orchestrates theme switching across multiple applications:
+# Set specific theme mode
+./executable_theme-toggle-modular.sh dark
+./executable_theme-toggle-modular.sh light
+```
 
-1. **Core Components**:
-   - `modules/base.sh` - Shared functions for app detection, performance monitoring, theme caching, and logging
-   - `theme-toggle-modular.sh` - Main orchestrator that runs modules in parallel
-   - `modules/*.sh` - Application-specific theme modules (gtk, wezterm, wofi, tmux, claude, hyprpanel)
+### Theme State
+- State stored in `~/.cache/theme_state`
+- Wallpaper path: `~/Pictures/forrest.png`
 
-2. **Module System**:
-   - Each module implements `{module_name}_apply_theme()` function
-   - Modules check app installation, theme caching, and apply themes independently
-   - Performance monitoring tracks execution time with 0.25s threshold warnings
-   - All modules run in parallel for optimal speed
+## Architecture Overview
 
-3. **Color Generation**:
-   - Uses `matugen` to generate Material You colors from wallpaper
-   - Colors are pulled directly from matugen JSON output
-   - Python script `generate-theme-configs.py` handles complex config generation for Wofi/WezTerm
+### Core Components
+- `executable_theme-toggle-modular.sh` - Main orchestrator script
+- `modules/base.sh` - Shared utility functions  
+- `modules/*.sh` - Application-specific theme modules
 
-4. **State Management**:
-   - Theme state stored in `~/.cache/theme_state`
-   - Environment variables set via systemd user environment and D-Bus
-   - Uses `GTK_THEME` environment variable for crash-safe Electron app theming
+### Theme Generation Pipeline
+1. **Read current state** from `~/.cache/theme_state`
+2. **Generate colors** using `matugen` from wallpaper
+3. **Apply themes** by running all module scripts in parallel
+4. **Update state file** with new theme mode
 
-### Key Design Principles
-- **Crash Safety**: Uses environment variables instead of runtime GTK changes to prevent Electron app crashes
-- **Performance**: Parallel module execution with performance monitoring and warnings
-- **Smart Caching**: Skips theme generation if configs are newer than wallpaper/state files
-- **App Detection**: Only applies themes to installed applications
+### Matugen Integration
+```bash
+matugen image "$WALLPAPER_PATH" --mode "$MATUGEN_MODE" --type scheme-expressive
+```
+- Generates Material You color schemes
+- Creates color templates for various applications
+- Supports both light and dark modes
 
-### Integration Points
-- **HyprPanel**: TypeScript module at `hyprpanel-module.ts` provides UI button
-- **Hyprland**: Can be bound to keybinds via Hyprland config
-- **Wallpaper**: Configurable wallpaper path in main script (default: `~/Pictures/forrest.png`)
+## Module System
 
-## Module Development
-When adding new application support:
-1. Create new module in `modules/{app}.sh`
-2. Implement `{app}_apply_theme()` function
-3. Use base.sh functions: `app_installed()`, `theme_cached()`, `log_module()`
-4. Source base.sh and follow existing module patterns
-5. Test performance to stay under 0.25s threshold when possible
+### Module Structure
+Each module in `modules/` handles theming for specific applications:
+- `gtk.sh` - GTK applications and themes
+- `hyprpanel.sh` - Hyprland panel theming  
+- `qt.sh` - Qt application theming
+- `wezterm.sh` - WezTerm terminal theming
+- `wofi.sh` - Wofi launcher theming
+- `vscode.sh` - VS Code theme switching
+- `tmux.sh` - Tmux status bar theming
+
+### Module Execution
+- All modules run **in parallel** for performance
+- Background execution with PID tracking
+- Error handling per module (failures don't stop others)
+
+### Base Functions (`modules/base.sh`)
+```bash
+get_theme_state()     # Read current theme from state file
+run_module()          # Execute module with error handling  
+wait_for_modules()    # Wait for all background processes
+```
+
+## Development Guidelines
+
+### Adding New Application Support
+1. Create new module file: `modules/app-name.sh`
+2. Implement theme switching logic using matugen colors
+3. Test both light and dark modes
+4. Module should handle missing applications gracefully
+
+### Module Requirements
+- Must check if application is installed before theming
+- Should use matugen-generated color files from `~/.config/matugen/`
+- Include error handling for file operations
+- Exit with appropriate status codes
+
+### Color Template Integration
+- Templates located in `~/.config/matugen/templates/`
+- Generated config files placed in appropriate app directories
+- Modules apply generated configs and trigger app refreshes

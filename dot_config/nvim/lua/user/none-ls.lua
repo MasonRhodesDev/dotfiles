@@ -17,10 +17,7 @@ function M.config()
     sources = {
       formatting.stylua,
       formatting.black,
-      -- ESLint diagnostics and code actions
-      require("none-ls.diagnostics.eslint"),
-      require("none-ls.code_actions.eslint"),
-      diagnostics.flake8,
+      require("none-ls.diagnostics.flake8"),
       null_ls.builtins.completion.spell,
     },
   }
