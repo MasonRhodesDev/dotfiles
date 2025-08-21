@@ -16,11 +16,11 @@ run_if_exists() {
 # Astal first (libraries used by others)
 run_if_exists "$HOME/git_installers/astal/executable_install.sh"
 
-# HyprPanel (Fedora-only script; it will no-op elsewhere)
-if command -v dnf >/dev/null 2>&1; then
-  run_if_exists "$HOME/git_installers/hyprpanel/executable_install.sh"
-else
-  echo "Skipping HyprPanel (not Fedora)"
-fi
+# HyprPanel (disabled)
+# if command -v dnf >/dev/null 2>&1; then
+#   run_if_exists "$HOME/git_installers/hyprpanel/executable_install.sh"
+# else
+#   echo "Skipping HyprPanel (not Fedora)"
+# fi
 
 exit 0

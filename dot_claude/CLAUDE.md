@@ -1,3 +1,43 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+# Repository Context
+
+This is a **chezmoi dotfiles repository** managing system configuration files for a Fedora-based Hyprland/Wayland desktop environment. The repository uses chezmoi templates (.tmpl) for dynamic configuration and includes automated software installers and theme management.
+
+## Key Commands
+
+### Chezmoi Operations
+- `chezmoi add <file>` - Track local changes to chezmoi (NEVER use `chezmoi apply`)
+- `chezmoi diff` - Compare tracked config with local files
+- `chezmoi status` - Show files that need updating
+- `chezmoi execute-template` - Test template rendering
+
+### Software Installation  
+- `./software_installers/executable_03_hyprland.sh` - Install Hyprland ecosystem
+- `./software_installers/executable_04_git_based.sh` - Install git-based projects
+- Installation scripts run in dependency order automatically
+
+### Theme Management
+- `./scripts/hyprland-theme-toggle/executable_theme-toggle-modular.sh [light|dark]` - Switch system theme
+- Themes use matugen with Material You color generation from wallpapers
+- Modular system applies themes to all applications (Hyprland, GTK, Qt, terminals, etc.)
+
+## Repository Architecture
+
+- `dot_*` files become `.*` in home directory via chezmoi
+- `.tmpl` files are processed as Go templates with chezmoi data
+- `software_installers/` - Ordered installation scripts for system setup  
+- `scripts/` - Utility scripts for system management
+- `git_installers/` - Scripts for installing git-based software
+- `chezmoi-daemon/` - Background service for config monitoring
+
+## Neovim Configuration
+- Uses lazy.nvim plugin manager with modular loading via `spec()` function
+- Configuration split into focused modules in `lua/user/`
+- LSP, completion, and telescope pre-configured for development
+
 # Development Guidelines
 
 ## Core Principles
