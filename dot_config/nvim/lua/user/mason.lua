@@ -1,34 +1,44 @@
-local M = {
-  "williamboman/mason-lspconfig.nvim",
-  commit = "56e435e09f8729af2d41973e81a0db440f8fe9c9", -- Compatible with Neovim 0.10.4
+return {
+  'mason-org/mason.nvim',
   dependencies = {
-    "williamboman/mason.nvim",
+    'mason-org/mason-lspconfig.nvim',
   },
+  config = function()
+    -- import mason
+    local mason = require 'mason'
+
+    -- import mason-lspconfig
+    local mason_lspconfig = require 'mason-lspconfig'
+
+    -- enable mason and configure icons
+    mason.setup {
+      ui = {
+        border = 'rounded',
+        icons = {
+          package_installed = '✓',
+          package_pending = '➜',
+          package_uninstalled = '✗',
+        },
+      },
+    }
+
+    mason_lspconfig.setup {
+      -- list of servers for mason to install
+      ensure_installed = {
+        'vtsls',
+        'vue_ls',
+        'html',
+        'eslint',
+        'cssls',
+        'tailwindcss',
+        'svelte',
+        'lua_ls',
+        'graphql',
+        'emmet_ls',
+        'prismals',
+        'pyright',
+      },
+    }
+
+  end,
 }
-
-function M.config()
-  local servers = {
-    "lua_ls",
-    "cssls",
-    "html",
-    "tsserver",
-    "volar",
-    "pyright",
-    "bashls",
-    "jsonls",
-    "eslint",
-    "yamlls",
-  }
-
-  require("mason").setup {
-    ui = {
-      border = "rounded",
-    },
-  }
-
-  require("mason-lspconfig").setup {
-    ensure_installed = servers,
-  }
-end
-
-return M
