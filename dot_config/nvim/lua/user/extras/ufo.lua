@@ -3,7 +3,9 @@ local M = {
   dependencies = {
     "kevinhwang91/promise-async",
     "luukvbaal/statuscol.nvim",
+    "nvim-treesitter/nvim-treesitter",
   },
+  event = "BufRead",
 }
 
 function M.config()
@@ -72,9 +74,8 @@ function M.config()
     -- close_fold_kinds = { "imports", "comment" },
     provider_selector = function(bufnr, filetype, buftype)
       -- if you prefer treesitter provider rather than lsp,
+      return {'treesitter', 'indent'}
       -- return ftMap[filetype] or {'treesitter', 'indent'}
-      return ftMap[filetype]
-      -- return { "treesitter", "indent" }
 
       -- refer to ./doc/example.lua for detail
     end,

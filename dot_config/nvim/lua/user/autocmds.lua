@@ -90,6 +90,36 @@ vim.api.nvim_create_autocmd({"BufRead", "BufNewFile"}, {
   end,
 })
 
+-- Set working directory early before plugins load, then let existing logic handle git repos
+vim.api.nvim_create_augroup("EarlyWorkingDir", { clear = true })
+vim.api.nvim_create_autocmd("VimEnter", {
+  group = "EarlyWorkingDir",
+  once = true,
+  callback = function()
+    local arg = vim.fn.argv(0)
+    if arg and arg ~= "" then
+      local path = vim.fn.fnamemodify(arg, ":p")
+      local target_path = path
+      
+      -- If it's a file, use its directory
+      if vim.fn.isdirectory(path) == 0 then
+        target_path = vim.fn.fnamemodify(path, ":h")
+      end
+      
+      -- Check if it's in a git repo and find the root
+      local git_root = vim.fn.system("cd " .. vim.fn.shellescape(target_path) .. " && git rev-parse --show-toplevel 2>/dev/null")
+      git_root = vim.trim(git_root)
+      
+      if vim.v.shell_error == 0 and git_root ~= "" then
+        vim.cmd("cd " .. vim.fn.fnameescape(git_root))
+      elseif vim.fn.isdirectory(path) == 1 then
+        -- Only change to directory if we explicitly opened a directory
+        vim.cmd("cd " .. vim.fn.fnameescape(path))
+      end
+    end
+  end,
+})
+
 -- Custom filetype detection for .tmpl files (chezmoi templates)
 vim.api.nvim_create_autocmd({"BufRead", "BufNewFile"}, {
   pattern = "*.tmpl",

@@ -69,7 +69,7 @@ function M.config()
     { "<leader>la", "<cmd>lua vim.lsp.buf.code_action()<cr>", desc = "Code Action" },
     {
       "<leader>lf",
-      "<cmd>lua vim.lsp.buf.format({async = true, filter = function(client) return client.name ~= 'typescript-tools' end})<cr>",
+      "<cmd>lua vim.lsp.buf.format({async = true, filter = function(client) return client.name == 'null-ls' or (client.name ~= 'typescript-tools' and client.name ~= 'vtsls' and client.name ~= 'eslint') end})<cr>",
       desc = "Format",
     },
     { "<leader>lh", "<cmd>lua require('user.lspconfig').toggle_inlay_hints()<cr>", desc = "Hints" },
