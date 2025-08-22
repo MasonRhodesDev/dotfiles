@@ -17,6 +17,15 @@ local function sync_terminal_background()
     end
   end
   
+  -- Set WezTerm to fully opaque using the plugin if available
+  local ok, wezterm_config = pcall(require, 'wezterm-config')
+  if ok then
+    wezterm_config.set_wezterm_user_var('window_background_opacity', '1.0')
+  else
+    -- Fallback: use OSC 1337 SetUserVar escape sequence
+    io.write("\027]1337;SetUserVar=window_background_opacity=MS4w\007")
+  end
+  
   -- Convert to OSC 11 escape sequence to change terminal background
   local osc_sequence = string.format("\027]11;%s\007", bg_color)
   
@@ -29,7 +38,20 @@ end
 local function restore_terminal()
   -- Reset terminal background to default (transparent/original)
   io.write("\027]111\007")  -- Reset background color
+  -- Restore opacity to default (0.95) using the plugin if available
+  local ok, wezterm_config = pcall(require, 'wezterm-config')
+  if ok then
+    wezterm_config.set_wezterm_user_var('window_background_opacity', '0.95')
+  else
+    -- Fallback: use OSC 1337 SetUserVar escape sequence
+    io.write("\027]1337;SetUserVar=window_background_opacity=MC45NQ==\007")
+  end
   io.flush()
+end
+
+-- Manual sync function (can be called with :lua require('user.wezterm-config').sync())
+function M.sync()
+  sync_terminal_background()
 end
 
 function M.config()
