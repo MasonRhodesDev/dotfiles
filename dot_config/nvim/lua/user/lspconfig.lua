@@ -1,5 +1,6 @@
 local M = {
   "neovim/nvim-lspconfig",
+  branch = "master", -- Ensure latest version
   event = { "BufReadPre", "BufNewFile" },
   dependencies = {
     {
@@ -25,16 +26,35 @@ M.on_attach = function(client, bufnr)
   if client.supports_method "textDocument/inlayHint" then
     vim.lsp.inlay_hint.enable(true, { bufnr })
   end
+
+  -- Enable and refresh code lens
+  if client.supports_method "textDocument/codeLens" then
+    vim.lsp.codelens.refresh()
+    -- Auto-refresh code lens on buffer changes
+    vim.api.nvim_create_autocmd({ "BufEnter", "BufWritePost", "CursorHold" }, {
+      buffer = bufnr,
+      callback = function()
+        vim.lsp.codelens.refresh { bufnr = bufnr }
+      end,
+    })
+  end
 end
 
 function M.common_capabilities()
+  local capabilities
   local status_ok, cmp_nvim_lsp = pcall(require, "cmp_nvim_lsp")
   if status_ok then
-    return cmp_nvim_lsp.default_capabilities()
+    capabilities = cmp_nvim_lsp.default_capabilities()
+  else
+    capabilities = vim.lsp.protocol.make_client_capabilities()
+    capabilities.textDocument.completion.completionItem.snippetSupport = true
   end
   
-  local capabilities = vim.lsp.protocol.make_client_capabilities()
-  capabilities.textDocument.completion.completionItem.snippetSupport = true
+  -- Enable code lens support
+  capabilities.textDocument.codeLens = {
+    dynamicRegistration = true,
+  }
+  
   return capabilities
 end
 
@@ -66,15 +86,14 @@ function M.config()
     { "<leader>laa", "<cmd>lua vim.lsp.buf.code_action()<cr>", desc = "Code Action", mode = "v" },
   }
 
-  local lspconfig = require "lspconfig"
   local icons = require "user.icons"
 
   local servers = {
     "lua_ls",
     "cssls",
     "html",
-    "volar",
-    "ts_ls",
+    "vtsls",
+    "vue_ls",
     "eslint",
     "pyright",
     "bashls",
@@ -111,23 +130,24 @@ function M.config()
   vim.lsp.handlers["textDocument/signatureHelp"] = vim.lsp.with(vim.lsp.handlers.signature_help, { border = "rounded" })
   require("lspconfig.ui.windows").default_options.border = "rounded"
 
+  -- Setup servers using nvim 0.11+ API
   for _, server in pairs(servers) do
     local opts = {
       on_attach = M.on_attach,
       capabilities = M.common_capabilities(),
     }
 
-    local require_ok, settings = pcall(require, "user.lspsettings." .. server)
-    if require_ok then
-      opts = vim.tbl_deep_extend("force", settings, opts)
-    end
+    local settings = require("user.lspsettings." .. server)
+    opts = vim.tbl_deep_extend("force", settings, opts)
 
     if server == "lua_ls" then
       require("neodev").setup {}
     end
 
-    lspconfig[server].setup(opts)
+    vim.lsp.config(server, opts)
   end
+  
+  vim.lsp.enable(servers)
 end
 
 return M

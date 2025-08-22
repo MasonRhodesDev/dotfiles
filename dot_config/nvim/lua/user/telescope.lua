@@ -75,7 +75,6 @@ function M.config()
         theme = "dropdown",
         previewer = false,
         hidden = true,
-        no_ignore = true,
       },
 
       buffers = {
