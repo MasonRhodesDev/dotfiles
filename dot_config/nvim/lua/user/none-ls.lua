@@ -19,6 +19,13 @@ function M.config()
       formatting.black,
       require("none-ls.diagnostics.flake8"),
       null_ls.builtins.completion.spell,
+      -- ESLint formatting for ts/js/vue files
+      require("none-ls.formatting.eslint_d").with({
+        filetypes = { "typescript", "javascript", "typescriptreact", "javascriptreact", "vue" },
+        condition = function(utils)
+          return utils.root_has_file({ "eslint.config.js", ".eslintrc.js", ".eslintrc.json", ".eslintrc" })
+        end,
+      }),
     },
   }
 end
