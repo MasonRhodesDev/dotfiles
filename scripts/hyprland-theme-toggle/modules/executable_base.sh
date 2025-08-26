@@ -70,12 +70,13 @@ run_module_with_timing() {
     local wallpaper="$3"
     local mode="$4"
     local state_file="$5"
+    local colors_json="$6"
     
     local start_time=$(start_timer)
     
     # Source and execute the module
     source "$module_script"
-    "${module_name}_apply_theme" "$wallpaper" "$mode" "$state_file"
+    "${module_name}_apply_theme" "$wallpaper" "$mode" "$state_file" "$colors_json"
     local exit_code=$?
     
     local duration=$(end_timer "$start_time")

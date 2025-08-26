@@ -2,27 +2,27 @@
 
 window {
     margin: 0px;
-    border: 1px solid var(--md-primary);
-    background-color: var(--md-surface);
+    border: 1px solid @primary;
+    background-color: @surface;
 }
 
 #input {
     margin: 5px;
     border: none;
-    color: var(--md-on-surface);
-    background-color: var(--md-surface-container-high);
+    color: @on_surface;
+    background-color: @surface_variant;
 }
 
 #inner-box {
     margin: 5px;
     border: none;
-    background-color: var(--md-surface);
+    background-color: @surface;
 }
 
 #outer-box {
     margin: 5px;
     border: none;
-    background-color: var(--md-surface);
+    background-color: @surface;
 }
 
 #scroll {
@@ -33,22 +33,22 @@ window {
 #text {
     margin: 5px;
     border: none;
-    color: var(--md-on-surface);
+    color: @on_surface;
 } 
 
 #entry.activatable #text {
-    color: var(--md-on-primary);
+    color: @on_primary;
 }
 
 #entry > * {
-    color: var(--md-on-surface);
+    color: @on_surface;
 }
 
 #entry:selected {
-    background-color: var(--md-primary-container);
+    background-color: @primary;
 }
 
 #entry:selected #text {
     font-weight: bold;
-    color: var(--md-on-primary-container);
+    color: @on_primary;
 }

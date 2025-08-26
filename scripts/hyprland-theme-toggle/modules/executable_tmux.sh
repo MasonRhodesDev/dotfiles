@@ -8,6 +8,7 @@ tmux_apply_theme() {
     local wallpaper="$1"
     local mode="$2"
     local state_file="$3"
+    local colors_json="$4"
     
     local config_file="$HOME/.tmux.conf"
     local module_name="Tmux"
@@ -26,14 +27,7 @@ tmux_apply_theme() {
     
     log_module "$module_name" "Generating $mode theme"
     
-    # Get matugen colors directly
-    local colors_json=$(matugen --json hex --dry-run image "$wallpaper" --mode "$mode")
-    if [[ $? -ne 0 ]]; then
-        log_module "$module_name" "Error: Failed to get colors from matugen"
-        return 1
-    fi
-    
-    # Generate tmux config using Python
+    # Generate tmux config using Python with passed colors JSON
     python3 -c "
 import json, sys, re
 
