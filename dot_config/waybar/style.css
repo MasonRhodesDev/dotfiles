@@ -1,54 +1,79 @@
 @import url('../matugen/colors.css');
 
 * {
-    font-size:17px;
+    font-size: 17px;
     font-family: "CodeNewRoman Nerd Font Propo";
 }
-window#waybar{
-    all:unset;
+
+window#waybar {
+    all: unset;
 }
+
+.modules-left,
+.modules-right,
+.modules-center {
+    padding: 1px;
+    margin-top: 1.25px;
+    margin-bottom: 1.25px;
+    margin-bottom: 0px;
+    margin-top: 5px;
+}
+
 .modules-left {
-    padding:7px;
-    margin:2.5 0 1.25 10;
-    border-radius:10px;
-    background: alpha(@background,.6);
+    border-radius: 10px;
+    background: alpha(@background, .6);
     box-shadow: 0px 0px 2px rgba(0, 0, 0, .6);
 }
+
 .modules-center {
-    padding: 0;
-    margin: 0;
+    /* padding: 0; */
+    /* margin: 0; */
     background: transparent;
     box-shadow: none;
 }
 
-/* Style the media module itself so it matches when present */
-#custom-media{
-    padding:7px;
-    margin:2.5 0 1.25 0;
-    border-radius:10px;
-    background: alpha(@background,.6);
+.modules-right {
+    /* padding-right: 7px; */
+    /* margin-right: 7px; */
+    border-radius: 10px;
+    background: alpha(@background, .6);
     box-shadow: 0px 0px 2px rgba(0, 0, 0, .6);
-    color:@color7;
+}
+
+/* Style the media module itself so it matches when present */
+#custom-media {
+    padding: 7px;
+    margin: 2.5 0 1.25 0;
+    border-radius: 10px;
+    background: alpha(@background, .6);
+    box-shadow: 0px 0px 2px rgba(0, 0, 0, .6);
+    color: @color7;
     transition: all .3s ease;
 }
-#custom-media:hover{
-    color:@color9;
+
+#custom-media:hover {
+    color: @color9;
 }
-.modules-right {
-    padding:7px;
-    margin: 1.25 5 1.25 0;
-    border-radius:10px;
-    background: alpha(@background,.6);
-    box-shadow: 0px 0px 2px rgba(0, 0, 0, .6);
-}
+
 tooltip {
-    background:@background;
+    background: @background;
     color: @color7;
 }
-#clock:hover, #custom-updates:hover, #bluetooth:hover,#network:hover,#battery:hover, #cpu:hover,#memory:hover,#temperature:hover,#pulseaudio:hover,#idle_inhibitor:hover{
+
+#clock:hover,
+#custom-updates:hover,
+#bluetooth:hover,
+#network:hover,
+#battery:hover,
+#cpu:hover,
+#memory:hover,
+#temperature:hover,
+#pulseaudio:hover,
+#idle_inhibitor:hover {
     transition: all .3s ease;
-    color:@accent;
+    color: @accent;
 }
+
 #custom-notification {
     padding: 4px 8px;
     margin: 0 4px;
@@ -76,32 +101,39 @@ tooltip {
     box-shadow: none;
     outline: none;
 }
-#clock{
+
+#clock {
     padding: 0px 5px;
-    color:@foreground;
+    color: @foreground;
     transition: all .3s ease;
 }
-#custom-updates{
+
+#custom-updates {
     padding: 0px 5px;
     transition: all .3s ease;
-    color:@foreground;
+    color: @foreground;
 
 }
+
 #workspaces {
     padding: 0px 5px;
 }
+
 #workspaces button {
-    all:unset;
-    padding: 3px 8px 6px; /* ensure 1px underline sits fully inside hover outline */
+    all: unset;
+    padding: 3px 8px 6px;
+    /* ensure 1px underline sits fully inside hover outline */
     border-radius: 8px;
-    color: alpha(@accent,.4);
+    color: alpha(@accent, .4);
     transition: all .2s ease;
 }
+
 #workspaces button:hover {
     color: @accent;
     background-color: alpha(@background, .25);
     /* don't touch background-image so underline remains visible */
-    box-shadow: none; /* remove green outline */
+    box-shadow: none;
+    /* remove green outline */
     border-radius: 8px;
     transition: all .2s ease;
 }
@@ -109,14 +141,17 @@ tooltip {
 #workspaces button.active:hover,
 #workspaces button.focused:hover,
 #workspaces button.visible:hover {
-    box-shadow: none; /* remove green outline */
+    box-shadow: none;
+    /* remove green outline */
 }
 
 #workspaces button.empty.active:hover,
 #workspaces button.empty.focused:hover,
 #workspaces button.empty.visible:hover {
-    box-shadow: none; /* remove green outline */
+    box-shadow: none;
+    /* remove green outline */
 }
+
 #workspaces button.active,
 #workspaces button.visible,
 #workspaces button.focused {
@@ -134,17 +169,20 @@ tooltip {
     background-repeat: no-repeat;
     background-position: bottom left;
 }
+
 #workspaces button.empty {
-    color: rgba(0,0,0,0);
+    color: rgba(0, 0, 0, 0);
     border: none;
     text-shadow: 0px 0px 1.5px rgba(0, 0, 0, .2);
 }
+
 #workspaces button.empty:hover {
-    color: rgba(0,0,0,0);
+    color: rgba(0, 0, 0, 0);
     border: none;
     text-shadow: 0px 0px 1.5px rgba(0, 0, 0, .5);
     transition: all 1s ease;
 }
+
 #workspaces button.empty.active,
 #workspaces button.empty.visible,
 #workspaces button.empty.focused {
@@ -154,25 +192,28 @@ tooltip {
 }
 
 /* remove inset underline shadows entirely (handled by ::after now) */
-#bluetooth{
+#bluetooth {
     padding: 0px 5px;
     transition: all .3s ease;
-    color:@foreground;
+    color: @foreground;
 
 }
-#network{
+
+#network {
     padding: 0px 10px 0px 0px;
     transition: all .3s ease;
-    color:@foreground;
+    color: @foreground;
 
 }
-#battery{
+
+#battery {
     padding: 0px 5px;
     transition: all .3s ease;
-    color:@foreground;
+    color: @foreground;
 
 
 }
+
 #battery.charging {
     color: #26A65B;
 }
@@ -189,55 +230,75 @@ tooltip {
     animation-iteration-count: infinite;
     animation-direction: alternate;
 }
-#group-expand{
+
+#group-expand {
     padding: 0px 5px;
-    transition: all .3s ease; 
+    transition: all .3s ease;
 }
-#custom-expand{
+
+#custom-expand {
     padding: 0px 5px;
-    color:alpha(@foreground,.2);
+    color: alpha(@foreground, .2);
     text-shadow: 0px 0px 2px rgba(0, 0, 0, .7);
-    transition: all .3s ease; 
+    transition: all .3s ease;
 }
-#custom-expand:hover{
-    color:rgba(255,255,255,.2);
+
+#custom-expand:hover {
+    color: rgba(255, 255, 255, .2);
     text-shadow: 0px 0px 2px rgba(255, 255, 255, .5);
 }
-#custom-colorpicker{
+
+#custom-colorpicker {
     padding: 0px 5px;
 }
-#cpu,#memory,#temperature{
+
+#cpu,
+#memory,
+#temperature {
     padding: 0px 5px;
-    transition: all .3s ease; 
-    color:@foreground;
+    transition: all .3s ease;
+    color: @foreground;
 
 }
-#custom-endpoint{
-    color:transparent;
+
+#custom-endpoint {
+    color: transparent;
     text-shadow: 0px 0px 1.5px rgba(0, 0, 0, 1);
 
 }
-#tray{
+
+#tray {
     padding: 0px 5px;
-    transition: all .3s ease; 
+    transition: all .3s ease;
 
 }
+
 #tray menu * {
     padding: 0px 5px;
-    transition: all .3s ease; 
+    transition: all .3s ease;
 }
 
 #tray menu separator {
     padding: 0px 5px;
-    transition: all .3s ease; 
+    transition: all .3s ease;
 }
-#idle_inhibitor{
+
+#custom-idle-inhibitor {
     padding: 0px 5px;
     transition: all .3s ease;
-    color:@foreground;
+    color: @on_background;
 }
-#pulseaudio{
+
+#custom-idle-inhibitor.activated {
+    color: @on_background;
+}
+
+#custom-idle-inhibitor.deactivated {
+    color: @on_background;
+}
+
+#pulseaudio {
     padding: 0px 5px;
     transition: all .3s ease;
-    color:@foreground;
+    color: @foreground;
 }

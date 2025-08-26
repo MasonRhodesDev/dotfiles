@@ -32,9 +32,9 @@ fi
 # Update state file
 echo "$NEW_STATE" > "$STATE_FILE"
 
-# Generate matugen colors for the new mode (always regenerate base colors)
+# Generate matugen colors JSON for the new mode
 echo "Generating Material You colors from wallpaper..."
-matugen image "$WALLPAPER_PATH" --mode "$MATUGEN_MODE" --type scheme-expressive
+COLORS_JSON=$(matugen --json hex --dry-run image "$WALLPAPER_PATH" --mode "$MATUGEN_MODE" --type scheme-expressive)
 
 # Check if matugen succeeded
 if [[ $? -ne 0 ]]; then
@@ -44,10 +44,11 @@ fi
 
 echo "Applying themes to installed applications..."
 
-# Create array to store module information
+# Create arrays to store module information
 declare -a modules
 declare -a pids
 declare -A module_names
+declare -A pid_to_module
 
 # Collect modules (excluding base.sh)
 for module in "$MODULES_DIR"/*.sh; do
@@ -72,20 +73,73 @@ for module in "${modules[@]}"; do
         # Check if module function exists
         source "$module"
         if declare -f "${module_name}_apply_theme" >/dev/null; then
-            run_module_with_timing "$module" "$module_name" "$WALLPAPER_PATH" "$NEW_STATE" "$STATE_FILE"
+            run_module_with_timing "$module" "$module_name" "$WALLPAPER_PATH" "$NEW_STATE" "$STATE_FILE" "$COLORS_JSON"
         else
             echo "Warning: ${module_name}_apply_theme function not found in $module"
         fi
     ) &
     
-    pids+=($!)
+    pid=$!
+    pids+=($pid)
+    pid_to_module["$pid"]="$module_name"
 done
 
-# Wait for all modules to complete and collect results
-for pid in "${pids[@]}"; do
-    wait "$pid"
+# Wait for all modules to complete with timeout
+TIMEOUT=10  # 10 seconds timeout
+SLEEP_INTERVAL=0.1
+
+echo "Waiting for modules to complete (timeout: ${TIMEOUT}s)..."
+echo "Started ${#pids[@]} background processes with PIDs: ${pids[*]}"
+
+# Global timeout - track elapsed time across all processes
+start_time=$(date +%s.%N)
+
+while true; do
+    # Check if any processes are still running
+    running_pids=()
+    for pid in "${pids[@]}"; do
+        if kill -0 "$pid" 2>/dev/null; then
+            running_pids+=("$pid")
+        fi
+    done
+    
+    # If no processes running, we're done
+    if [[ ${#running_pids[@]} -eq 0 ]]; then
+        echo "All modules completed normally"
+        break
+    fi
+    
+    # Check global timeout
+    current_time=$(date +%s.%N)
+    elapsed=$(echo "$current_time - $start_time" | bc -l)
+    
+    if (( $(echo "$elapsed >= $TIMEOUT" | bc -l) )); then
+        echo "⚠️  Global timeout of ${TIMEOUT}s exceeded, killing remaining modules..."
+        for pid in "${running_pids[@]}"; do
+            module_name="${pid_to_module["$pid"]}"
+            echo "⚠️  Killing '$module_name' (PID $pid)"
+            kill -TERM "$pid" 2>/dev/null || true
+        done
+        
+        # Give processes 0.5s to terminate gracefully
+        sleep 0.5
+        
+        # Force kill any remaining processes
+        for pid in "${running_pids[@]}"; do
+            if kill -0 "$pid" 2>/dev/null; then
+                module_name="${pid_to_module["$pid"]}"
+                kill -KILL "$pid" 2>/dev/null || true
+                echo "⚠️  Force killed '$module_name' (PID $pid)"
+            fi
+        done
+        break
+    fi
+    
+    sleep $SLEEP_INTERVAL
 done
 
 echo ""
 echo "Theme switched to $NEW_STATE mode!"
 echo "All applications should automatically detect the theme change."
+echo "Script exiting..."
+exit 0

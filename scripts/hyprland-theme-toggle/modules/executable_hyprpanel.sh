@@ -17,6 +17,17 @@ hyprpanel_apply_theme() {
         return 0
     fi
     
+    # Check if SwayNC is installed - if so, give it priority over HyprPanel 
+    if app_installed "swaync"; then
+        log_module "$module_name" "SwayNC is installed, giving it priority over HyprPanel"
+        # Kill HyprPanel if it's running to prevent conflicts
+        if pgrep -x hyprpanel >/dev/null; then
+            log_module "$module_name" "Stopping HyprPanel to prevent notification conflicts with SwayNC"
+            pkill hyprpanel
+        fi
+        return 0
+    fi
+    
     log_module "$module_name" "Updating config for $mode theme"
     
     # Update the HyprPanel config file
@@ -32,10 +43,10 @@ hyprpanel_apply_theme() {
             log_module "$module_name" "Restarting hyprpanel to apply theme changes"
             pkill hyprpanel
             sleep 0.5
-            hyprpanel &
+            nohup hyprpanel </dev/null >/dev/null 2>&1 &
         else
             log_module "$module_name" "Starting hyprpanel with new theme"
-            hyprpanel &
+            nohup hyprpanel </dev/null >/dev/null 2>&1 &
         fi
     fi
     

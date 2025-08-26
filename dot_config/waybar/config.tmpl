@@ -11,7 +11,7 @@
             "pulseaudio",
             "tray",
             "custom/updates",
-            "idle_inhibitor",
+            "custom/idle-inhibitor",
             "clock",
             "custom/notification",
             "battery"
@@ -180,14 +180,13 @@
             "icon-size": 18,
             "spacing": 10
         },
-        "idle_inhibitor": {
-            "format": "{icon}",
-            "format-icons": {
-                "activated": "󰅶",
-                "deactivated": "󰾪"
-            },
-            "tooltip-format-activated": "Idle inhibition active",
-            "tooltip-format-deactivated": "Idle inhibition inactive"
+        "custom/idle-inhibitor": {
+            "format": "{}",
+            "return-type": "json",
+            "interval": "once",
+            "exec": "$HOME/scripts/idle-inhibitor/waybar-module.sh",
+            "on-click": "$HOME/scripts/idle-inhibitor/toggle.sh",
+            "signal": 9
         }
 } 
 

@@ -9,34 +9,34 @@ config.window_background_opacity = 0.95
 
 -- Material You colors generated from wallpaper
 config.colors = {
-  foreground = '#191c20',
-  background = '#f9f9ff',
-  cursor_bg = '#405f91',
+  foreground = '#1a1b23',
+  background = '#fbf8ff',
+  cursor_bg = '#3a6931',
   cursor_fg = '#ffffff',
-  cursor_border = '#405f91',
-  selection_fg = '#001b3e',
-  selection_bg = '#d6e3ff',
+  cursor_border = '#3a6931',
+  selection_fg = '#002201',
+  selection_bg = '#baf1aa',
 
   ansi = {
-    '#74777f',
+    '#757685',
     '#ba1a1a',
     '#2e7d32',
     '#f57c00',
-    '#405f91',
-    '#44474e',
+    '#3a6931',
+    '#444654',
     '#7d5260',
-    '#191c20',
+    '#1a1b23',
   },
 
   brights = {
-    '#e7e8ee',
+    '#e8e7f2',
     '#ba1a1a',
     '#388e3c',
     '#ff9800',
-    '#405f91',
-    '#44474e',
+    '#3a6931',
+    '#444654',
     '#7d5260',
-    '#191c20',
+    '#1a1b23',
   },
 }
 

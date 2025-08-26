@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Signal idle inhibitor daemon about lock event
+touch /tmp/idle-inhibitor-lock-signal
+
 hyprlock
 # swaylock \
 #   --image "$HOME/Pictures/forrest.png" \
