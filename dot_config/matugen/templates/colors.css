@@ -1,0 +1,100 @@
+/* Centralized Material You colors for all applications */
+:root {
+  /* Core Material You colors */
+  --md-primary: {{colors.primary.hex}};
+  --md-on-primary: {{colors.on_primary.hex}};
+  --md-primary-container: {{colors.primary_container.hex}};
+  --md-on-primary-container: {{colors.on_primary_container.hex}};
+  
+  --md-secondary: {{colors.secondary.hex}};
+  --md-on-secondary: {{colors.on_secondary.hex}};
+  --md-secondary-container: {{colors.secondary_container.hex}};
+  --md-on-secondary-container: {{colors.on_secondary_container.hex}};
+  
+  --md-tertiary: {{colors.tertiary.hex}};
+  --md-on-tertiary: {{colors.on_tertiary.hex}};
+  --md-tertiary-container: {{colors.tertiary_container.hex}};
+  --md-on-tertiary-container: {{colors.on_tertiary_container.hex}};
+  
+  --md-error: {{colors.error.hex}};
+  --md-on-error: {{colors.on_error.hex}};
+  --md-error-container: {{colors.error_container.hex}};
+  --md-on-error-container: {{colors.on_error_container.hex}};
+  
+  --md-surface: {{colors.surface.hex}};
+  --md-on-surface: {{colors.on_surface.hex}};
+  --md-surface-variant: {{colors.surface_variant.hex}};
+  --md-on-surface-variant: {{colors.on_surface_variant.hex}};
+  
+  --md-surface-container: {{colors.surface_container.hex}};
+  --md-surface-container-low: {{colors.surface_container_low.hex}};
+  --md-surface-container-high: {{colors.surface_container_high.hex}};
+  --md-surface-container-highest: {{colors.surface_container_highest.hex}};
+  
+  --md-outline: {{colors.outline.hex}};
+  --md-outline-variant: {{colors.outline_variant.hex}};
+  
+  --md-shadow: {{colors.shadow.hex}};
+  --md-scrim: {{colors.scrim.hex}};
+  
+  --md-inverse-surface: {{colors.inverse_surface.hex}};
+  --md-inverse-on-surface: {{colors.inverse_on_surface.hex}};
+  --md-inverse-primary: {{colors.inverse_primary.hex}};
+  
+  /* Legacy color names for compatibility */
+  --background: var(--md-surface);
+  --foreground: var(--md-on-surface);
+  --accent: var(--md-primary);
+  --color7: var(--md-on-surface);
+  --color9: var(--md-secondary);
+}
+
+/* Additional helper classes for common patterns */
+.md-surface {
+  background-color: var(--md-surface);
+  color: var(--md-on-surface);
+}
+
+.md-primary {
+  background-color: var(--md-primary);
+  color: var(--md-on-primary);
+}
+
+.md-secondary {
+  background-color: var(--md-secondary);
+  color: var(--md-on-secondary);
+}
+
+.md-primary-container {
+  background-color: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+}
+
+.md-secondary-container {
+  background-color: var(--md-secondary-container);
+  color: var(--md-on-secondary-container);
+}
+
+/* GTK/Waybar compatibility colors */
+@define-color background var(--md-surface);
+@define-color foreground var(--md-on-surface);
+@define-color accent var(--md-primary);
+@define-color primary var(--md-primary);
+@define-color secondary var(--md-secondary);
+@define-color tertiary var(--md-tertiary);
+@define-color surface var(--md-surface);
+@define-color surface_variant var(--md-surface-variant);
+@define-color on_primary var(--md-on-primary);
+@define-color on_secondary var(--md-on-secondary);
+@define-color on_tertiary var(--md-on-tertiary);
+@define-color on_surface var(--md-on-surface);
+@define-color on_surface_variant var(--md-on-surface-variant);
+@define-color outline var(--md-outline);
+@define-color outline_variant var(--md-outline-variant);
+@define-color shadow var(--md-shadow);
+@define-color scrim var(--md-scrim);
+@define-color inverse_surface var(--md-inverse-surface);
+@define-color inverse_on_surface var(--md-inverse-on-surface);
+@define-color inverse_primary var(--md-inverse-primary);
+@define-color color7 var(--md-on-surface);
+@define-color color9 var(--md-secondary);

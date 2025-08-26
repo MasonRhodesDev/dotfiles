@@ -17,18 +17,7 @@ waybar_apply_theme() {
         return 0
     fi
     
-    log_module "$module_name" "Updating theme for $mode mode"
-    
-    # Check if matugen template exists
-    local template_file="$HOME/.config/matugen/templates/waybar.css"
-    local output_file="$HOME/.config/waybar/matugen.css"
-    
-    if [[ -f "$template_file" ]]; then
-        # Matugen will generate the CSS file from template
-        log_module "$module_name" "Matugen will generate waybar CSS from template"
-    else
-        log_module "$module_name" "Warning: Matugen template not found at $template_file"
-    fi
+    log_module "$module_name" "Using centralized colors for $mode theme"
     
     # Signal waybar to reload configuration
     if pgrep -x waybar >/dev/null; then

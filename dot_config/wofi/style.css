@@ -1,52 +1,54 @@
+@import url('../matugen/colors.css');
+
 window {
     margin: 0px;
-    border: 1px solid #aac7ff;
-    background-color: #111318;
-    }
-    
-    #input {
+    border: 1px solid var(--md-primary);
+    background-color: var(--md-surface);
+}
+
+#input {
     margin: 5px;
     border: none;
-    color: #e2e2e9;
-    background-color: #1d2024;
-    }
-    
-    #inner-box {
+    color: var(--md-on-surface);
+    background-color: var(--md-surface-container-high);
+}
+
+#inner-box {
     margin: 5px;
     border: none;
-    background-color: #111318;
-    }
-    
-    #outer-box {
+    background-color: var(--md-surface);
+}
+
+#outer-box {
     margin: 5px;
     border: none;
-    background-color: #111318;
-    }
-    
-    #scroll {
+    background-color: var(--md-surface);
+}
+
+#scroll {
     margin: 0px;
     border: none;
-    }
-    
-    #text {
+}
+
+#text {
     margin: 5px;
     border: none;
-    color: #e2e2e9;
-    } 
-    
-    #entry.activatable #text {
-    color: #09305f;
-    }
-    
-    #entry > * {
-    color: #e2e2e9;
-    }
-    
-    #entry:selected {
-    background-color: #274777;
-    }
-    
-    #entry:selected #text {
+    color: var(--md-on-surface);
+} 
+
+#entry.activatable #text {
+    color: var(--md-on-primary);
+}
+
+#entry > * {
+    color: var(--md-on-surface);
+}
+
+#entry:selected {
+    background-color: var(--md-primary-container);
+}
+
+#entry:selected #text {
     font-weight: bold;
-    color: #d6e3ff;
-    }
+    color: var(--md-on-primary-container);
+}

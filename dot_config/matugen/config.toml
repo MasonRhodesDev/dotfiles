@@ -1,0 +1,9 @@
+# Matugen configuration
+# Centralized color generation for all applications
+
+# Template configuration
+[templates.colors]
+# Input template
+input_path = "~/.config/matugen/templates/colors.css"
+# Output path - centralized location for all apps to import
+output_path = "~/.config/matugen/colors.css"
