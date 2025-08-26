@@ -43,7 +43,6 @@ function M.config()
       restore_to_wezterm_theme()
     end,
     desc = "Restore terminal to current WezTerm theme colors",
-    priority = 1000, -- Run before bg.nvim's default restoration
   })
 end
 
