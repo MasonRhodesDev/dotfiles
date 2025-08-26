@@ -15,6 +15,9 @@ local function set_dark_mode()
   vim.o.background = "dark"
   vim.cmd([[colorscheme darkplus]])
   
+  -- Force complete colorscheme reload and highlight refresh
+  vim.cmd([[doautocmd ColorScheme darkplus]])
+  
   -- Update LspCodeLens highlight for dark theme
   vim.api.nvim_set_hl(0, "LspCodeLens", { fg = "#5c6370", bg = "NONE", italic = true })
 end
@@ -22,6 +25,9 @@ end
 local function set_light_mode()
   vim.o.background = "light"
   vim.cmd([[colorscheme oxocarbon]])
+  
+  -- Force complete colorscheme reload and highlight refresh
+  vim.cmd([[doautocmd ColorScheme oxocarbon]])
   
   -- Update LspCodeLens highlight for light theme
   vim.api.nvim_set_hl(0, "LspCodeLens", { fg = "#6b7280", bg = "NONE", italic = true })
@@ -51,6 +57,9 @@ local function watch_theme_change()
           set_dark_mode()
           print("Switching to dark mode")
         end
+        
+        -- Force complete UI refresh
+        vim.cmd([[redraw!]])
         unwatch_cb()
         watch_theme_change()
       end)
