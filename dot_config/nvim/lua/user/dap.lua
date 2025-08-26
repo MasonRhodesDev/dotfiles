@@ -2,8 +2,6 @@ local M = {
   "mfussenegger/nvim-dap",
   dependencies = {
     "nvim-neotest/nvim-nio",
-    "microsoft/vscode-js-debug",
-    "mxsdev/nvim-dap-vscode-js",
     "rcarriga/nvim-dap-ui",
   },
 }
@@ -39,11 +37,46 @@ function M.config()
     "vue"
   }
 
-  -- Configure vscode-js-debug
-  require("dap-vscode-js").setup({
-    debugger_path = vim.fn.stdpath("data") .. "/lazy/vscode-js-debug",
-    adapters = { "pwa-node", "pwa-chrome", "node-terminal" },
-  })
+  -- Configure js-debug-adapter (installed via Mason)
+  dap.adapters["pwa-node"] = {
+    type = "server",
+    host = "localhost",
+    port = "${port}",
+    executable = {
+      command = "js-debug-adapter",
+      args = { "${port}" },
+    },
+  }
+  
+  dap.adapters["pwa-chrome"] = {
+    type = "server", 
+    host = "localhost",
+    port = "${port}",
+    executable = {
+      command = "js-debug-adapter",
+      args = { "${port}" },
+    },
+  }
+
+  dap.adapters["pwa-msedge"] = {
+    type = "server",
+    host = "localhost", 
+    port = "${port}",
+    executable = {
+      command = "js-debug-adapter",
+      args = { "${port}" },
+    },
+  }
+
+  dap.adapters["node-terminal"] = {
+    type = "server",
+    host = "localhost",
+    port = "${port}", 
+    executable = {
+      command = "js-debug-adapter",
+      args = { "${port}" },
+    },
+  }
 
   -- Configure debug adapters for JavaScript/TypeScript
   for _, language in ipairs(js_based_languages) do
@@ -54,7 +87,7 @@ function M.config()
         request = "launch",
         name = "Launch current file (pwa-node)",
         cwd = vim.fn.getcwd(),
-        args = { "${file}" },
+        program = "${file}",
         sourceMaps = true,
         protocol = "inspector",
       },
@@ -64,12 +97,46 @@ function M.config()
         request = "launch", 
         name = "Launch current file (pwa-node with args)",
         cwd = vim.fn.getcwd(),
+        program = "${file}",
         args = function()
           local args_string = vim.fn.input("Arguments: ")
           return vim.split(args_string, " +")
         end,
         sourceMaps = true,
         protocol = "inspector",
+      },
+      -- Debug Jest Tests
+      {
+        type = "pwa-node",
+        request = "launch",
+        name = "Debug Jest Tests",
+        runtimeExecutable = "node",
+        runtimeArgs = {
+          "./node_modules/jest/bin/jest.js",
+          "--runInBand",
+        },
+        rootPath = "${workspaceFolder}",
+        cwd = "${workspaceFolder}",
+        console = "integratedTerminal",
+        internalConsoleOptions = "neverOpen",
+        sourceMaps = true,
+      },
+      -- Debug Vitest Tests
+      {
+        type = "pwa-node",
+        request = "launch",
+        name = "Debug Vitest Tests", 
+        runtimeExecutable = "node",
+        runtimeArgs = {
+          "./node_modules/vitest/vitest.mjs",
+          "run",
+          "--reporter=verbose",
+        },
+        rootPath = "${workspaceFolder}",
+        cwd = "${workspaceFolder}",
+        console = "integratedTerminal",
+        internalConsoleOptions = "neverOpen",
+        sourceMaps = true,
       },
       -- Attach to Node.js process
       {

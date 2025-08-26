@@ -17,6 +17,13 @@ M.config = function()
     { "<leader>gs", "<cmd>lua require 'gitsigns'.stage_hunk()<cr>", desc = "Stage Hunk" },
     { "<leader>gu", "<cmd>lua require 'gitsigns'.undo_stage_hunk()<cr>", desc = "Undo Stage Hunk" },
     { "<leader>gd", "<cmd>Gitsigns diffthis HEAD<cr>", desc = "Git Diff" },
+    { "<leader>gc", function()
+        vim.ui.input({ prompt = "Commit message: " }, function(msg)
+          if msg and msg ~= "" then
+            vim.cmd("!git commit -m '" .. msg .. "'")
+          end
+        end)
+      end, desc = "Commit with message" },
   }
 
   require("gitsigns").setup {

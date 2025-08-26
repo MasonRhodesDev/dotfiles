@@ -20,6 +20,9 @@ return {
           package_uninstalled = '✗',
         },
       },
+      ensure_installed = {
+        'js-debug-adapter',
+      },
     }
 
     mason_lspconfig.setup {
