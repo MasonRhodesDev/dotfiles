@@ -1,8 +1,7 @@
-@import url('../../.cache/wal/colors-waybar.css');
 @import url('matugen.css');
 
 * {
-    font-size:19px;
+    font-size:17px;
     font-family: "CodeNewRoman Nerd Font Propo";
 }
 window#waybar{
@@ -10,7 +9,7 @@ window#waybar{
 }
 .modules-left {
     padding:7px;
-    margin:10 0 5 10;
+    margin:2.5 0 1.25 10;
     border-radius:10px;
     background: alpha(@background,.6);
     box-shadow: 0px 0px 2px rgba(0, 0, 0, .6);
@@ -25,7 +24,7 @@ window#waybar{
 /* Style the media module itself so it matches when present */
 #custom-media{
     padding:7px;
-    margin:10 0 5 0;
+    margin:2.5 0 1.25 0;
     border-radius:10px;
     background: alpha(@background,.6);
     box-shadow: 0px 0px 2px rgba(0, 0, 0, .6);
@@ -37,7 +36,7 @@ window#waybar{
 }
 .modules-right {
     padding:7px;
-    margin: 5 5 5 0;
+    margin: 1.25 5 1.25 0;
     border-radius:10px;
     background: alpha(@background,.6);
     box-shadow: 0px 0px 2px rgba(0, 0, 0, .6);
@@ -46,7 +45,7 @@ tooltip {
     background:@background;
     color: @color7;
 }
-#clock:hover, #custom-pacman:hover, #bluetooth:hover,#network:hover,#battery:hover, #cpu:hover,#memory:hover,#temperature:hover,#pulseaudio:hover{
+#clock:hover, #custom-updates:hover, #bluetooth:hover,#network:hover,#battery:hover, #cpu:hover,#memory:hover,#temperature:hover,#pulseaudio:hover,#idle_inhibitor:hover{
     transition: all .3s ease;
     color:@accent;
 }
@@ -82,7 +81,7 @@ tooltip {
     color:@foreground;
     transition: all .3s ease;
 }
-#custom-pacman{
+#custom-updates{
     padding: 0px 5px;
     transition: all .3s ease;
     color:@foreground;
@@ -162,7 +161,7 @@ tooltip {
 
 }
 #network{
-    padding: 0px 5px;
+    padding: 0px 10px 0px 0px;
     transition: all .3s ease;
     color:@foreground;
 
@@ -231,4 +230,14 @@ tooltip {
 #tray menu separator {
     padding: 0px 5px;
     transition: all .3s ease; 
+}
+#idle_inhibitor{
+    padding: 0px 5px;
+    transition: all .3s ease;
+    color:@foreground;
+}
+#pulseaudio{
+    padding: 0px 5px;
+    transition: all .3s ease;
+    color:@foreground;
 }

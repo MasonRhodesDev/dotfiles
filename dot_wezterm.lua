@@ -4,18 +4,8 @@ local config = {}
 -- Hide tab bar when only one tab is open
 config.hide_tab_bar_if_only_one_tab = true
 
--- Dynamic opacity based on running process
+-- Set window opacity
 config.window_background_opacity = 0.95
-
--- Load wezterm-config.nvim plugin
-local wezterm_config_nvim = wezterm.plugin.require "https://github.com/winter-again/wezterm-config.nvim"
-
--- Handle user variable changes from nvim for config overrides
-wezterm.on('user-var-changed', function(window, pane, name, value)
-  local overrides = window:get_config_overrides() or {}
-  overrides = wezterm_config_nvim.override_user_var(overrides, name, value)
-  window:set_config_overrides(overrides)
-end)
 
 -- Material You colors generated from wallpaper
 config.colors = {

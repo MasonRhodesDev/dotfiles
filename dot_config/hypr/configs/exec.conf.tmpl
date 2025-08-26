@@ -19,7 +19,7 @@ exec-once=swaybg -i $WALLPAPER_PATH -m fill
 # Generate material you colors from wallpaper
 exec-once=matugen image $WALLPAPER_PATH -m dark
 
-exec-once = /home/mason/scripts/hyprland-theme-toggle/theme-toggle-modular.sh dark >/dev/null 2>&1
+exec = /home/mason/scripts/hyprland-theme-toggle/theme-restore.sh >/dev/null 2>&1
 
 # Update hyprpanel wallpaper config and launch
 #exec=sed -i "s|\"wallpaper.image\": \".*\"|\"wallpaper.image\": \"$WALLPAPER_PATH\"|" ~/.config/hyprpanel/config.json && uwsm app -- hyprpanel

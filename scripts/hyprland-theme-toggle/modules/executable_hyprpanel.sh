@@ -26,6 +26,17 @@ hyprpanel_apply_theme() {
         # Use jq to update the specific config value
         /usr/bin/jq --arg mode "$mode" '.["theme.matugen_settings.mode"] = $mode' "$config_file" > "$config_file.tmp" && mv "$config_file.tmp" "$config_file"
         log_module "$module_name" "Updated config: theme.matugen_settings.mode = $mode"
+        
+        # Restart hyprpanel to apply the theme
+        if pgrep -x hyprpanel >/dev/null; then
+            log_module "$module_name" "Restarting hyprpanel to apply theme changes"
+            pkill hyprpanel
+            sleep 0.5
+            hyprpanel &
+        else
+            log_module "$module_name" "Starting hyprpanel with new theme"
+            hyprpanel &
+        fi
     fi
     
     return 0
