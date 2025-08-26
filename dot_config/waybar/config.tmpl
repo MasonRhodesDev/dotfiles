@@ -10,7 +10,8 @@
             "network",
             "pulseaudio",
             "tray",
-            "custom/pacman",
+            "custom/updates",
+            "idle_inhibitor",
             "clock",
             "custom/notification",
             "battery"
@@ -69,7 +70,7 @@
             "format-on": "󰂯",
             "format-off": "BT-off",
             "format-disabled": "󰂲",
-            "format-connected-battery": "{device_battery_percentage}% 󰂯",
+            "format-connected-battery": "{device_battery_percentage}%  󰂯",
             "format-alt": "{device_alias} 󰂯",
             "tooltip-format": "{controller_alias}\t{controller_address}\n\n{num_connections} connected",
             "tooltip-format-connected": "{controller_alias}\t{controller_address}\n\n{num_connections} connected\n\n{device_enumerate}",
@@ -84,7 +85,7 @@
                 "warning": 30,
                 "critical": 20
             },
-            "format": "{capacity}% {icon}",
+            "format": "{capacity}%  {icon}",
             "format-charging": "{capacity}% 󰂄",
             "format-plugged": "{capacity}% 󰂄 ",
             "format-alt": "{time} {icon}",
@@ -97,12 +98,18 @@
             "󰁹"
             ],
         },
-        "custom/pacman": {
-            "format": "󰅢 {}",
-            "interval": 30,   
-            "exec": "checkupdates | wc -l",
+        "custom/updates": {
+            "format": "󰅢   {}",
+            "interval": 28800,   
+{{- if eq .chezmoi.osRelease.id "fedora" }}
+            "exec": "dnf list --upgradable 2>/dev/null | tail -n +2 | wc -l",
             "exec-if": "exit 0",
-            "on-click": "wezterm sh -c 'yay -Syu; echo Done - Press enter to exit; read'; pkill -SIGRTMIN+8 waybar",
+            "on-click": "wezterm sh -c 'sudo dnf upgrade; echo Done - Press enter to exit; read'; pkill -SIGRTMIN+8 waybar",
+{{- else }}
+            "exec": "sh -c 'if command -v yay >/dev/null 2>&1; then yay -Qu 2>/dev/null | wc -l; else checkupdates | wc -l; fi'",
+            "exec-if": "exit 0",
+            "on-click": "wezterm sh -c 'if command -v yay >/dev/null 2>&1; then yay -Syu; else sudo pacman -Syu; fi; echo Done - Press enter to exit; read'; pkill -SIGRTMIN+8 waybar",
+{{- end }}
             "signal": 8,
             "tooltip": false,
         },
@@ -151,8 +158,8 @@
             "interval": 2
         },
         "pulseaudio": {
-            "format": "{volume}% {icon}",
-            "format-bluetooth": "{volume}% {icon}",
+            "format": "{volume}%  {icon}",
+            "format-bluetooth": "{volume}%  {icon}",
             "format-bluetooth-muted": " {icon}",
             "format-muted": "",
             "format-source": "{volume}% ",
@@ -173,5 +180,14 @@
             "icon-size": 18,
             "spacing": 10
         },
+        "idle_inhibitor": {
+            "format": "{icon}",
+            "format-icons": {
+                "activated": "󰅶",
+                "deactivated": "󰾪"
+            },
+            "tooltip-format-activated": "Idle inhibition active",
+            "tooltip-format-deactivated": "Idle inhibition inactive"
+        }
 } 
 

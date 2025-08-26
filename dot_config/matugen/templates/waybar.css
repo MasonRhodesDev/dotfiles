@@ -1,0 +1,25 @@
+/* Matugen theme colors for Waybar */
+@define-color background {{colors.surface}};
+@define-color foreground {{colors.on_surface}};
+@define-color accent {{colors.primary}};
+@define-color color7 {{colors.on_surface}};
+@define-color color9 {{colors.secondary}};
+
+/* Additional Material You colors */
+@define-color primary {{colors.primary}};
+@define-color secondary {{colors.secondary}};
+@define-color tertiary {{colors.tertiary}};
+@define-color surface {{colors.surface}};
+@define-color surface_variant {{colors.surface_variant}};
+@define-color on_primary {{colors.on_primary}};
+@define-color on_secondary {{colors.on_secondary}};
+@define-color on_tertiary {{colors.on_tertiary}};
+@define-color on_surface {{colors.on_surface}};
+@define-color on_surface_variant {{colors.on_surface_variant}};
+@define-color outline {{colors.outline}};
+@define-color outline_variant {{colors.outline_variant}};
+@define-color shadow {{colors.shadow}};
+@define-color scrim {{colors.scrim}};
+@define-color inverse_surface {{colors.inverse_surface}};
+@define-color inverse_on_surface {{colors.inverse_on_surface}};
+@define-color inverse_primary {{colors.inverse_primary}};

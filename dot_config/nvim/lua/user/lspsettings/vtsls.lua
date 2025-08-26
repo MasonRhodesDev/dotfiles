@@ -20,6 +20,8 @@ return {
     typescript = {
       preferences = {
         includePackageJsonAutoImports = "on",
+        includeCompletionsForModuleExports = true,
+        includeCompletionsForImportStatements = true,
       },
       referencesCodeLens = {
         enabled = true,
