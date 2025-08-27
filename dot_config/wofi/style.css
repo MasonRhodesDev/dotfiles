@@ -1,39 +1,56 @@
 @import url('../matugen/colors.css');
 
+/* GTK workarounds for clean rendering */
+* {
+    background-image: none;
+    -gtk-icon-shadow: none;
+    text-shadow: none;
+    box-shadow: none;
+}
+
 window {
     margin: 0px;
-    border: 1px solid @primary;
-    background-color: @surface;
+    border: none;
+    background-color: transparent; /* Fully transparent for clean edges */
+    border-radius: 12px;
+    width: 400px;
 }
 
 #input {
-    margin: 5px;
+    margin: 8px;
+    padding: 8px 12px;
     border: none;
+    border-radius: 8px;
     color: @on_surface;
     background-color: @surface_variant;
-}
-
-#inner-box {
-    margin: 5px;
-    border: none;
-    background-color: @surface;
+    font-size: 14px;
 }
 
 #outer-box {
-    margin: 5px;
+    margin: 0;
     border: none;
-    background-color: @surface;
+    background-color: rgba(18, 19, 26, 1.0);
+    border-radius: 12px;
+}
+
+#inner-box {
+    margin: 4px;
+    border: none;
+    background-color: rgba(18, 19, 26, 1.0);
+    border-radius: 8px;
 }
 
 #scroll {
     margin: 0px;
     border: none;
+    background-color: rgba(18, 19, 26, 1.0);
 }
 
 #text {
-    margin: 5px;
+    margin: 8px 12px;
     border: none;
     color: @on_surface;
+    font-size: 14px;
 } 
 
 #entry.activatable #text {
@@ -46,6 +63,8 @@ window {
 
 #entry:selected {
     background-color: @primary;
+    border-radius: 6px;
+    margin: 2px 4px;
 }
 
 #entry:selected #text {
