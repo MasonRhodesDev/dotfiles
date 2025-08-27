@@ -1,0 +1,6 @@
+" Enable system clipboard integration
+set clipboard=unnamedplus
+
+" Basic vim settings
+set number
+set mouse=a
