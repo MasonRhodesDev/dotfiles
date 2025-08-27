@@ -245,6 +245,10 @@ Define custom colors for specific needs:
 1. **Check matugen installation:**
 ```bash
 command -v matugen || echo "matugen not found"
+
+# Install matugen if missing
+# Fedora: sudo dnf install -y matugen
+# Arch: yay -S --noconfirm matugen
 ```
 
 2. **Verify color generation:**

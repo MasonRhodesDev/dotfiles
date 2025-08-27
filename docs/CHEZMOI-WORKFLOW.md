@@ -1,6 +1,6 @@
 # Chezmoi Workflow Documentation
 
-Complete guide to managing dotfiles with chezmoi, including templates, cross-machine synchronization, and best practices.
+Complete guide to managing dotfiles with chezmoi, including templates, cross-machine synchronization, and best practices for Fedora and Arch Linux systems.
 
 ## Overview
 
