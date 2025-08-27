@@ -9,6 +9,10 @@ local function set_terminal_opaque()
   local opacity_base64 = "MS4w"  -- Base64 encoded "1.0"
   io.write(string.format("\027]1337;SetUserVar=window_background_opacity=%s\007", opacity_base64))
   io.flush()
+  
+  -- Also try direct opacity setting via OSC sequence as backup
+  io.write("\027]1337;SetUserVar=window_background_opacity=MS4w\007")
+  io.flush()
 end
 
 -- Function to restore terminal to current WezTerm theme colors and transparency

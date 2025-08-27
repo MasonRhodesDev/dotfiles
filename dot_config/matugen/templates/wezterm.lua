@@ -4,8 +4,17 @@ local config = {}
 -- Hide tab bar when only one tab is open
 config.hide_tab_bar_if_only_one_tab = true
 
--- Set window opacity
+-- Set window opacity (can be overridden by user variables)
 config.window_background_opacity = 0.95
+
+-- Allow user variables to override window opacity
+wezterm.on('user-var-changed', function(window, pane, name, value)
+  if name == 'window_background_opacity' then
+    local overrides = window:get_config_overrides() or {}
+    overrides.window_background_opacity = tonumber(value)
+    window:set_config_overrides(overrides)
+  end
+end)
 
 -- Material You colors generated from wallpaper
 config.colors = {
