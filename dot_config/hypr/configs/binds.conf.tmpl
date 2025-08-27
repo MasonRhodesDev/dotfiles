@@ -2,7 +2,7 @@ bind=$mainMod, Q, exec, wezterm
 bind=$mainMod, C, killactive, 
 bind=$mainMod, E, exec, nautilus
 bind=$mainMod, V, togglefloating, 
-bind=$mainMod, R, exec, bash -c 'app=$(wofi --show drun --term wezterm --allow-images -W 800 -D key_expand=Tab -i 2>/dev/null) && [ -n "$app" ] && uwsm app -- "$app"' >/dev/null 2>&1
+bind=$mainMod, R, exec, ~/.config/wofi/launch-drun.sh
 bind=$mainMod, P, pseudo, # dwindle
 bind=$mainMod, J, togglesplit, # dwindle
 bind=$mainMod, F, fullscreen,
