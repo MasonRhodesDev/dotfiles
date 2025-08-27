@@ -96,6 +96,12 @@ vim.api.nvim_create_user_command("SyncTheme", function()
 end, { desc = "Manually sync theme with system state" })
 
 local theme = read_file(theme_file_path)
+
+-- Defer theme sync until after plugins are loaded
+vim.defer_fn(function()
+  _G.set_nvim_theme(theme)
+end, 100)
+
 watch_theme_change()
 
 return {

@@ -22,6 +22,9 @@ local function tree_keymaps(bufnr)
   keymap(bufnr, "n", "<leader>h", "<cmd>nohlsearch<cr>", opts)
   keymap(bufnr, "n", "<leader>;", "<cmd>tabnew | terminal<cr>", opts)
   keymap(bufnr, "n", "<leader>v", "<cmd>vsplit<cr>", opts)
+  
+  -- Harpoon
+  keymap(bufnr, "n", "<TAB>", "<cmd>lua require('harpoon.ui').toggle_quick_menu()<cr>", opts)
 end
 
 local function on_attach(bufnr)
