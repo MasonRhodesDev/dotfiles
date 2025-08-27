@@ -1,6 +1,6 @@
 # Hyprland Configuration Documentation
 
-Complete guide to the Hyprland Wayland compositor configuration, keybindings, and desktop environment integration.
+Complete guide to the Hyprland Wayland compositor configuration, keybindings, and desktop environment integration on Fedora and Arch Linux.
 
 ## Overview
 

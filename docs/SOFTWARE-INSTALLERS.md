@@ -61,13 +61,21 @@ sudo dnf install -y \
 
 **Arch packages:**
 ```bash
+# Install yay AUR helper first (done automatically)
 sudo pacman -S --noconfirm \
-    git curl wget unzip \
-    gcc make cmake \
-    python python-pip \
-    neovim vim \
-    htop btop \
-    ripgrep fd bat
+    vim curl git jq \
+    thunar \
+    wireplumber \
+    networkmanager \
+    go \
+    keychain
+    
+# AUR packages
+yay -S --noconfirm \
+    solaar \
+    ttf-fira-code \
+    piper \
+    headsetcontrol
 ```
 
 ### 01_terminal.sh - Terminal Tools
@@ -94,18 +102,37 @@ yay -S --noconfirm oh-my-posh-bin
 
 ### 02_node.sh - Node.js Development
 
-**Purpose:** Node.js runtime and package managers
+**Purpose:** Node.js runtime managed by fnm and alternative runtimes
 
 **Fedora:**
 ```bash
-sudo dnf install -y nodejs npm
-npm install -g yarn pnpm
+# Install fnm via cargo
+sudo dnf install -y cargo
+cargo install fnm
+
+# Install Node.js LTS via fnm
+eval "$(fnm env --use-on-cd)"
+fnm install --lts
+fnm use lts-latest
+fnm default lts-latest
+
+# Bun runtime
+curl -fsSL https://bun.sh/install | bash
 ```
 
 **Arch:**
 ```bash
-sudo pacman -S --noconfirm nodejs npm
-npm install -g yarn pnpm
+# Install fnm from AUR
+yay -S --noconfirm fnm-bin
+
+# Install Node.js LTS via fnm
+eval "$(fnm env --use-on-cd)"
+fnm install --lts
+fnm use lts-latest
+fnm default lts-latest
+
+# Bun from AUR
+yay -S --noconfirm bun-bin
 ```
 
 ### 03_hyprland.sh - Hyprland Ecosystem
@@ -135,19 +162,23 @@ sudo dnf install -y \
 
 **Arch (official/AUR):**
 ```bash
-# Install from official repos and AUR
+# Install from official repos
 sudo pacman -S --noconfirm \
     hyprland \
     waybar wofi \
-    swaync \
+    dunst pavucontrol \
     xdg-desktop-portal-hyprland \
     wl-clipboard grim slurp
 
-# AUR packages
+# AUR packages (prefer -git versions)
 yay -S --noconfirm \
-    hyprlock hypridle hyprpicker \
-    swayosd-git \
-    matugen
+    hyprlock-git \
+    hypridle-git \
+    hyprpicker-git \
+    swaybg-git \
+    matugen \
+    swaync-git \
+    swayosd-git
 ```
 
 ### 04_git_based.sh - Repository Software
@@ -197,7 +228,7 @@ flatpak install -y flathub com.google.Chrome
 sudo pacman -S --noconfirm firefox chromium
 
 # Development browsers from AUR
-yay -S --noconfirm google-chrome
+yay -S --noconfirm vivaldi
 ```
 
 ## Platform-Specific Features
