@@ -1,6 +1,6 @@
-# Fedora Hyprland Dotfiles
+# Hyprland Dotfiles
 
-A comprehensive dotfiles repository for a Fedora-based Hyprland/Wayland desktop environment, managed with [chezmoi](https://chezmoi.io). Features automated software installation, dynamic theme management with Material You colors, and a fully configured development environment.
+A comprehensive dotfiles repository for Hyprland/Wayland desktop environments on **Fedora** and **Arch Linux**, managed with [chezmoi](https://chezmoi.io). Features automated software installation, dynamic theme management with Material You colors, and a fully configured development environment.
 
 ## ✨ Features
 
@@ -105,7 +105,7 @@ See [docs/THEME-SYSTEM.md](docs/THEME-SYSTEM.md) for detailed documentation.
 
 ## ⚙️ System Requirements
 
-- **OS**: Fedora Linux (40+)
+- **OS**: Fedora Linux (40+) or Arch Linux (current)
 - **Display**: Wayland-compatible graphics
 - **Memory**: 8GB+ recommended for full desktop
 - **Storage**: 10GB+ for all software
@@ -115,6 +115,7 @@ See [docs/THEME-SYSTEM.md](docs/THEME-SYSTEM.md) for detailed documentation.
 - Git (version control)
 - curl/wget (downloads)
 - sudo access (system packages)
+- **Arch users**: yay AUR helper (installed automatically)
 
 ## 🔧 Common Tasks
 
@@ -213,6 +214,9 @@ ls ~/.software_installer_logs/
 
 # Re-run specific installer
 ./software_installers/executable_03_hyprland.sh
+
+# Arch users: Update yay and AUR packages
+yay -Syu
 ```
 
 ## 📄 License
