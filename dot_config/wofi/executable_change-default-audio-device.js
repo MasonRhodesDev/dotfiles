@@ -20,9 +20,20 @@ exports.WofiListAudioDevices = async function (options) {
         devices = devices.filter(device => device.id !== defaultDevice);
     }
     
+    // Calculate dynamic width and height based on content
+    const deviceStrings = devices.map(device => `${device.id === defaultDevice ? '* ':'  '}${device.id}. ${device.name}`);
+    const maxLength = Math.max(...deviceStrings.map(str => str.length));
+    const numDevices = deviceStrings.length;
+    
+    // Width: ~8px per character + padding
+    const dynamicWidth = Math.min(Math.max(250, maxLength * 8 + 40), 600);
+    
+    // Height: ~30px per line + padding for search box
+    const dynamicHeight = Math.min(Math.max(150, numDevices * 30 + 80), 400);
+    
     let wofiOutput;
     try {
-        wofiOutput = execSync('printf "' + devices.map(device => `${device.id === defaultDevice ? '* ':'  '}${device.id}. ${device.name}`).join('\n') + '" | wofi -d').toString();
+        wofiOutput = execSync('printf "' + deviceStrings.join('\n') + '" | wofi -d --width ' + dynamicWidth + ' --height ' + dynamicHeight).toString();
     } catch (e) {
         console.error(e);
         return {

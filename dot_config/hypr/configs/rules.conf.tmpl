@@ -37,6 +37,13 @@ windowrulev2=opacity 0.95 override 0.95 override 0.95 override, title:^(PRE_SLEE
 windowrulev2=xray off, title:^(PRE_SLEEP_WINDOW)$
 windowrulev2=float, title: ^(Sign in - Google Accounts*)$
 
+# wofi window rules (normal window mode)
+windowrulev2=float,class:^(wofi)$
+windowrulev2=opacity 0.99999 0.99999,class:^(wofi)$
+windowrulev2=center,class:^(wofi)$
+windowrulev2=stayfocused,class:^(wofi)$
+windowrulev2=pin,class:^(wofi)$
+
 # pavucontrol rules
 windowrulev2=float,class:^(org.pulseaudio.pavucontrol)$
 windowrulev2=center,class:^(org.pulseaudio.pavucontrol)$

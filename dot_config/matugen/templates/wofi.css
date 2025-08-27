@@ -1,37 +1,57 @@
+/* GTK workarounds for clean rendering */
+* {
+    background-image: none;
+    -gtk-icon-shadow: none;
+    text-shadow: none;
+    box-shadow: none;
+}
+
 window {
     margin: 0px;
-    border: 1px solid {{colors.primary.hex}};
-    background-color: {{colors.surface.hex}};
+    border: none;
+    background-color: {{colors.surface.hex}}; 
+    background: {{colors.surface.hex}};
+    border-radius: 12px;
+    width: 400px;
     }
     
     #input {
-    margin: 5px;
+    margin: 8px;
+    padding: 8px 12px;
     border: none;
+    border-radius: 8px;
     color: {{colors.on_surface.hex}};
     background-color: {{colors.surface_variant.hex}};
-    }
-    
-    #inner-box {
-    margin: 5px;
-    border: none;
-    background-color: {{colors.surface.hex}};
+    font-size: 14px;
     }
     
     #outer-box {
-    margin: 5px;
+    margin: 0;
     border: none;
     background-color: {{colors.surface.hex}};
+    background: {{colors.surface.hex}};
+    border-radius: 12px;
+    }
+    
+    #inner-box {
+    margin: 4px;
+    border: none;
+    background-color: {{colors.surface.hex}};
+    background: {{colors.surface.hex}};
+    border-radius: 8px;
     }
     
     #scroll {
     margin: 0px;
     border: none;
+    background-color: {{colors.surface.hex}};
     }
     
     #text {
-    margin: 5px;
+    margin: 8px 12px;
     border: none;
     color: {{colors.on_surface.hex}};
+    font-size: 14px;
     } 
     
     #entry.activatable #text {
@@ -44,6 +64,8 @@ window {
     
     #entry:selected {
     background-color: {{colors.primary_container.hex}};
+    border-radius: 6px;
+    margin: 2px 4px;
     }
     
     #entry:selected #text {
