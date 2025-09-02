@@ -230,8 +230,30 @@ local function create_adapter(config)
     
     -- Add test name filters if running specific tests
     if position.type == "test" then
+      -- For individual test, also specify the file
+      local test_file = vim.fn.fnamemodify(file_path, ":.")
+      if package_dir then
+        local package_name = vim.fn.fnamemodify(package_dir, ":t")
+        if file_path:find("/" .. package_name .. "/") then
+          test_file = file_path:match(".*/" .. package_name .. "/(.*)")
+        end
+      end
+      if test_file then
+        table.insert(command, test_file)
+      end
       table.insert(command, "--testNamePattern=" .. position.name)
     elseif position.type == "namespace" then
+      -- For namespace, also specify the file
+      local test_file = vim.fn.fnamemodify(file_path, ":.")
+      if package_dir then
+        local package_name = vim.fn.fnamemodify(package_dir, ":t")
+        if file_path:find("/" .. package_name .. "/") then
+          test_file = file_path:match(".*/" .. package_name .. "/(.*)")
+        end
+      end
+      if test_file then
+        table.insert(command, test_file)
+      end
       table.insert(command, "--testNamePattern=" .. position.name)
     end
     
@@ -243,6 +265,33 @@ local function create_adapter(config)
         position_id = position.id,
       }
     }
+    
+    -- DAP debugging support 
+    local function get_dap_config(strategy, command, cwd)
+      local config = {
+        dap = function()
+          return {
+            name = "Debug Jest Tests",
+            type = "pwa-node",
+            request = "launch", 
+            args = { unpack(command, 2) },
+            runtimeExecutable = command[1],
+            console = "integratedTerminal",
+            internalConsoleOptions = "neverOpen",
+            rootPath = "${workspaceFolder}",
+            cwd = cwd or "${workspaceFolder}",
+            skipFiles = {
+              "<node_internals>/**"
+            },
+          }
+        end,
+      }
+      if config[strategy] then
+        return config[strategy]()
+      end
+    end
+    
+    spec.strategy = get_dap_config(args.strategy, command, package_dir)
     
     return spec
   end
