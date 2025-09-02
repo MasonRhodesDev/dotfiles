@@ -41,6 +41,9 @@ function M.config()
     { "<leader>tw", "<cmd>lua require('neotest').watch.toggle(vim.fn.expand('%'))<cr>", desc = "Test Watch" },
   }
 
+  -- Store project config globally for LSP formatting access
+  _G.current_project_config = nil
+
   -- Cache for neotest configurations
   local config_cache = {}
   local last_configured_dir = ""
@@ -181,6 +184,9 @@ function M.config()
     
     -- Apply project configuration if found
     if project_config then
+      -- Store globally for LSP access
+      _G.current_project_config = project_config
+      
       -- Check if notifications should be enabled (default is suppressed)
       if project_config.suppress_notifications == false then
         suppress_notifications = false

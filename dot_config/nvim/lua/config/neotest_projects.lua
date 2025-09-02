@@ -13,7 +13,12 @@ return {
         auto_detect_package_root = true,
       })
     },
-    suppress_notifications = true
+    suppress_notifications = true,
+    lsp_formatting = {
+      filter = function(client) 
+        return client.name == "vtsls" or client.name == "eslint"
+      end
+    }
   },
   
   -- Add more git repositories here as needed
