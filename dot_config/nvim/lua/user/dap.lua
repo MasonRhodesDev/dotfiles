@@ -105,11 +105,66 @@ function M.config()
         sourceMaps = true,
         protocol = "inspector",
       },
-      -- Debug Jest Tests
+      -- Debug Jest Tests (Monorepo aware)
       {
         type = "pwa-node",
         request = "launch",
         name = "Debug Jest Tests",
+        runtimeExecutable = "node",
+        runtimeArgs = function()
+          local current_file = vim.fn.expand("%:p")
+          local jest_config = vim.fn.findfile("jest.config.js", current_file .. ";")
+          if jest_config == "" then
+            jest_config = vim.fn.findfile("jest.config.mjs", current_file .. ";")
+          end
+          
+          if jest_config ~= "" then
+            local workspace_dir = vim.fn.fnamemodify(jest_config, ":h")
+            return {
+              workspace_dir .. "/node_modules/jest/bin/jest.js",
+              "--runInBand",
+            }
+          else
+            return {
+              "./node_modules/jest/bin/jest.js",
+              "--runInBand",
+            }
+          end
+        end,
+        rootPath = function()
+          local current_file = vim.fn.expand("%:p")
+          local package_json = vim.fn.findfile("package.json", current_file .. ";")
+          if package_json ~= "" then
+            return vim.fn.fnamemodify(package_json, ":h")
+          end
+          return "${workspaceFolder}"
+        end,
+        cwd = function()
+          local current_file = vim.fn.expand("%:p")
+          local jest_config = vim.fn.findfile("jest.config.js", current_file .. ";")
+          if jest_config == "" then
+            jest_config = vim.fn.findfile("jest.config.mjs", current_file .. ";")
+          end
+          
+          if jest_config ~= "" then
+            return vim.fn.fnamemodify(jest_config, ":h")
+          else
+            local package_json = vim.fn.findfile("package.json", current_file .. ";")
+            if package_json ~= "" then
+              return vim.fn.fnamemodify(package_json, ":h")
+            end
+            return "${workspaceFolder}"
+          end
+        end,
+        console = "integratedTerminal",
+        internalConsoleOptions = "neverOpen",
+        sourceMaps = true,
+      },
+      -- Debug Jest Tests (Current workspace)
+      {
+        type = "pwa-node",
+        request = "launch",
+        name = "Debug Jest Tests (Workspace)",
         runtimeExecutable = "node",
         runtimeArgs = {
           "./node_modules/jest/bin/jest.js",

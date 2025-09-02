@@ -28,6 +28,7 @@
   "neogit": { "branch": "master", "commit": "aec66c46c132a019296e9e73a2ef6d753bf15563" },
   "neotest": { "branch": "master", "commit": "35a59c1f59dbb954d92b74ab64a966a668cea495" },
   "neotest-bash": { "branch": "main", "commit": "57eab5b80a5296dc3fc5b22112b3ed78da3a5732" },
+  "neotest-jest": { "branch": "main", "commit": "ae9c269c8b3759cd9bceb3721fc0098263e7f25f" },
   "neotest-plenary": { "branch": "master", "commit": "3523adcf9ffaad1911960c5813b0136c1b63a2ec" },
   "neotest-python": { "branch": "master", "commit": "ed9b4d794b89044cc32e5476e637936331473c6e" },
   "neotest-rust": { "branch": "main", "commit": "2c9941d4a358839918fac21d20fc8fef0e1ad05f" },
@@ -59,6 +60,5 @@
   "toggleterm.nvim": { "branch": "main", "commit": "9a88eae817ef395952e08650b3283726786fb5fb" },
   "vim-illuminate": { "branch": "master", "commit": "0d1e93684da00ab7c057410fecfc24f434698898" },
   "vim-test": { "branch": "master", "commit": "5fb927e90e1ca11c656762f8528000312f842b1e" },
-  "wezterm-config.nvim": { "branch": "main", "commit": "9ce616b5b1a00fbbbeca5c89aaf89d774dbec3de" },
   "which-key.nvim": { "branch": "main", "commit": "370ec46f710e058c9c1646273e6b225acf47cbed" }
 }
