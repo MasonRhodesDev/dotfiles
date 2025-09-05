@@ -75,7 +75,7 @@ function M.config()
           filter = _G.current_project_config.lsp_formatting.filter
         else
           filter = function(client) 
-            return client.name == 'null-ls' or (client.name ~= 'typescript-tools' and client.name ~= 'vtsls' and client.name ~= 'eslint') 
+            return client.name == 'null-ls' or (client.name ~= 'typescript-tools' and client.name ~= 'vtsls' and client.name ~= 'eslint' and client.name ~= 'vue_ls') 
           end
         end
         vim.lsp.buf.format({async = true, filter = filter})
@@ -84,6 +84,22 @@ function M.config()
     },
     { "<leader>lh", "<cmd>lua require('user.lspconfig').toggle_inlay_hints()<cr>", desc = "Hints" },
     { "<leader>li", "<cmd>LspInfo<cr>", desc = "Info" },
+    {
+      "<leader>lI",
+      function()
+        vim.lsp.buf.code_action({
+          filter = function(action)
+            return action.kind and (
+              action.kind:match("source%.addMissingImports") or
+              action.kind:match("quickfix%..*import") or
+              action.title:lower():match("import")
+            )
+          end,
+          apply = true,
+        })
+      end,
+      desc = "Add Missing Imports",
+    },
     { "<leader>lj", "<cmd>lua vim.diagnostic.goto_next()<cr>", desc = "Next Diagnostic" },
     { "<leader>lk", "<cmd>lua vim.diagnostic.goto_prev()<cr>", desc = "Prev Diagnostic" },
     { "<leader>ll", "<cmd>lua vim.lsp.codelens.run()<cr>", desc = "CodeLens Action" },
