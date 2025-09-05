@@ -12,5 +12,5 @@ app=$(wofi --show drun --term wezterm --allow-images -W 800 -D key_expand=Tab -i
 
 # If an app was selected, launch it
 if [ -n "$app" ]; then
-    uwsm app -- "$app" >/dev/null 2>&1 &
+    (uwsm app -- "$app") </dev/null >/dev/null 2>&1 &
 fi

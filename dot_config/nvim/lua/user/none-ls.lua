@@ -23,7 +23,16 @@ function M.config()
       require("none-ls.formatting.eslint_d").with({
         filetypes = { "typescript", "javascript", "typescriptreact", "javascriptreact", "vue" },
         condition = function(utils)
-          return utils.root_has_file({ "eslint.config.js", ".eslintrc.js", ".eslintrc.json", ".eslintrc" })
+          -- Search up the directory tree from current buffer, not just project root
+          local current_file = vim.api.nvim_buf_get_name(0)
+          if current_file == "" then return false end
+          
+          local config_files = { "eslint.config.js", ".eslintrc.js", ".eslintrc.json", ".eslintrc" }
+          local found = vim.fs.find(config_files, { 
+            path = vim.fn.fnamemodify(current_file, ":p:h"),
+            upward = true 
+          })
+          return #found > 0
         end,
       }),
     },
