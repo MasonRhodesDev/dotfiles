@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Redirect all output to prevent command interpretation
+# Redirect all output to prevent any command interpretation
 exec 1>/dev/null 2>&1
 
 # Check if wofi is already running
@@ -10,10 +10,12 @@ if pgrep -x "wofi" > /dev/null; then
     exit 0
 fi
 
-# Launch wofi drun mode 
-app=$(wofi --show drun --term wezterm --allow-images -W 800 -D key_expand=Tab -i 2>/dev/null)
+# Launch wofi in drun mode with desktop file output
+# This outputs the path to the .desktop file instead of executing the app
+desktop_file=$(wofi --show drun --term wezterm --allow-images -W 800 -D key_expand=Tab -i --define drun-print_desktop_file=true 2>/dev/null)
 
-# If an app was selected, launch it
-if [ -n "$app" ]; then
-    uwsm app -- "$app" &
+# If a desktop file was selected, launch it properly with uwsm
+if [ -n "$desktop_file" ]; then
+    # uwsm app handles desktop files correctly and manages systemd integration
+    uwsm app -- "$desktop_file" &
 fi
