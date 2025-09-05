@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Redirect all output to prevent command interpretation
+exec 1>/dev/null 2>&1
+
 # Check if wofi is already running
 if pgrep -x "wofi" > /dev/null; then
     # If wofi is running, kill it to toggle
@@ -7,10 +10,10 @@ if pgrep -x "wofi" > /dev/null; then
     exit 0
 fi
 
-# Launch wofi drun mode
+# Launch wofi drun mode 
 app=$(wofi --show drun --term wezterm --allow-images -W 800 -D key_expand=Tab -i 2>/dev/null)
 
 # If an app was selected, launch it
 if [ -n "$app" ]; then
-    (uwsm app -- "$app") </dev/null >/dev/null 2>&1 &
+    uwsm app -- "$app" &
 fi
