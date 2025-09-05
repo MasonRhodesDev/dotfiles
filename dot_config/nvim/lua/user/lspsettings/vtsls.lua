@@ -16,12 +16,37 @@ return {
           vue_plugin,
         },
       },
+      enableMoveToFileCodeAction = true,
+      autoUseWorkspaceTsdk = true,
+      experimental = {
+        completion = {
+          enableServerSideFuzzyMatch = true,
+          entriesLimit = 50,
+        }
+      }
     },
     typescript = {
+      suggest = {
+        autoImports = true,
+        completeFunctionCalls = true,
+        includeAutomaticOptionalChainCompletions = true,
+        importStatementSuggestions = true,
+      },
+      updateImportsOnFileMove = {
+        enabled = "always",
+      },
       preferences = {
         includePackageJsonAutoImports = "on",
         includeCompletionsForModuleExports = true,
         includeCompletionsForImportStatements = true,
+        importModuleSpecifier = "shortest",
+        quoteStyle = "single",
+        providePrefixAndSuffixTextForRename = true,
+      },
+      codeActionsOnSave = {
+        source = {
+          addMissingImports = { enabled = true },
+        },
       },
       referencesCodeLens = {
         enabled = true,
@@ -32,6 +57,20 @@ return {
       },
     },
     javascript = {
+      suggest = {
+        autoImports = true,
+        completeFunctionCalls = true,
+        includeAutomaticOptionalChainCompletions = true,
+        importStatementSuggestions = true,
+      },
+      updateImportsOnFileMove = {
+        enabled = "always",
+      },
+      codeActionsOnSave = {
+        source = {
+          addMissingImports = { enabled = true },
+        },
+      },
       referencesCodeLens = {
         enabled = true,
         showOnAllFunctions = true,
