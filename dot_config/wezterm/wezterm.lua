@@ -17,38 +17,31 @@ wezterm.on('user-var-changed', function(window, pane, name, value)
   window:set_config_overrides(overrides)
 end)
 
--- Material You colors generated from wallpaper
-config.colors = {
-  foreground = '#e2e2e9',
-  background = '#111318',
-  cursor_bg = '#aac7ff',
-  cursor_fg = '#09305f',
-  cursor_border = '#aac7ff',
-  selection_fg = '#d6e3ff',
-  selection_bg = '#274777',
-
-  ansi = {
-    '#111318',
-    '#ffb4ab',
-    '#a5d6a7',
-    '#fff59d',
-    '#aac7ff',
-    '#c4c6d0',
-    '#563e5c',
-    '#e2e2e9',
-  },
-
-  brights = {
-    '#1d2024',
-    '#ffb4ab',
-    '#c8e6c9',
-    '#ffecb3',
-    '#aac7ff',
-    '#c4c6d0',
-    '#563e5c',
-    '#e2e2e9',
-  },
-}
+-- Load dynamic colors from theme switcher
+local colors_file = wezterm.config_dir .. '/wezterm-colors.lua'
+local has_colors, colors_module = pcall(dofile, colors_file)
+if has_colors and colors_module then
+  config.colors = colors_module
+else
+  -- Fallback colors if theme switcher hasn't generated colors yet
+  config.colors = {
+    foreground = '#e2e2e9',
+    background = '#111318',
+    cursor_bg = '#aac7ff',
+    cursor_fg = '#09305f',
+    cursor_border = '#aac7ff',
+    selection_fg = '#d6e3ff',
+    selection_bg = '#274777',
+    ansi = {
+      '#111318', '#ffb4ab', '#a5d6a7', '#fff59d',
+      '#aac7ff', '#c4c6d0', '#563e5c', '#e2e2e9',
+    },
+    brights = {
+      '#1d2024', '#ffb4ab', '#c8e6c9', '#ffecb3',
+      '#aac7ff', '#c4c6d0', '#563e5c', '#e2e2e9',
+    },
+  }
+end
 
 -- Use default hyperlink rules and add file path detection
 config.hyperlink_rules = wezterm.default_hyperlink_rules()
