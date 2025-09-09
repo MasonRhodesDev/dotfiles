@@ -48,28 +48,68 @@ swaync_apply_theme() {
     local text_secondary="${on_surface_variant}"
     
     if [[ "$mode" == "light" ]]; then
-        # Light theme: match waybar's semi-transparent style
-        shadow_opacity="0.2"
-        # Use semi-transparent background like waybar
-        notification_bg="rgba(251, 248, 255, 0.9)"  # 90% opacity of #fbf8ff
-        control_bg="rgba(251, 248, 255, 0.9)"  # Same as waybar
-        widget_bg="transparent"  # Fully transparent for cards
+        # Light theme: use actual theme colors properly
+        shadow_opacity="0.15"
+        notification_bg="${surface}"  # Use the actual surface color (#fbf8ff)
+        control_bg="${surface}"  # Use the actual surface color (#fbf8ff)
+        widget_bg="${surface}"  # Same solid background as everything else
         text_primary="${on_surface}"  # Use theme text color
         text_secondary="${on_surface_variant}"  # Use theme secondary text
     fi
     
-    # Generate new themed style.css - clean modern design
+    # Generate new themed style.css - override defaults properly
     cat > "$style_file" << EOF
-/* SwayNC Theme - Material You Design */
+/* SwayNC Theme - Material You */
+
+/* Define color variables to override defaults */
+@define-color cc-bg ${control_bg};
+@define-color noti-border-color transparent;
+@define-color noti-bg ${notification_bg};
+@define-color noti-bg-opaque ${notification_bg};
+@define-color noti-bg-darker ${notification_bg};
+@define-color noti-bg-hover ${notification_bg};
+@define-color noti-bg-hover-opaque ${notification_bg};
+@define-color noti-bg-focus ${notification_bg};
+@define-color noti-close-bg ${error};
+@define-color noti-close-bg-hover ${error};
+@define-color text-color ${text_primary};
+@define-color text-color-disabled ${text_secondary};
+@define-color bg-selected ${primary};
+
 * {
   font-family: "SF Pro Text", sans-serif;
-  font-weight: normal;
   font-size: 14px;
+}
+
+/* Notification row */
+.notification-row {
+  outline: none;
+  background: transparent;
+}
+
+.notification-row:focus,
+.notification-row:hover {
+  background: transparent;
+}
+
+/* Notification background container */
+.notification-row .notification-background {
+  padding: 0;
+  background: transparent;
+}
+
+/* The actual notification */
+.notification-row .notification-background .notification {
+  background: ${notification_bg};
+  border-radius: 12px;
+  padding: 0;
+  border: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, ${shadow_opacity});
 }
 
 /* Control Center */
 .control-center {
-  background-color: ${control_bg};
+  background: ${control_bg};
   border-radius: 16px;
   margin: 12px;
   padding: 16px;
@@ -77,135 +117,147 @@ swaync_apply_theme() {
   color: ${text_primary};
 }
 
-/* Widget Titles */
-.control-center .widget-title > label {
-  color: ${text_primary};
-  font-size: 15px;
-  font-weight: 500;
-  margin-bottom: 8px;
-}
-
-.control-center .widget-title button {
-  background-color: ${primary};
-  color: ${on_primary};
-  border: none;
-  border-radius: 8px;
-  padding: 6px 12px;
-  font-size: 13px;
-}
-
-.control-center .widget-title button:hover {
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-/* Widget Spacing */
-.widget-dnd, .widget-volume, .widget-backlight, .widget-mpris, .widget-title {
-  margin-bottom: 8px;
-}
-
-/* Floating Notifications */
-.floating-notifications.background .notification-row .notification-background {
-  background-color: ${notification_bg};
-  border-radius: 12px;
-  margin: 12px;
-  padding: 0;
-  box-shadow: 0 3px 6px rgba(0, 0, 0, ${shadow_opacity});
-  border: none;
-}
-
-.floating-notifications.background .notification-row .notification-background .notification {
+/* Notification content */
+.notification-content {
   padding: 12px;
-  border-radius: 12px;
+  background: transparent;
 }
 
-.floating-notifications.background .notification-row .notification-background .notification .notification-content .summary {
+.notification-content .summary {
   color: ${text_primary};
   font-size: 15px;
   font-weight: 500;
   margin-bottom: 4px;
 }
 
-.floating-notifications.background .notification-row .notification-background .notification .notification-content .body {
+.notification-content .body {
   color: ${text_secondary};
   font-size: 13px;
 }
 
-.floating-notifications.background .notification-row .notification-background .close-button {
-  margin: 6px;
-  border-radius: 50%;
-  background-color: ${error};
+/* Close button */
+.notification-row .notification-background .close-button {
+  background: ${error};
   color: ${on_error};
-  min-width: 20px;
-  min-height: 20px;
+  border-radius: 50%;
+  min-width: 24px;
+  min-height: 24px;
+  padding: 0;
+  margin: 6px;
   border: none;
+  box-shadow: none;
 }
 
-.floating-notifications.background .notification-row .notification-background .close-button:hover {
+.notification-row .notification-background .close-button:hover {
   opacity: 0.8;
+  background: ${error};
 }
 
-/* Control Center Notifications */
-.control-center .notification-row .notification-background {
-  background-color: ${widget_bg};
+/* Floating notifications */
+.floating-notifications {
+  background: transparent;
+}
+
+.floating-notifications.background {
+  background: transparent;
+}
+
+/* Control center list */
+.control-center .control-center-list {
+  background: transparent;
+}
+
+.control-center .control-center-list .notification {
+  background: ${widget_bg};
   border-radius: 8px;
+  padding: 0;
   margin-top: 8px;
-  border: none;
+  border: 1px solid ${outline};
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.control-center .notification-row .notification-background:hover {
-  background-color: rgba(0, 0, 0, 0.08);
+/* Widget titles */
+.widget-title {
+  margin-bottom: 8px;
 }
 
-.control-center .notification-row .notification-background .notification {
-  padding: 10px;
-  border-radius: 8px;
-}
-
-.control-center .notification-row .notification-background .notification .notification-content .summary {
+.widget-title > label {
   color: ${text_primary};
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 500;
-  margin-bottom: 2px;
 }
 
-.control-center .notification-row .notification-background .notification .notification-content .body {
-  color: ${text_secondary};
+.widget-title button {
+  background: ${primary};
+  color: ${on_primary};
+  border-radius: 8px;
+  padding: 6px 12px;
   font-size: 13px;
-}
-
-/* Do Not Disturb Switch */
-.widget-dnd > switch {
-  border-radius: 12px;
-  background-color: ${surface_variant};
   border: none;
-  min-height: 20px;
 }
 
-.widget-dnd > switch:checked {
-  background-color: ${primary};
+.widget-title button:hover {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-/* Volume and Backlight Sliders */
-.widget-volume, .widget-backlight {
+/* Widgets */
+.widget-dnd,
+.widget-volume, 
+.widget-backlight,
+.widget-mpris {
   background: ${widget_bg};
   border-radius: 8px;
   padding: 10px;
   margin: 4px 0;
+  border: 1px solid ${outline};
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.widget-volume scale trough, .widget-backlight scale trough {
-  background-color: ${outline};
+/* DND Switch */
+.widget-dnd > switch {
+  background: ${surface_variant};
+  border-radius: 12px;
+  min-height: 20px;
+  min-width: 40px;
+  border: none;
+}
+
+.widget-dnd > switch:checked {
+  background: ${primary};
+}
+
+.widget-dnd > switch slider {
+  background: ${on_surface};
+  border-radius: 50%;
+  min-width: 16px;
+  min-height: 16px;
+  margin: 2px;
+}
+
+/* Sliders */
+.widget-volume scale,
+.widget-backlight scale {
+  min-height: 20px;
+  background: transparent;
+}
+
+.widget-volume scale trough,
+.widget-backlight scale trough {
+  background: ${outline};
   border-radius: 4px;
   min-height: 4px;
 }
 
-.widget-volume scale highlight, .widget-backlight scale highlight {
-  background-color: ${primary};
+.widget-volume scale highlight,
+.widget-backlight scale highlight {
+  background: ${primary};
   border-radius: 4px;
+  min-height: 4px;
 }
 
-.widget-volume scale slider, .widget-backlight scale slider {
-  background-color: ${on_surface};
+.widget-volume scale slider,
+.widget-backlight scale slider {
+  background: ${on_surface};
   border-radius: 50%;
   min-width: 14px;
   min-height: 14px;
@@ -213,17 +265,10 @@ swaync_apply_theme() {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
-/* Media Player Widget */
-.widget-mpris {
-  background: ${widget_bg};
-  border-radius: 8px;
-  padding: 10px;
-  margin: 4px 0;
-}
-
+/* Media Player */
 .widget-mpris-player {
   padding: 8px;
-  border-radius: 6px;
+  background: transparent;
 }
 
 .widget-mpris-title {
@@ -239,23 +284,28 @@ swaync_apply_theme() {
 }
 
 .widget-mpris button {
-  background-color: rgba(0, 0, 0, 0.08);
+  background: ${surface_variant};
   color: ${text_primary};
-  border: none;
   border-radius: 50%;
-  padding: 0;
   min-width: 32px;
   min-height: 32px;
+  padding: 0;
   margin: 2px;
+  border: none;
 }
 
 .widget-mpris button:hover {
-  background-color: rgba(0, 0, 0, 0.12);
+  background: ${outline};
 }
 
 .widget-mpris button:active {
-  background-color: ${primary};
+  background: ${primary};
   color: ${on_primary};
+}
+
+/* Blank window */
+.blank-window {
+  background: transparent;
 }
 EOF
     
