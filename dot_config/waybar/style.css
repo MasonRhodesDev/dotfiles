@@ -1,65 +1,73 @@
 @import url('../matugen/colors.css');
 
+/* Base styling - aligned with swaync */
 * {
-    font-size: 17px;
-    font-family: "CodeNewRoman Nerd Font Propo";
+    font-size: 14px;
+    font-family: "SF Pro Text", sans-serif;
+    font-weight: normal;
 }
 
 window#waybar {
     all: unset;
 }
 
+/* Main container modules - scalable and consistent */
 .modules-left,
 .modules-right,
 .modules-center {
-    padding: 1px;
-    margin-top: 1.25px;
-    margin-bottom: 1.25px;
-    margin-bottom: 0px;
-    margin-top: 5px;
+    padding: 0;
+    margin-top: 8px;
+    margin-bottom: 4px;
+    margin-right: 8px;
+    margin-left: 8px;
 }
 
-.modules-left {
-    border-radius: 10px;
-    background: alpha(@background, .6);
-    box-shadow: 0px 0px 2px rgba(0, 0, 0, .6);
+.modules-left,
+.modules-right {
+    border-radius: 8px;
+    background: alpha(@background, 0.9);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    padding-top: 1px;
+    padding-bottom: 1px;
+    padding-left: 8px;
+    padding-right: 8px;
 }
 
 .modules-center {
-    /* padding: 0; */
-    /* margin: 0; */
     background: transparent;
     box-shadow: none;
 }
 
-.modules-right {
-    /* padding-right: 7px; */
-    /* margin-right: 7px; */
-    border-radius: 10px;
-    background: alpha(@background, .6);
-    box-shadow: 0px 0px 2px rgba(0, 0, 0, .6);
+/* Media module - same height as other containers, auto-hide when empty */
+#custom-media {
+    padding-left: 12px;
+    padding-right: 12px;
+    border-radius: 8px;
+    margin: 0px;
+    background: alpha(@background, 0.9);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    color: @foreground;
 }
 
-/* Style the media module itself so it matches when present */
-#custom-media {
-    padding: 7px;
-    margin: 2.5 0 1.25 0;
-    border-radius: 10px;
-    background: alpha(@background, .6);
-    box-shadow: 0px 0px 2px rgba(0, 0, 0, .6);
-    color: @color7;
-    transition: all .3s ease;
-}
+/* Media module auto-hides when empty (waybar handles this automatically) */
 
 #custom-media:hover {
-    color: @color9;
+    color: @accent;
 }
 
+/* Tooltip styling */
 tooltip {
     background: @background;
-    color: @color7;
+    color: @foreground;
+    border-radius: 8px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+    padding-left: 10px;
+    padding-right: 10px;
+    border: 1px solid alpha(@foreground, 0.2);
 }
 
+/* Module hover effects - simplified */
 #clock:hover,
 #custom-updates:hover,
 #bluetooth:hover,
@@ -69,150 +77,115 @@ tooltip {
 #memory:hover,
 #temperature:hover,
 #pulseaudio:hover,
-#idle_inhibitor:hover {
-    transition: all .3s ease;
+#custom-idle-inhibitor:hover {
     color: @accent;
 }
 
+/* Notification module - matches workspace styling */
 #custom-notification {
-    padding: 4px 8px;
-    margin: 0 4px;
-    border-radius: 10px;
-    background: alpha(@background, .25);
-    color: @foreground;
-    transition: background .2s ease;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    padding-left: 8px;
+    padding-right: 6px;
+    border-radius: 8px;
+    color: alpha(@accent, 0.4);
+    background: transparent;
     border: none;
     box-shadow: none;
     outline: none;
+}
+
+#custom-notification:hover {
+    background-color: alpha(@accent, 0.3);
+    box-shadow: none;
 }
 
 #custom-notification.notification,
 #custom-notification.dnd-notification,
 #custom-notification.inhibited-notification,
 #custom-notification.dnd-inhibited-notification {
-    background: alpha(@accent, .3);
-    color: @background;
+    color: @accent;
+    background-color: alpha(@accent, 0.1);
 }
 
-#custom-notification:hover {
-    background: alpha(@background, .35);
+/* Individual modules - consistent padding */
+#clock,
+#custom-updates,
+#bluetooth,
+#network,
+#battery,
+#cpu,
+#memory,
+#temperature,
+#pulseaudio,
+#custom-idle-inhibitor,
+#tray {
+    padding-left: 4px;
+    padding-right: 4px;
     color: @foreground;
-    border: none;
-    box-shadow: none;
-    outline: none;
-}
-
-#clock {
-    padding: 0px 5px;
-    color: @foreground;
-    transition: all .3s ease;
-}
-
-#custom-updates {
-    padding: 0px 5px;
-    transition: all .3s ease;
-    color: @foreground;
-
 }
 
 #workspaces {
-    padding: 0px 5px;
+    padding-left: 0px;
+    padding-right: 0px;
 }
 
+/* Workspace buttons - consistent styling */
 #workspaces button {
     all: unset;
-    padding: 3px 8px 6px;
-    /* ensure 1px underline sits fully inside hover outline */
-    border-radius: 8px;
-    color: alpha(@accent, .4);
-    transition: all .2s ease;
+    padding-top: 1px;
+    padding-bottom: 1px;
+    padding-left: 8px;
+    padding-right: 8px;
+    border-radius: 6px;
+    color: alpha(@accent, 0.4);
 }
 
-#workspaces button:hover {
-    color: @accent;
-    background-color: alpha(@background, .25);
-    /* don't touch background-image so underline remains visible */
-    box-shadow: none;
-    /* remove green outline */
-    border-radius: 8px;
-    transition: all .2s ease;
-}
-
-#workspaces button.active:hover,
+#workspaces button:hover, 
 #workspaces button.focused:hover,
+#workspaces button.active:hover,
 #workspaces button.visible:hover {
+    background-color: alpha(@accent, 0.3);
     box-shadow: none;
-    /* remove green outline */
 }
 
-#workspaces button.empty.active:hover,
-#workspaces button.empty.focused:hover,
-#workspaces button.empty.visible:hover {
-    box-shadow: none;
-    /* remove green outline */
-}
-
+/* Active workspace styling */
 #workspaces button.active,
 #workspaces button.visible,
 #workspaces button.focused {
     color: @accent;
-    border: none;
-    text-shadow: 0px 0px 2px rgba(0, 0, 0, .5);
+    background-color: alpha(@accent, 0.1);
+    text-shadow: 0 0 2px rgba(0, 0, 0, 0.3);
 }
 
-/* Underline only the Hyprland active workspace (per monitor) using background-image */
+/* Underline for active workspace */
 #workspaces button.active,
 #workspaces button.empty.active {
-    /* draw a 1px line at the bottom that survives hover */
     background-image: linear-gradient(to bottom, transparent calc(100% - 1px), @accent calc(100% - 1px));
     background-size: 100% 100%;
     background-repeat: no-repeat;
     background-position: bottom left;
 }
 
+/* Empty workspace styling */
 #workspaces button.empty {
-    color: rgba(0, 0, 0, 0);
-    border: none;
-    text-shadow: 0px 0px 1.5px rgba(0, 0, 0, .2);
+    color: transparent;
+    text-shadow: 0 0 1.5px rgba(0, 0, 0, 0.2);
 }
 
 #workspaces button.empty:hover {
-    color: rgba(0, 0, 0, 0);
-    border: none;
-    text-shadow: 0px 0px 1.5px rgba(0, 0, 0, .5);
-    transition: all 1s ease;
+    color: transparent;
+    text-shadow: 0 0 1.5px rgba(0, 0, 0, 0.4);
 }
 
 #workspaces button.empty.active,
 #workspaces button.empty.visible,
 #workspaces button.empty.focused {
     color: @accent;
-    border: none;
-    text-shadow: 0px 0px 2px rgba(0, 0, 0, .5);
+    text-shadow: 0 0 2px rgba(0, 0, 0, 0.3);
 }
 
-/* remove inset underline shadows entirely (handled by ::after now) */
-#bluetooth {
-    padding: 0px 5px;
-    transition: all .3s ease;
-    color: @foreground;
-
-}
-
-#network {
-    padding: 0px 10px 0px 0px;
-    transition: all .3s ease;
-    color: @foreground;
-
-}
-
-#battery {
-    padding: 0px 5px;
-    transition: all .3s ease;
-    color: @foreground;
-
-
-}
+/* Battery states - keep special colors */
 
 #battery.charging {
     color: #26A65B;
@@ -231,74 +204,30 @@ tooltip {
     animation-direction: alternate;
 }
 
+/* Special module states */
 #group-expand {
-    padding: 0px 5px;
-    transition: all .3s ease;
+    padding-left: 6px;
+    padding-right: 6px;
 }
 
 #custom-expand {
-    padding: 0px 5px;
-    color: alpha(@foreground, .2);
-    text-shadow: 0px 0px 2px rgba(0, 0, 0, .7);
-    transition: all .3s ease;
+    padding-left: 6px;
+    padding-right: 6px;
+    color: alpha(@foreground, 0.3);
+    text-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
 }
 
 #custom-expand:hover {
-    color: rgba(255, 255, 255, .2);
-    text-shadow: 0px 0px 2px rgba(255, 255, 255, .5);
-}
-
-#custom-colorpicker {
-    padding: 0px 5px;
-}
-
-#cpu,
-#memory,
-#temperature {
-    padding: 0px 5px;
-    transition: all .3s ease;
-    color: @foreground;
-
+    color: alpha(@foreground, 0.6);
+    text-shadow: 0 0 2px rgba(0, 0, 0, 0.3);
 }
 
 #custom-endpoint {
     color: transparent;
-    text-shadow: 0px 0px 1.5px rgba(0, 0, 0, 1);
-
+    text-shadow: 0 0 1.5px rgba(0, 0, 0, 1);
 }
 
-#tray {
-    padding: 0px 5px;
-    transition: all .3s ease;
-
-}
-
-#tray menu * {
-    padding: 0px 5px;
-    transition: all .3s ease;
-}
-
-#tray menu separator {
-    padding: 0px 5px;
-    transition: all .3s ease;
-}
-
-#custom-idle-inhibitor {
-    padding: 0px 5px;
-    transition: all .3s ease;
-    color: @on_background;
-}
-
-#custom-idle-inhibitor.activated {
-    color: @on_background;
-}
-
+#custom-idle-inhibitor.activated,
 #custom-idle-inhibitor.deactivated {
     color: @on_background;
-}
-
-#pulseaudio {
-    padding: 0px 5px;
-    transition: all .3s ease;
-    color: @foreground;
 }
