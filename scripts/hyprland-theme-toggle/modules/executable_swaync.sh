@@ -4,7 +4,7 @@
 
 source "$(dirname "${BASH_SOURCE[0]}")/base.sh"
 
-executable_swaync_apply_theme() {
+swaync_apply_theme() {
     local wallpaper="$1"
     local mode="$2"
     local state_file="$3"

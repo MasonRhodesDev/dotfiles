@@ -129,5 +129,9 @@ except Exception as e:
     sys.exit(1)
 "
     
+    # WezTerm should automatically detect the color file change
+    # due to add_to_config_reload_watch_list in the config
+    log_module "$module_name" "Colors generated - WezTerm should auto-reload"
+    
     return $?
 }

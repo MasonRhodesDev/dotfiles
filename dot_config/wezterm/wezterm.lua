@@ -22,6 +22,11 @@ end)
 
 -- Load dynamic colors from theme switcher
 local colors_file = wezterm.config_dir .. '/wezterm-colors.lua'
+
+-- Add the colors file to the watch list for automatic reloading
+wezterm.add_to_config_reload_watch_list(colors_file)
+
+-- Load the colors
 local has_colors, colors_module = pcall(dofile, colors_file)
 if has_colors and colors_module then
   config.colors = colors_module
