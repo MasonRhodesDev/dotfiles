@@ -4,7 +4,7 @@
 
 source "$(dirname "${BASH_SOURCE[0]}")/base.sh"
 
-swaync_apply_theme() {
+executable_swaync_apply_theme() {
     local wallpaper="$1"
     local mode="$2"
     local state_file="$3"
@@ -25,6 +25,20 @@ swaync_apply_theme() {
     # Extract colors for current mode
     local surface=$(echo "$colors_json" | jq -r ".colors.${mode}.surface")
     local on_surface=$(echo "$colors_json" | jq -r ".colors.${mode}.on_surface")
+    
+    # Debug: Check if surface is empty
+    if [[ -z "$surface" ]]; then
+        log_module "$module_name" "ERROR: Surface color is empty! colors_json length: ${#colors_json}"
+        # Fallback to hardcoded values based on mode
+        if [[ "$mode" == "dark" ]]; then
+            surface="#12131a"
+            on_surface="#e3e1ec"
+        else
+            surface="#fbf8ff"
+            on_surface="#1a1b23"
+        fi
+        log_module "$module_name" "Using fallback surface color: $surface"
+    fi
     local surface_variant=$(echo "$colors_json" | jq -r ".colors.${mode}.surface_variant")
     local on_surface_variant=$(echo "$colors_json" | jq -r ".colors.${mode}.on_surface_variant")
     local primary=$(echo "$colors_json" | jq -r ".colors.${mode}.primary")
@@ -39,23 +53,16 @@ swaync_apply_theme() {
         cp "$style_file" "${style_file}.backup"
     fi
     
-    # Calculate values based on mode - matching waybar style
-    local shadow_opacity="0.2"
+    # Use consistent theme variables for both light and dark modes
+    local shadow_opacity="0.15"
     local notification_bg="${surface}"
     local control_bg="${surface}"
-    local widget_bg="transparent"
+    local widget_bg="${surface}"
     local text_primary="${on_surface}"
     local text_secondary="${on_surface_variant}"
     
-    if [[ "$mode" == "light" ]]; then
-        # Light theme: use actual theme colors properly
-        shadow_opacity="0.15"
-        notification_bg="${surface}"  # Use the actual surface color (#fbf8ff)
-        control_bg="${surface}"  # Use the actual surface color (#fbf8ff)
-        widget_bg="${surface}"  # Same solid background as everything else
-        text_primary="${on_surface}"  # Use theme text color
-        text_secondary="${on_surface_variant}"  # Use theme secondary text
-    fi
+    # Debug widget_bg value
+    log_module "$module_name" "widget_bg value: '$widget_bg' (surface: '$surface')"
     
     # Generate new themed style.css - override defaults properly
     cat > "$style_file" << EOF

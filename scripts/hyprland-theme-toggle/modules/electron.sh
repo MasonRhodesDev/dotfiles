@@ -11,6 +11,10 @@ electron_apply_theme() {
     
     local module_name="Electron"
     
+    # Temporarily disabled for performance
+    log_module "$module_name" "Module disabled for performance"
+    return 0
+    
     log_module "$module_name" "Applying $mode theme to Electron applications"
     
     # Ensure Electron apps can use portal for theme detection

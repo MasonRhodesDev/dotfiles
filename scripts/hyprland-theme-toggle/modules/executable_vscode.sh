@@ -11,6 +11,10 @@ vscode_apply_theme() {
     
     local module_name="VSCode"
     
+    # Temporarily disabled for performance
+    log_module "$module_name" "Module disabled for performance"
+    return 0
+    
     log_module "$module_name" "Applying $mode theme to VS Code/Cursor"
     
     # Define settings paths for different editors
