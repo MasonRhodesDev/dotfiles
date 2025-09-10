@@ -20,22 +20,13 @@ wezterm.on('user-var-changed', function(window, pane, name, value)
   window:set_config_overrides(overrides)
 end)
 
--- Watch the colors file for changes
-local home = os.getenv("HOME")
-local colors_file = home .. '/.config/wezterm/wezterm-colors.lua'
-wezterm.add_to_config_reload_watch_list(colors_file)
-
--- Clear any cached module
-package.loaded['wezterm-colors'] = nil
-
--- Load colors using dofile to avoid module path issues
-local load_colors = dofile(colors_file)
-if load_colors then
-  config.colors = load_colors
-  wezterm.log_info('Loaded colors from: ' .. colors_file)
+-- Load dynamic colors from theme switcher
+local colors_file = wezterm.config_dir .. '/wezterm-colors.lua'
+local has_colors, colors_module = pcall(dofile, colors_file)
+if has_colors and colors_module then
+  config.colors = colors_module
 else
   -- Fallback colors if theme switcher hasn't generated colors yet
-  wezterm.log_error('Failed to load colors from: ' .. colors_file)
   config.colors = {
     foreground = '#e2e2e9',
     background = '#111318',
