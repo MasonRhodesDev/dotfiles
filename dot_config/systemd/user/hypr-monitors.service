@@ -1,0 +1,15 @@
+[Unit]
+Description=Hyprland Monitor Configuration
+After=graphical-session.target
+Wants=graphical-session.target
+
+[Service]
+Type=oneshot
+ExecStart=/home/mason/.config/hypr/configs/monitors.sh
+StandardOutput=journal
+StandardError=journal
+Environment=WAYLAND_DISPLAY=%i
+Environment=XDG_CURRENT_DESKTOP=Hyprland
+
+[Install]
+WantedBy=graphical-session.target

@@ -1,0 +1,10 @@
+[Unit]
+Description=Watch for monitor configuration changes
+After=graphical-session.target
+
+[Path]
+PathModified=/sys/class/drm
+PathModified=/proc/modules
+
+[Install]
+WantedBy=graphical-session.target
