@@ -36,8 +36,13 @@ EOF
     
     log_module "$module_name" "Generated colors file: $colors_file"
     
-    # Waybar has reload_style_on_change enabled and will auto-reload when CSS changes
-    log_module "$module_name" "Colors updated - Waybar will auto-reload styles"
+    # Send SIGUSR2 to reload styles without restart (smoother than auto-reload)
+    if pgrep -x waybar >/dev/null; then
+        log_module "$module_name" "Signaling waybar to reload styles"
+        pkill -SIGUSR2 waybar
+    else
+        log_module "$module_name" "Waybar not running, no reload needed"
+    fi
     
     return 0
 }

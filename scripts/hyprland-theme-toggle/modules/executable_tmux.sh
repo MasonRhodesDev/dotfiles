@@ -10,7 +10,7 @@ tmux_apply_theme() {
     local state_file="$3"
     local colors_json="$4"
     
-    local config_file="$HOME/.tmux.conf"
+    local theme_file="$HOME/.config/tmux/tmux-theme.conf"
     local module_name="Tmux"
     
     # Check if tmux is installed
@@ -19,26 +19,19 @@ tmux_apply_theme() {
         return 0
     fi
     
-    # Check if theme is already cached
-    if theme_cached "$config_file" "$wallpaper" "$state_file"; then
-        log_module "$module_name" "Theme cached, skipping regeneration"
-        return 0
-    fi
+    # Create tmux config directory if it doesn't exist
+    mkdir -p "$(dirname "$theme_file")"
     
     log_module "$module_name" "Generating $mode theme"
     
-    # Generate tmux config using Python with passed colors JSON
+    # Generate tmux theme file using Python with passed colors JSON
     python3 -c "
-import json, sys, re
+import json, sys
 
 try:
     data = json.loads('$colors_json')
     colors = data.get('colors', {}).get('$mode', {})
     mode = '$mode'
-    
-    # Read existing tmux config
-    with open('$config_file', 'r') as f:
-        config_content = f.read()
     
     if mode == 'light':
         theme_colors = {
@@ -74,9 +67,10 @@ try:
         if value.startswith('#'):
             theme_colors[key] = value[1:]  # Remove # for tmux
     
-    # Define the tmux theme section
-    theme_section = f'''
-# Generated Material You theme for tmux
+    # Define the tmux theme content
+    theme_content = f'''# Generated Material You theme for tmux
+# Theme mode: {mode}
+
 # Normal mode: Green status bar background
 set -g status-style \"bg=#{theme_colors['normal_mode_bg']},fg=#{theme_colors['normal_mode_fg']}\"
 set -g status-left-style \"bg=#{theme_colors['normal_mode_bg']},fg=#{theme_colors['normal_mode_fg']}\"
@@ -106,26 +100,16 @@ set -g mode-style \"bg=#{theme_colors['accent']},fg=#{theme_colors['accent_fg']}
 set -g clock-mode-colour \"#{theme_colors['accent']}\"
 '''
     
-    # Remove all existing theme sections
-    pattern = r'# Generated Material You theme for tmux.*?(?=\\n#[^\\s]|\\n$|$)'
-    config_content = re.sub(pattern, '', config_content, flags=re.DOTALL)
+    # Write the theme file
+    with open('$theme_file', 'w') as f:
+        f.write(theme_content)
     
-    # Clean up any leftover empty lines
-    config_content = re.sub(r'\\n{3,}', '\\n\\n', config_content)
-    
-    # Always append theme at the very end to ensure it overrides any plugin settings
-    new_config = config_content + theme_section
-    
-    # Write the updated config
-    with open('$config_file', 'w') as f:
-        f.write(new_config)
-    
-    print('Generated tmux theme: $config_file')
+    print('Generated tmux theme: $theme_file')
     
     # Reload tmux config for all sessions
     import subprocess
     try:
-        subprocess.run(['tmux', 'source-file', '$config_file'], check=True, capture_output=True)
+        subprocess.run(['tmux', 'source-file', '$HOME/.tmux.conf'], check=True, capture_output=True)
         print('Reloaded tmux configuration')
     except subprocess.CalledProcessError:
         print('Note: Could not reload tmux config (no active sessions)')
