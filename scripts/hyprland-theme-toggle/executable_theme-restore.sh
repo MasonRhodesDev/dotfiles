@@ -5,7 +5,7 @@
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STATE_FILE="$HOME/.cache/theme_state"
-THEME_SWITCHER="$SCRIPT_DIR/executable_theme-toggle-modular.sh"
+THEME_SWITCHER="$SCRIPT_DIR/theme-toggle-modular.sh"
 
 # Function to get the current theme state with fallback
 get_theme_with_fallback() {
