@@ -222,24 +222,32 @@ function M.config()
     end
     
     ---@diagnostic disable: missing-fields
-    require("neotest").setup {
-      adapters = adapters,
-    }
+    vim.schedule(function()
+      require("neotest").setup {
+        adapters = adapters,
+      }
+    end)
     
     if not suppress_notifications then
       vim.notify("🚀 neotest configured with " .. #adapters .. " adapter(s)", vim.log.levels.INFO)
     end
   end
 
-  -- Initial configuration
-  configure_neotest()
+  -- Initial configuration - defer to avoid fast event issues
+  vim.schedule(function()
+    vim.defer_fn(function()
+      configure_neotest()
+    end, 100)
+  end)
 
   -- Reconfigure when directory changes or buffer enters
   local function trigger_reconfigure(event_name)
     -- Small delay to let project.nvim settle
-    vim.defer_fn(function()
-      configure_neotest(true)  -- Force reconfiguration
-    end, 200)  -- Longer delay for project.nvim
+    vim.schedule(function()
+      vim.defer_fn(function()
+        configure_neotest(true)  -- Force reconfiguration
+      end, 200)  -- Longer delay for project.nvim
+    end)
   end
 
   vim.api.nvim_create_autocmd("DirChanged", {

@@ -20,7 +20,20 @@ return {
       end
     }
   },
-  
+
+  ["github.com/thecvlb/stardust-front-end"] = {
+    adapters = {
+      require("neotest-vitest") {
+        vitestConfigPath = "vitest.config.ts",
+        filter_dir = function(name, rel_path, root)
+          -- Only handle vitest for unit test directories, exclude e2e
+          return name ~= "e2e" and name ~= "test-results"
+        end,
+      },
+    },
+    suppress_notifications = true
+  },
+
   -- Add more git repositories here as needed
   -- Format: ["github.com/user/repo"] = { neotest config }
   -- Examples:

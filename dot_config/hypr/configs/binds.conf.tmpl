@@ -53,6 +53,7 @@ bind=SHIFT, Print, exec, /home/{{ .chezmoi.username }}/scripts/record
 bind=$mainMod, L, exec, /home/{{ .chezmoi.username }}/scripts/lock_cmd
 bind=$mainMod, M, exec, ~/.config/wofi/power-menu.sh
 bind=$mainMod, T, exec, /home/{{ .chezmoi.username }}/scripts/hyprland-theme-toggle/theme-toggle-modular.sh
+bind=$mainMod, N, exec, swaync-client -t -sw
 bind=$mainMod, XF86AudioPlay, exec, ~/.config/wofi/change-default-audio-device.js WofiListAudioDevices
 bindl=, XF86AudioPlay, exec, ~/.config/swaync/scripts/media-osd.sh play-pause
 bindl=, XF86AudioStop, exec, ~/.config/swaync/scripts/media-osd.sh stop

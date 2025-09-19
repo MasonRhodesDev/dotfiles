@@ -11,7 +11,7 @@ local M = {
 function M.config()
   local wk = require "which-key"
   wk.add {
-    { "<leader>bb", "<cmd>Telescope buffers previewer=false<cr>", desc = "Find" },
+    { "<leader>bb", "<cmd>Telescope buffers<cr>", desc = "Find Buffers" },
     { "<leader>fb", "<cmd>Telescope git_branches<cr>", desc = "Checkout branch" },
     { "<leader>fc", "<cmd>Telescope colorscheme<cr>", desc = "Colorscheme" },
     { "<leader>ff", "<cmd>Telescope find_files<cr>", desc = "Find files" },
@@ -34,6 +34,8 @@ function M.config()
       selection_strategy = "reset",
       path_display = { "smart" },
       color_devicons = true,
+      borderchars = { "─", "│", "─", "│", "╭", "╮", "╯", "╰" },
+      winblend = 0,
       vimgrep_arguments = {
         "rg",
         "--color=never",
@@ -79,7 +81,7 @@ function M.config()
 
       buffers = {
         theme = "dropdown",
-        previewer = false,
+        previewer = true,
         initial_mode = "normal",
         mappings = {
           i = {
@@ -87,8 +89,13 @@ function M.config()
           },
           n = {
             ["dd"] = actions.delete_buffer,
+            ["<C-q>"] = actions.delete_buffer + actions.move_to_top,
           },
         },
+        show_all_buffers = true,
+        sort_mru = true,
+        ignore_current_buffer = false,
+        sort_lastused = true,
       },
 
       planets = {
@@ -129,6 +136,8 @@ function M.config()
       },
     },
   }
+
+  -- Use theme default borders for telescope
 end
 
 return M

@@ -82,6 +82,12 @@ config.keys = {
     mods = 'CTRL|SHIFT',
     action = wezterm.action.PasteFrom 'Clipboard',
   },
+  -- Disable Super+N to let Hyprland handle it for swaync
+  {
+    key = 'n',
+    mods = 'SUPER',
+    action = wezterm.action.DisableDefaultAssignment,
+  },
 }
 
 -- Mouse bindings for link handling  
