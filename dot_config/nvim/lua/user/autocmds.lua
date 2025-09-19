@@ -120,6 +120,21 @@ vim.api.nvim_create_autocmd("VimEnter", {
   end,
 })
 
+-- Highlight active/inactive windows
+vim.api.nvim_create_autocmd({"WinEnter", "BufEnter"}, {
+  callback = function()
+    vim.opt_local.cursorline = true
+    vim.opt_local.relativenumber = true
+  end
+})
+
+vim.api.nvim_create_autocmd({"WinLeave", "BufLeave"}, {
+  callback = function()
+    vim.opt_local.cursorline = false
+    vim.opt_local.relativenumber = false
+  end
+})
+
 -- Custom filetype detection for .tmpl files (chezmoi templates)
 vim.api.nvim_create_autocmd({"BufRead", "BufNewFile"}, {
   pattern = "*.tmpl",

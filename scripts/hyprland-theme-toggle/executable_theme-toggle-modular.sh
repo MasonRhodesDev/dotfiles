@@ -5,6 +5,17 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STATE_FILE="$HOME/.cache/theme_state"
 WALLPAPER_PATH="$HOME/Pictures/forrest.png"
 MODULES_DIR="$SCRIPT_DIR/modules"
+LOCKFILE="/tmp/theme-toggle.lock"
+
+# Check if another instance is running
+if [ -f "$LOCKFILE" ]; then
+    echo "Theme toggle already running, exiting..."
+    exit 0
+fi
+
+# Create lockfile and ensure it's removed on exit
+touch "$LOCKFILE"
+trap "rm -f $LOCKFILE" EXIT INT TERM
 
 # Source base functions
 source "$MODULES_DIR/base.sh"

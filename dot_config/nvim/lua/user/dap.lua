@@ -1,8 +1,19 @@
 local M = {
   "mfussenegger/nvim-dap",
+  lazy = true,
+  keys = {
+    { "<F5>", desc = "Debug: Start/Continue" },
+    { "<F10>", desc = "Debug: Step Over" },
+    { "<F11>", desc = "Debug: Step Into" },
+    { "<F12>", desc = "Debug: Step Out" },
+    { "<leader>db", desc = "Debug: Toggle Breakpoint" },
+  },
   dependencies = {
     "nvim-neotest/nvim-nio",
-    "rcarriga/nvim-dap-ui",
+    {
+      "rcarriga/nvim-dap-ui",
+      lazy = true,
+    },
   },
 }
 

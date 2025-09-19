@@ -118,6 +118,7 @@ function M.config()
           buffer = "",
           path = "",
           emoji = "",
+          codeium = "",
         })[entry.source.name]
 
         if entry.source.name == "emoji" then
@@ -130,10 +131,16 @@ function M.config()
           vim_item.kind_hl_group = "CmpItemKindTabnine"
         end
 
+        if entry.source.name == "codeium" then
+          vim_item.kind = icons.misc.Robot
+          vim_item.kind_hl_group = "CmpItemKindCodeium"
+        end
+
         return vim_item
       end,
     },
     sources = {
+      { name = "codeium" },
       { name = "copilot" },
       { name = "nvim_lsp" },
       { name = "luasnip" },
@@ -152,9 +159,11 @@ function M.config()
       completion = {
         border = "rounded",
         scrollbar = false,
+        winhighlight = "FloatBorder:CustomActiveBorder",
       },
       documentation = {
         border = "rounded",
+        winhighlight = "FloatBorder:CustomActiveBorder",
       },
     },
     experimental = {

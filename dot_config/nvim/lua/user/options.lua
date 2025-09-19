@@ -39,9 +39,16 @@ vim.opt.guifont = "monospace:h17" -- the font used in graphical neovim applicati
 vim.opt.title = false
 -- colorcolumn = "80",
 -- colorcolumn = "120",
-vim.opt.fillchars = vim.opt.fillchars + "eob: "
-vim.opt.fillchars:append {
-  stl = " ",
+vim.opt.fillchars = {
+  vert = "│",     -- Vertical split character (thick line for visibility)
+  horiz = "─",    -- Horizontal split character
+  horizup = "┴",  -- Horizontal split going up
+  horizdown = "┬", -- Horizontal split going down
+  vertleft = "┤",  -- Vertical split going left
+  vertright = "├", -- Vertical split going right
+  verthoriz = "┼", -- Cross split
+  eob = " ",       -- End of buffer (blank)
+  stl = " ",       -- Status line fill
 }
 
 vim.opt.shortmess:append "c"

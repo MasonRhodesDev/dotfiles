@@ -1,6 +1,7 @@
 local M = {
-  "neovim/nvim-lspconfig",
-  branch = "master", -- Ensure latest version
+  -- Native LSP configuration for Neovim 0.11+
+  -- No longer depends on nvim-lspconfig plugin
+  name = "native-lsp-config",
   event = { "BufReadPre", "BufNewFile" },
   dependencies = {
     {
@@ -74,8 +75,8 @@ function M.config()
         if _G.current_project_config and _G.current_project_config.lsp_formatting and _G.current_project_config.lsp_formatting.filter then
           filter = _G.current_project_config.lsp_formatting.filter
         else
-          filter = function(client) 
-            return client.name == 'null-ls' or (client.name ~= 'typescript-tools' and client.name ~= 'vtsls' and client.name ~= 'eslint' and client.name ~= 'vue_ls') 
+          filter = function(client)
+            return client.name == 'null-ls' or (client.name ~= 'typescript-tools' and client.name ~= 'vtsls' and client.name ~= 'eslint' and client.name ~= 'vue_ls')
           end
         end
         vim.lsp.buf.format({async = true, filter = filter})
@@ -105,6 +106,7 @@ function M.config()
     { "<leader>ll", "<cmd>lua vim.lsp.codelens.run()<cr>", desc = "CodeLens Action" },
     { "<leader>lq", "<cmd>lua vim.diagnostic.setloclist()<cr>", desc = "Quickfix" },
     { "<leader>lr", "<cmd>lua vim.lsp.buf.rename()<cr>", desc = "Rename" },
+    { "<leader>ls", "<cmd>lua print(vim.inspect(vim.lsp.get_clients()))<cr>", desc = "LSP Status" },
   }
 
   wk.add {
@@ -147,32 +149,45 @@ function M.config()
       source = "always",
       header = "",
       prefix = "",
+      winhighlight = "FloatBorder:CustomActiveBorder",
     },
   }
 
   vim.diagnostic.config(default_diagnostic_config)
 
-  vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(vim.lsp.handlers.hover, { border = "rounded" })
-  vim.lsp.handlers["textDocument/signatureHelp"] = vim.lsp.with(vim.lsp.handlers.signature_help, { border = "rounded" })
-  require("lspconfig.ui.windows").default_options.border = "rounded"
+  -- Configure LSP UI handlers (native approach)
+  vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(vim.lsp.handlers.hover, {
+    border = "rounded",
+    winhighlight = "FloatBorder:CustomActiveBorder"
+  })
+  vim.lsp.handlers["textDocument/signatureHelp"] = vim.lsp.with(vim.lsp.handlers.signature_help, {
+    border = "rounded",
+    winhighlight = "FloatBorder:CustomActiveBorder"
+  })
 
-  -- Setup servers using nvim 0.11+ API
+  -- Setup servers using native vim.lsp.config (Neovim 0.11+)
+  -- No longer dependent on nvim-lspconfig plugin
+
   for _, server in pairs(servers) do
-    local opts = {
+    local base_config = {
       on_attach = M.on_attach,
       capabilities = M.common_capabilities(),
     }
 
-    local settings = require("user.lspsettings." .. server)
-    opts = vim.tbl_deep_extend("force", settings, opts)
+    local require_ok, settings = pcall(require, "user.lspsettings." .. server)
+    if require_ok then
+      base_config = vim.tbl_deep_extend("force", base_config, settings)
+    end
 
     if server == "lua_ls" then
       require("neodev").setup {}
     end
 
-    vim.lsp.config(server, opts)
+    -- Use native vim.lsp.config instead of lspconfig
+    vim.lsp.config[server] = base_config
   end
-  
+
+  -- Enable all configured language servers
   vim.lsp.enable(servers)
 end
 
