@@ -1,9 +1,12 @@
 -- Native LSP configuration for Neovim 0.11+
--- Setup as dependency of neodev since we need it for Lua LSP
+-- Keep minimal nvim-lspconfig for neodev compatibility
 
 local M = {
-  "folke/neodev.nvim",
+  "neovim/nvim-lspconfig",
   event = { "BufReadPre", "BufNewFile" },
+  dependencies = {
+    "folke/neodev.nvim",
+  },
 }
 
 local function lsp_keymaps(bufnr)
@@ -61,7 +64,7 @@ M.toggle_inlay_hints = function()
 end
 
 function M.config()
-  -- Setup neodev first for Lua development
+  -- Setup neodev for Lua development (requires lspconfig.util)
   require("neodev").setup {}
 
   local wk = require "which-key"

@@ -37,7 +37,6 @@ return {
     -- Support for ESLint 9 flat config files
     options = {
       configFile = nil, -- Auto-detect eslint.config.js
-      extensions = { '.js', '.jsx', '.ts', '.tsx', '.vue' },
     },
   },
   -- Fix workspace folder capability warning
