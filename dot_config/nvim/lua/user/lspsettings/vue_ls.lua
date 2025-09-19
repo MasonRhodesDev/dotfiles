@@ -39,20 +39,21 @@ return {
       validation = {
         template = true,
         style = true,
-        script = true,
+        script = false, -- Let vtsls handle TypeScript validation
         templateProps = true,
         interpolation = true,
       },
+      -- Disable hybrid mode - both vtsls and vue_ls are active
+      hybridMode = false,
+      server = {
+        maxProjectSize = 20971520, -- 20MB
+      },
     },
   },
-  -- Coordinate with vtsls for TypeScript support
+  -- Configure to work with vtsls as TypeScript provider
   init_options = {
     typescript = {
       tsdk = vim.fn.expand('$MASON/packages/typescript-language-server/node_modules/typescript/lib')
-    },
-    -- Tell vue_ls to work in hybrid mode with external TypeScript server
-    vue = {
-      hybridMode = false,  -- Let vtsls handle TypeScript via plugin
     },
   },
 }
