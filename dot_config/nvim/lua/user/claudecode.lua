@@ -164,6 +164,13 @@ return {
   dependencies = { "folke/snacks.nvim" },
   opts = {
     claude_executable = "/home/mason/.claude/local/claude",
+    diff_opts = {
+      layout = "vertical",
+      open_in_new_tab = true,         -- Opens diff in dedicated tab for clean review
+      keep_terminal_focus = false,    -- Focus on diff when opened
+      hide_terminal_in_new_tab = true, -- Hide terminal in diff tab for maximum space
+      on_new_file_reject = "keep_empty",
+    },
   },
   keys = {
     { "<leader>a", nil, desc = "AI/Claude Code" },

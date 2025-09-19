@@ -32,5 +32,6 @@ spec "user.toggleterm"
 -- spec "user.wezterm-config"  -- Disabled: conflicts with bg.nvim
 spec "user.bg"
 spec "user.claudecode"
+spec "user.codeium"
 spec "user.extras.ufo"
 require "user.lazy"

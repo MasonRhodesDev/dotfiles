@@ -76,6 +76,7 @@ M.config = function()
       relative = "cursor",
       row = 0,
       col = 1,
+      winhighlight = "FloatBorder:CustomBorder",
     },
   }
 end
