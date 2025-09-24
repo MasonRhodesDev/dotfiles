@@ -25,7 +25,7 @@ local function tree_keymaps(bufnr)
   keymap(bufnr, "n", "<leader>v", "<cmd>vsplit<cr>", opts)
   
   -- Harpoon
-  keymap(bufnr, "n", "<TAB>", "<cmd>lua require('harpoon.ui').toggle_quick_menu()<cr>", opts)
+  keymap(bufnr, "n", "<TAB>", "<cmd>lua require('harpoon').ui:toggle_quick_menu(require('harpoon'):list())<cr>", opts)
 end
 
 local function on_attach(bufnr)
