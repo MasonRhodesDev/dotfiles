@@ -66,3 +66,6 @@ vim.g.netrw_mouse = 2
 vim.opt.exrc = true  -- Allow loading .nvimrc.lua from project directories
 vim.opt.secure = true  -- Restrict shell commands in project-local configs
 
+-- Enable basic syntax highlighting as fallback until Treesitter loads
+vim.cmd([[syntax enable]])
+
