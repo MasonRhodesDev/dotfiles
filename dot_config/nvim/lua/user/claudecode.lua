@@ -31,32 +31,41 @@ end
 -- Function to send text directly to Claude terminal
 local function send_text_to_claude(text)
   local job_id = get_claude_terminal_job_id()
-  
+
   if not job_id then
     -- Open Claude if not already open
     vim.cmd("ClaudeCode")
     vim.notify("Opening Claude Code...", vim.log.levels.INFO)
-    
+
     -- Wait for terminal to initialize, then send text
     vim.defer_fn(function()
       local new_job_id = get_claude_terminal_job_id()
       if new_job_id then
-        vim.fn.chansend(new_job_id, text .. "\n")
-        -- Ensure terminal stays visible and focused
-        vim.cmd("ClaudeCode")
-        vim.defer_fn(function() vim.cmd("ClaudeCodeFocus") end, 100)
-        vim.notify("Text sent to Claude Code", vim.log.levels.INFO)
+        local success = pcall(vim.fn.chansend, new_job_id, text .. "\n")
+        if success then
+          -- Ensure terminal stays visible and focused
+          vim.cmd("ClaudeCode")
+          vim.defer_fn(function() vim.cmd("ClaudeCodeFocus") end, 100)
+          vim.notify("Text sent to Claude Code", vim.log.levels.INFO)
+        else
+          vim.notify("Failed to send text to Claude terminal", vim.log.levels.ERROR)
+        end
       else
         vim.notify("Failed to find Claude terminal", vim.log.levels.ERROR)
       end
     end, 1000)
   else
-    -- Send directly to existing terminal
-    vim.fn.chansend(job_id, text .. "\n")
-    -- Ensure terminal stays visible and focused
-    vim.cmd("ClaudeCode")
-    vim.defer_fn(function() vim.cmd("ClaudeCodeFocus") end, 100)
-    vim.notify("Text sent to Claude Code", vim.log.levels.INFO)
+    -- Validate channel is still open before sending
+    local success = pcall(vim.fn.chansend, job_id, text .. "\n")
+    if success then
+      -- Ensure terminal stays visible and focused
+      vim.cmd("ClaudeCode")
+      vim.defer_fn(function() vim.cmd("ClaudeCodeFocus") end, 100)
+      vim.notify("Text sent to Claude Code", vim.log.levels.INFO)
+    else
+      -- Channel is closed, just notify user
+      vim.notify("Claude terminal connection lost. Please try again.", vim.log.levels.WARN)
+    end
   end
 end
 
@@ -167,8 +176,8 @@ return {
     diff_opts = {
       layout = "vertical",
       open_in_new_tab = true,         -- Opens diff in dedicated tab for clean review
-      keep_terminal_focus = false,    -- Focus on diff when opened
-      hide_terminal_in_new_tab = true, -- Hide terminal in diff tab for maximum space
+      keep_terminal_focus = true,    -- Focus on diff when opened
+      hide_terminal_in_new_tab = false, -- Hide terminal in diff tab for maximum space
       on_new_file_reject = "keep_empty",
     },
   },
@@ -193,5 +202,22 @@ return {
     -- Send diagnostics/errors to Claude
     { "<leader>aj", function() send_diagnostics_to_claude() end, desc = "Send diagnostics to Claude" },
     { "<leader>aq", function() send_quickfix_to_claude() end, desc = "Send quickfix to Claude" },
+    -- Debug config
+    { "<leader>aD", function()
+      local claudecode = require("claudecode")
+      if claudecode.state and claudecode.state.config then
+        local config = claudecode.state.config
+        print("ClaudeCode config debug:")
+        if config.diff_opts then
+          print("  keep_terminal_focus:", config.diff_opts.keep_terminal_focus)
+          print("  hide_terminal_in_new_tab:", config.diff_opts.hide_terminal_in_new_tab)
+          print("  open_in_new_tab:", config.diff_opts.open_in_new_tab)
+        else
+          print("  diff_opts is nil!")
+        end
+      else
+        print("ClaudeCode not initialized")
+      end
+    end, desc = "Debug Claude config" },
   },
 }

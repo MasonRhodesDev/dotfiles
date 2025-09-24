@@ -65,3 +65,4 @@ vim.g.netrw_mouse = 2
 -- Enable project-local configuration files
 vim.opt.exrc = true  -- Allow loading .nvimrc.lua from project directories
 vim.opt.secure = true  -- Restrict shell commands in project-local configs
+
