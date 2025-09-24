@@ -3,9 +3,13 @@
 
 local M = {
   "neovim/nvim-lspconfig",
+  commit = "b3cce1419ca67871ae782b3e529652f8a016f0de",
   event = { "BufReadPre", "BufNewFile" },
   dependencies = {
-    "folke/neodev.nvim",
+    {
+      "folke/neodev.nvim",
+      commit = "46aa467dca16cf3dfe27098042402066d2ae242d",
+    },
   },
 }
 
