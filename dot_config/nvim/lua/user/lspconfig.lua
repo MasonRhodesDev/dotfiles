@@ -5,6 +5,7 @@ local M = {
   "neovim/nvim-lspconfig",
   commit = "b3cce1419ca67871ae782b3e529652f8a016f0de",
   event = { "BufReadPre", "BufNewFile" },
+  priority = 400,
   dependencies = {
     {
       "folke/neodev.nvim",

@@ -148,7 +148,7 @@ vim.api.nvim_create_autocmd({"BufRead", "BufNewFile"}, {
         vim.bo.filetype = 'hypr'
         return
       end
-      
+
       -- Map common extensions to filetypes
       local ext_to_filetype = {
         lua = 'lua',
@@ -179,12 +179,67 @@ vim.api.nvim_create_autocmd({"BufRead", "BufNewFile"}, {
         h = 'c',
         hpp = 'cpp',
       }
-      
+
       local filetype = ext_to_filetype[real_ext]
       if filetype then
         vim.bo.filetype = filetype
       end
     end
+  end,
+})
+
+-- Refresh syntax highlighting after Treesitter loads
+vim.api.nvim_create_autocmd("User", {
+  pattern = "LazyLoad",
+  callback = function(args)
+    if args.data == "nvim-treesitter" then
+      vim.schedule(function()
+        -- Refresh all current buffers to apply Treesitter highlighting
+        for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+          if vim.api.nvim_buf_is_loaded(buf) and vim.bo[buf].buftype == "" then
+            vim.api.nvim_buf_call(buf, function()
+              -- Force refresh the buffer highlighting
+              vim.cmd([[edit!]])
+            end)
+          end
+        end
+      end)
+    end
+  end,
+})
+
+-- Force highlighting refresh for buffers that load before Treesitter is ready
+vim.api.nvim_create_autocmd({"BufEnter", "BufWinEnter"}, {
+  callback = function()
+    local buf = vim.api.nvim_get_current_buf()
+    if vim.bo[buf].buftype == "" and vim.bo[buf].filetype ~= "" then
+      -- Check if Treesitter is available and has highlighting for this filetype
+      local ts_available, ts_highlight = pcall(require, "nvim-treesitter.highlight")
+      if ts_available and ts_highlight then
+        local has_parser = pcall(vim.treesitter.get_parser, buf)
+        if has_parser then
+          -- Treesitter is ready, force a highlight refresh
+          vim.schedule(function()
+            vim.api.nvim_buf_call(buf, function()
+              vim.cmd([[TSBufEnable highlight]])
+            end)
+          end)
+        end
+      end
+    end
+  end,
+})
+
+-- Fix first buffer syntax highlighting with minimal solution
+-- Simply refresh the first buffer after plugins load
+vim.api.nvim_create_autocmd("BufReadPost", {
+  once = true,
+  callback = function()
+    vim.defer_fn(function()
+      if vim.bo.buftype == "" then
+        vim.cmd([[edit!]])
+      end
+    end, 1000)
   end,
 })
 
