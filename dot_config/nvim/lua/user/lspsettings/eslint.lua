@@ -53,7 +53,15 @@ return {
     -- Enable auto-fix on save for supported file types
     vim.api.nvim_create_autocmd('BufWritePre', {
       buffer = bufnr,
-      command = 'EslintFixAll',
+      callback = function()
+        vim.lsp.buf.code_action({
+          context = {
+            only = { 'source.fixAll.eslint' },
+            diagnostics = {},
+          },
+          apply = true,
+        })
+      end,
       desc = 'Auto-fix ESLint issues on save',
     })
   end,
