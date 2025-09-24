@@ -1,5 +1,6 @@
 local M = {
   "folke/which-key.nvim",
+  commit = "904308e6885bbb7b60714c80ab3daf0c071c1492",
   event = "VimEnter",
   init = function()
     vim.o.timeout = true

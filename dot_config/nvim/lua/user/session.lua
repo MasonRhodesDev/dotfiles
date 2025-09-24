@@ -1,5 +1,6 @@
 local M = {
   "rmagatti/auto-session",
+  commit = "af683b2cb176aa8e0cddb3cdc2dada21f09bb09b",
   lazy = false,
   dependencies = {
     "nvim-telescope/telescope.nvim", -- Only needed if you want to use session lens

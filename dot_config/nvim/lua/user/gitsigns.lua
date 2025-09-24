@@ -1,5 +1,6 @@
 local M = {
   "lewis6991/gitsigns.nvim",
+  commit = "f780609807eca1f783a36a8a31c30a48fbe150c5",
   event = "BufEnter",
   cmd = "Gitsigns",
 }

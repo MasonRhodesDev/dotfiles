@@ -1,5 +1,6 @@
 local M = {
-  "neogitorg/neogit",
+  "NeogitOrg/neogit",
+  commit = "462ccdeb26409849353d2859393e113a92a35a4a",
   event = "VeryLazy",
 }
 

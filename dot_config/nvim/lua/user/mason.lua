@@ -1,5 +1,6 @@
 return {
   'mason-org/mason.nvim',
+  commit = "7dc4facca9702f95353d5a1f87daf23d78e31c2a",
   config = function()
     -- import mason
     local mason = require 'mason'
