@@ -1,0 +1,90 @@
+# E2E Testing Git Ignore
+
+# Test results and logs
+test_results/
+*.log
+*.html
+*.xml
+*.json
+
+# VM images and temporary files
+infrastructure/images/
+infrastructure/temp/
+*.qcow2
+*.iso
+*.pid
+
+# Python cache and compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# SSH keys
+id_rsa*
+*.pem
+*.key
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+tmp/
+
+# Coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# QEMU monitor sockets
+*.sock
+
+# Packer cache
+packer_cache/
+
+# Cloud-init ISOs
+cloud-init-*.iso
