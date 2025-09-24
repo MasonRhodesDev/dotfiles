@@ -1,5 +1,6 @@
 local M = {
   "nvim-tree/nvim-tree.lua",
+  commit = "e179ad2f83b5955ab0af653069a493a1828c2697",
 }
 
 local function tree_keymaps(bufnr)

@@ -1,5 +1,6 @@
 local M = {
   "mfussenegger/nvim-dap",
+  commit = "7367cec8e8f7a0b1e4566af9a7ef5959d11206a7",
   lazy = true,
   keys = {
     { "<F5>", desc = "Debug: Start/Continue" },
@@ -9,9 +10,10 @@ local M = {
     { "<leader>db", desc = "Debug: Toggle Breakpoint" },
   },
   dependencies = {
-    "nvim-neotest/nvim-nio",
+    { "nvim-neotest/nvim-nio", commit = "21f5324bfac14e22ba26553caf69ec76ae8a7662" },
     {
       "rcarriga/nvim-dap-ui",
+      commit = "cf91d5e2d07c72903d052f5207511bf7ecdb7122",
       lazy = true,
     },
   },

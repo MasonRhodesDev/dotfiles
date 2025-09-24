@@ -133,11 +133,13 @@ watch_theme_change()
 return {
   {
     "LunarVim/darkplus.nvim",
+    commit = "c7fff5ce62406121fc6c9e4746f118b2b2499c4c",
     lazy = false,
     priority = 1000,
   },
   {
     "nyoom-engineering/oxocarbon.nvim",
+    commit = "9f85f6090322f39b11ae04a343d4eb9d12a86897",
     lazy = false,
     priority = 1000,
   },

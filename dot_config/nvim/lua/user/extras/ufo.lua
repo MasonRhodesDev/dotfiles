@@ -1,8 +1,9 @@
 local M = {
   "kevinhwang91/nvim-ufo",
+  commit = "d31e2a9fd572a25a4d5011776677223a8ccb7e35",
   dependencies = {
-    "kevinhwang91/promise-async",
-    "luukvbaal/statuscol.nvim",
+    { "kevinhwang91/promise-async", commit = "119e8961014c9bfaf1487bf3c2a393d254f337e2" },
+    { "luukvbaal/statuscol.nvim", commit = "c46172d0911aa5d49ba5f39f4351d1bb7aa289cc" },
     "nvim-treesitter/nvim-treesitter",
   },
   event = "BufRead",

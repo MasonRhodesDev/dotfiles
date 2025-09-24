@@ -1,20 +1,21 @@
 local M = {
   "nvim-neotest/neotest",
+  commit = "2cf3544fb55cdd428a9a1b7154aea9c9823426e8",
   dependencies = {
-    "nvim-neotest/nvim-nio",
+    { "nvim-neotest/nvim-nio", commit = "21f5324bfac14e22ba26553caf69ec76ae8a7662" },
     "nvim-treesitter/nvim-treesitter",
     -- general tests
-    "vim-test/vim-test",
-    "nvim-neotest/neotest-vim-test",
+    { "vim-test/vim-test", commit = "2b0ee6036473c86a2f3e9dedf5beb91c9e84e691" },
+    { "nvim-neotest/neotest-vim-test", commit = "75c4228882ae4883b11bfce9b8383e637eb44192" },
     -- language specific tests
-    "marilari88/neotest-vitest",
-    "nvim-neotest/neotest-python",
-    "nvim-neotest/neotest-plenary",
-    "rouge8/neotest-rust",
-    "lawrence-laz/neotest-zig",
-    "rcasia/neotest-bash",
+    { "marilari88/neotest-vitest", commit = "f5560d7048e514d8da92a9e1e1f1c6d84dd9096f" },
+    { "nvim-neotest/neotest-python", commit = "1b1b1abf928f32bbd6a7d183f7ffc80a591eb162" },
+    { "nvim-neotest/neotest-plenary", commit = "3523adcf9ffaad1911960c5813b0136c1b63a2ec" },
+    { "rouge8/neotest-rust", commit = "2c9941d4a358839918fac21d20fc8fef0e1ad05f" },
+    { "lawrence-laz/neotest-zig", commit = "de63f3b9a182d374d2e71cf44385326682ec90e7" },
+    { "rcasia/neotest-bash", commit = "57eab5b80a5296dc3fc5b22112b3ed78da3a5732" },
     -- jest only loaded via project-local config in lifemd
-    "nvim-neotest/neotest-jest",
+    { "nvim-neotest/neotest-jest", commit = "6d7b45865d724976825ca308c8d993de39a0a532" },
   },
 }
 

@@ -1,8 +1,12 @@
 local M = {
   "ThePrimeagen/harpoon",
+  commit = "ed1f853847ffd04b2b61c314865665e1dadf22c7",
   event = "VeryLazy",
   dependencies = {
-    { "nvim-lua/plenary.nvim" },
+    {
+      "nvim-lua/plenary.nvim",
+      commit = "b9fd5226c2f76c951fc8ed5923d85e4de065e509",
+    },
   },
 }
 
