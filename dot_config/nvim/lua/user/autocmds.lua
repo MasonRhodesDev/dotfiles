@@ -230,16 +230,6 @@ vim.api.nvim_create_autocmd({"BufEnter", "BufWinEnter"}, {
   end,
 })
 
--- Fix first buffer syntax highlighting with minimal solution
--- Simply refresh the first buffer after plugins load
-vim.api.nvim_create_autocmd("BufReadPost", {
-  once = true,
-  callback = function()
-    vim.defer_fn(function()
-      if vim.bo.buftype == "" then
-        vim.cmd([[edit!]])
-      end
-    end, 1000)
-  end,
-})
+-- Note: First buffer syntax highlighting issue was caused by session restoration
+-- timing - fixed in session.lua post_restore_cmds instead of here
 

@@ -2,6 +2,8 @@ local M = {
   "rmagatti/auto-session",
   commit = "af683b2cb176aa8e0cddb3cdc2dada21f09bb09b",
   lazy = false,
+  enabled = true,   -- RE-ENABLED - persistence.nvim needs session migration
+  priority = 400,  -- Lower priority - load after treesitter and colorscheme
   dependencies = {
     "nvim-telescope/telescope.nvim", -- Only needed if you want to use session lens
   },
@@ -13,6 +15,12 @@ function M.config()
     auto_save_enabled = true,
     auto_restore_enabled = true,
     auto_session_suppress_dirs = { "~/", "~/Downloads", "~/Documents", "~/Desktop/" },
+
+    -- Built-in lazy.nvim support - wait for plugins to load before restoring
+    lazy_support = true,
+
+    -- Better error handling - continue loading session even if some buffers fail
+    continue_restore_on_error = true,
     
     -- Use git branch in session name and only save in git repos
     auto_session_use_git_branch = false,
@@ -26,8 +34,15 @@ function M.config()
     },
 
     -- Pre and post session hooks
-    pre_save_cmds = { "tabdo NvimTreeClose" }, -- Close nvim-tree before saving
-    post_restore_cmds = { "NvimTreeOpen" }, -- Reopen nvim-tree after restore
+    pre_save_cmds = {
+      "tabdo NvimTreeClose",  -- Close nvim-tree before saving
+    },
+    post_restore_cmds = {
+      "NvimTreeOpen",  -- Reopen nvim-tree after restore
+      -- Fix Treesitter highlighting for session-restored buffers
+      -- Small timeout still needed - even lazy_support doesn't guarantee Treesitter is fully initialized
+      "lua vim.defer_fn(function() for _, buf in ipairs(vim.api.nvim_list_bufs()) do if vim.api.nvim_buf_is_loaded(buf) and vim.bo[buf].buftype == '' then vim.api.nvim_buf_call(buf, function() pcall(vim.cmd, 'TSBufEnable highlight'); pcall(vim.cmd, 'filetype detect'); end) end end end, 250)"
+    },
   }
 
   -- Function to view session logs
