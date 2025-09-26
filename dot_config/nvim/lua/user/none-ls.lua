@@ -33,16 +33,38 @@ function M.config()
           -- Search up the directory tree from current buffer, not just project root
           local current_file = vim.api.nvim_buf_get_name(0)
           if current_file == "" then return false end
-          
+
           local config_files = { "eslint.config.js", ".eslintrc.js", ".eslintrc.json", ".eslintrc" }
-          local found = vim.fs.find(config_files, { 
+          local found = vim.fs.find(config_files, {
             path = vim.fn.fnamemodify(current_file, ":p:h"),
-            upward = true 
+            upward = true
           })
           return #found > 0
         end,
       }),
     },
+    -- Format and lint on save
+    on_attach = function(client, bufnr)
+      if client.supports_method("textDocument/formatting") then
+        vim.api.nvim_create_autocmd("BufWritePre", {
+          buffer = bufnr,
+          callback = function()
+            -- Skip formatting for JS/TS files - let ESLint LSP handle them
+            local ft = vim.bo[bufnr].filetype
+            local eslint_filetypes = { "javascript", "javascriptreact", "typescript", "typescriptreact", "vue" }
+            if vim.tbl_contains(eslint_filetypes, ft) then
+              return
+            end
+
+            vim.lsp.buf.format({
+              bufnr = bufnr,
+              async = false,
+            })
+          end,
+          desc = "Format and lint on save",
+        })
+      end
+    end,
   }
 end
 
