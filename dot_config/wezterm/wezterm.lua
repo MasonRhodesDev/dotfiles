@@ -10,11 +10,26 @@ config.hide_tab_bar_if_only_one_tab = true
 -- Dynamic opacity based on running process
 config.window_background_opacity = 0.95
 
--- Load wezterm-config.nvim plugin
-local wezterm_config_nvim = wezterm.plugin.require "https://github.com/winter-again/wezterm-config.nvim"
+-- Load wezterm-config.nvim plugin (optional, guarded to avoid hard failure)
+local wezterm_config_nvim = nil
+if wezterm.plugin and wezterm.plugin.require then
+  local ok, plugin_or_err = pcall(function()
+    return wezterm.plugin.require "https://github.com/winter-again/wezterm-config.nvim"
+  end)
+  if ok then
+    wezterm_config_nvim = plugin_or_err
+  else
+    wezterm.log_info("wezterm-config.nvim not available: " .. tostring(plugin_or_err))
+  end
+else
+  wezterm.log_info("wezterm.plugin API unavailable; skipping plugins")
+end
 
 -- Handle user variable changes from nvim for config overrides
 wezterm.on('user-var-changed', function(window, pane, name, value)
+  if not wezterm_config_nvim or not wezterm_config_nvim.override_user_var then
+    return
+  end
   local overrides = window:get_config_overrides() or {}
   overrides = wezterm_config_nvim.override_user_var(overrides, name, value)
   window:set_config_overrides(overrides)
