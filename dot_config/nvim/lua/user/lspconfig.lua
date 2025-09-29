@@ -123,11 +123,15 @@ function M.config()
 
   local icons = require "user.icons"
 
+  -- Servers that need to start first (VTSLS before Vue LS)
+  local priority_servers = {
+    "vtsls",
+  }
+
   local servers = {
     "lua_ls",
     "cssls",
     "html",
-    "vtsls",
     "vue_ls",
     "eslint",
     "pyright",
@@ -172,9 +176,25 @@ function M.config()
     winhighlight = "FloatBorder:CustomActiveBorder"
   })
 
-  -- Setup servers using native vim.lsp.config (Neovim 0.11+)
-  -- No longer dependent on nvim-lspconfig plugin
+  -- Setup servers using nvim-lspconfig for Vue/TypeScript compatibility
+  local lspconfig = require("lspconfig")
 
+  -- Configure priority servers first (VTSLS before Vue)
+  for _, server in pairs(priority_servers) do
+    local base_config = {
+      on_attach = M.on_attach,
+      capabilities = M.common_capabilities(),
+    }
+
+    local require_ok, settings = pcall(require, "user.lspsettings." .. server)
+    if require_ok then
+      base_config = vim.tbl_deep_extend("force", base_config, settings)
+    end
+
+    lspconfig[server].setup(base_config)
+  end
+
+  -- Configure remaining servers
   for _, server in pairs(servers) do
     local base_config = {
       on_attach = M.on_attach,
@@ -186,14 +206,8 @@ function M.config()
       base_config = vim.tbl_deep_extend("force", base_config, settings)
     end
 
-    -- neodev already setup in config()
-
-    -- Use native vim.lsp.config instead of lspconfig
-    vim.lsp.config[server] = base_config
+    lspconfig[server].setup(base_config)
   end
-
-  -- Enable all configured language servers
-  vim.lsp.enable(servers)
 end
 
 return M
