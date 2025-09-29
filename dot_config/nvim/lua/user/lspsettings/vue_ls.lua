@@ -53,7 +53,7 @@ return {
   -- Configure to work with vtsls as TypeScript provider
   init_options = {
     typescript = {
-      tsdk = vim.fn.expand('$MASON/packages/typescript-language-server/node_modules/typescript/lib')
+      tsdk = vim.fn.expand('$MASON/packages/vtsls/node_modules/typescript/lib')
     },
   },
 }

@@ -49,7 +49,7 @@ function M.config()
         vim.api.nvim_create_autocmd("BufWritePre", {
           buffer = bufnr,
           callback = function()
-            -- Skip formatting for JS/TS files - let ESLint LSP handle them
+            -- Skip formatting for JS/TS/Vue files - let ESLint LSP handle them
             local ft = vim.bo[bufnr].filetype
             local eslint_filetypes = { "javascript", "javascriptreact", "typescript", "typescriptreact", "vue" }
             if vim.tbl_contains(eslint_filetypes, ft) then
