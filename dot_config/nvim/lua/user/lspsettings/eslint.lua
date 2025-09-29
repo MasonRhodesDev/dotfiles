@@ -60,6 +60,7 @@ return {
             diagnostics = {},
           },
           apply = true,
+          async = false,
         })
       end,
       desc = 'Auto-fix ESLint issues on save',

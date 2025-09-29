@@ -1,24 +1,46 @@
--- Dynamic path resolution for Vue language server (Mason 2.0 compatible)
-local vue_language_server_path = vim.fn.expand('$MASON/packages/vue-language-server/node_modules/@vue/language-server')
-local tsserver_filetypes = { "typescript", "javascript", "javascriptreact", "typescriptreact", "vue" }
-local vue_plugin = {
+-- Dynamic path resolution for Vue language server (Mason 2025 compatible)
+local function get_vue_plugin_path()
+  -- Try Mason registry first (preferred method)
+  local ok, mason_registry = pcall(require, 'mason-registry')
+  if ok and mason_registry.is_installed('vue-language-server') then
+    local vue_pkg = mason_registry.get_package('vue-language-server')
+    local install_path = vue_pkg:get_install_path()
+    return install_path .. '/node_modules/@vue/language-server'
+  end
+
+  -- Fallback to environment variable expansion
+  local fallback_paths = {
+    vim.fn.expand('$MASON/packages/vue-language-server/node_modules/@vue/language-server'),
+    vim.fn.expand('$MASON/packages/vue-language-server/node_modules/@vue/typescript-plugin'),
+  }
+
+  for _, path in ipairs(fallback_paths) do
+    if vim.fn.isdirectory(path) == 1 then
+      return path
+    end
+  end
+
+  return nil
+end
+
+local vue_plugin_path = get_vue_plugin_path()
+local vue_plugin = vue_plugin_path and {
   name = '@vue/typescript-plugin',
-  location = vue_language_server_path,
+  location = vue_plugin_path,
   languages = { 'vue' },
   configNamespace = 'typescript',
   enableForWorkspaceTypeScriptVersions = true,
-}
+} or nil
 
 return {
   cmd = { 'vtsls', '--stdio' },
   filetypes = { "typescript", "javascript", "javascriptreact", "typescriptreact", "vue" },
-  root_markers = { 'package.json', 'tsconfig.json', 'jsconfig.json', '.git' },
   settings = {
     vtsls = {
       tsserver = {
-        globalPlugins = {
+        globalPlugins = vue_plugin and {
           vue_plugin,
-        },
+        } or {},
       },
       enableMoveToFileCodeAction = true,
       autoUseWorkspaceTsdk = true,
