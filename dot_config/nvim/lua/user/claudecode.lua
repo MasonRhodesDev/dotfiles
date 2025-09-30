@@ -169,9 +169,9 @@ local function send_quickfix_to_claude()
 end
 
 return {
-  "masonj5n/claudecode.nvim",
+  "MasonRhodesDev/claudecode.nvim",
   commit = "2e6ea6f2a63cdf4fd3c05e6a054151d46848d319",
-  dependencies = { { "folke/snacks.nvim", commit = "68da653d206069007f71d4373049193248bf913b" } },
+  dependencies = { { "MasonRhodesDev/snacks.nvim", commit = "68da653d206069007f71d4373049193248bf913b" } },
   opts = {
     claude_executable = "/home/mason/.claude/local/claude",
     terminal = {
