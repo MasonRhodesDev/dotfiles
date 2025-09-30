@@ -174,6 +174,9 @@ return {
   dependencies = { { "folke/snacks.nvim", commit = "68da653d206069007f71d4373049193248bf913b" } },
   opts = {
     claude_executable = "/home/mason/.claude/local/claude",
+    terminal = {
+      split_width_percentage = 0.40,  -- 40% width (default is 30%)
+    },
     diff_opts = {
       layout = "vertical",
       open_in_new_tab = true,         -- Opens diff in dedicated tab for clean review
