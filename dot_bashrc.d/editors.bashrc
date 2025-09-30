@@ -1,3 +1,3 @@
 # Editor configuration
-export EDITOR=vim
-export VISUAL=cursor
+export EDITOR=~/scripts/nvim-open
+export VISUAL=~/scripts/nvim-open
