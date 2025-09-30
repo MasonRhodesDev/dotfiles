@@ -1,5 +1,6 @@
 local M = {
   "NvChad/nvim-colorizer.lua",
+  commit = "51cf7c995ed1eb6642aecf19067ee634fa1b6ba2",
   event = { "BufReadPost", "BufNewFile" },
 }
 
