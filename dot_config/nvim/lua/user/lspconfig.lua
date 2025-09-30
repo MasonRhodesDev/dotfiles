@@ -1,5 +1,5 @@
--- Native LSP configuration for Neovim 0.11+
--- Keep minimal nvim-lspconfig for neodev compatibility
+-- Native LSP configuration using vim.lsp.config (Neovim 0.11+)
+-- nvim-lspconfig kept only for neodev compatibility
 
 local M = {
   "neovim/nvim-lspconfig",
@@ -176,9 +176,7 @@ function M.config()
     winhighlight = "FloatBorder:CustomActiveBorder"
   })
 
-  -- Setup servers using nvim-lspconfig for Vue/TypeScript compatibility
-  local lspconfig = require("lspconfig")
-
+  -- Setup servers using native vim.lsp.config (Neovim 0.11+)
   -- Configure priority servers first (VTSLS before Vue)
   for _, server in pairs(priority_servers) do
     local base_config = {
@@ -191,7 +189,8 @@ function M.config()
       base_config = vim.tbl_deep_extend("force", base_config, settings)
     end
 
-    lspconfig[server].setup(base_config)
+    vim.lsp.config[server] = base_config
+    vim.lsp.enable(server)
   end
 
   -- Configure remaining servers
@@ -206,7 +205,8 @@ function M.config()
       base_config = vim.tbl_deep_extend("force", base_config, settings)
     end
 
-    lspconfig[server].setup(base_config)
+    vim.lsp.config[server] = base_config
+    vim.lsp.enable(server)
   end
 end
 

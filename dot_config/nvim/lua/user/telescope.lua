@@ -54,6 +54,7 @@ function M.config()
         "--column",
         "--smart-case",
         "--hidden",
+        "--no-ignore",           -- Show git-ignored files
         "--glob=!.git/",
       },
 
@@ -86,6 +87,7 @@ function M.config()
         theme = "dropdown",
         previewer = false,
         hidden = true,
+        no_ignore = true,        -- Show git-ignored files
       },
 
       buffers = {

@@ -56,6 +56,11 @@ function M.config()
     },
     view = {
       relativenumber = true,
+      width = {
+        min = 30,        -- Minimum width
+        max = 50,        -- Maximum width (-1 for unbounded)
+        padding = 1,     -- Extra padding on right
+      },
     },
     renderer = {
       add_trailing = false,
@@ -139,6 +144,12 @@ function M.config()
         warning = icons.diagnostics.BoldWarning,
         error = icons.diagnostics.BoldError,
       },
+    },
+    filters = {
+      dotfiles = false,      -- Show dotfiles
+      git_ignored = false,   -- Show git-ignored files
+      custom = {},           -- No custom filters
+      exclude = { "\\.local$" },  -- Always show .local files
     },
   }
 end
