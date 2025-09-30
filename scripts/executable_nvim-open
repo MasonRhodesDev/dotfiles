@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+# Project-aware nvim opener for Vue devtools and other editor integrations
+
+set -euo pipefail
+
+# Parse file path and optional line/column numbers
+# Supports formats: file, file:line, file:line:column
+FILE_ARG="${1:-}"
+if [[ -z "$FILE_ARG" ]]; then
+    exec nvim
+    exit 0
+fi
+
+# Extract file path and position
+FILE_PATH="${FILE_ARG%%:*}"
+POSITION=""
+
+if [[ "$FILE_ARG" =~ ^([^:]+):([0-9]+)(:([0-9]+))?$ ]]; then
+    FILE_PATH="${BASH_REMATCH[1]}"
+    LINE="${BASH_REMATCH[2]}"
+    COLUMN="${BASH_REMATCH[4]:-1}"
+    POSITION="+call cursor($LINE, $COLUMN)"
+fi
+
+# Resolve to absolute path
+if [[ ! "$FILE_PATH" =~ ^/ ]]; then
+    FILE_PATH="$(pwd)/$FILE_PATH"
+fi
+
+# Find project root by looking for common markers
+find_project_root() {
+    local dir="$1"
+    while [[ "$dir" != "/" ]]; do
+        if [[ -d "$dir/.git" ]] || \
+           [[ -f "$dir/package.json" ]] || \
+           [[ -f "$dir/Cargo.toml" ]] || \
+           [[ -f "$dir/go.mod" ]] || \
+           [[ -f "$dir/pyproject.toml" ]]; then
+            echo "$dir"
+            return 0
+        fi
+        dir="$(dirname "$dir")"
+    done
+    echo "$HOME"
+}
+
+PROJECT_ROOT=$(find_project_root "$(dirname "$FILE_PATH")")
+PROJECT_NAME=$(basename "$PROJECT_ROOT")
+
+# Create socket directory if it doesn't exist
+SOCKET_DIR="$HOME/.cache/nvim"
+mkdir -p "$SOCKET_DIR"
+
+SOCKET_PATH="$SOCKET_DIR/${PROJECT_NAME}.sock"
+
+# Check if socket exists and is active
+if [[ -S "$SOCKET_PATH" ]]; then
+    # Test if the server is responsive
+    if nvim --server "$SOCKET_PATH" --remote-send '<Esc>' 2>/dev/null; then
+        # Server is active, send file to it
+        if [[ -n "$POSITION" ]]; then
+            exec nvim --server "$SOCKET_PATH" --remote-send "<Esc>:e $FILE_PATH<CR>$POSITION<CR>"
+        else
+            exec nvim --server "$SOCKET_PATH" --remote "$FILE_PATH"
+        fi
+        exit 0
+    else
+        # Socket exists but server is dead, remove it
+        rm -f "$SOCKET_PATH"
+    fi
+fi
+
+# No active server, start new nvim instance with server
+if [[ -n "$POSITION" ]]; then
+    exec nvim --listen "$SOCKET_PATH" "$POSITION" "$FILE_PATH"
+else
+    exec nvim --listen "$SOCKET_PATH" "$FILE_PATH"
+fi
