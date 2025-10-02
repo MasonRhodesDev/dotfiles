@@ -24,8 +24,10 @@ function M.config()
     { "<leader>fb", "<cmd>Telescope git_branches<cr>", desc = "Checkout branch" },
     { "<leader>fc", "<cmd>Telescope colorscheme<cr>", desc = "Colorscheme" },
     { "<leader>ff", "<cmd>Telescope find_files<cr>", desc = "Find files" },
+    { "<leader>fF", "<cmd>Telescope find_files no_ignore=true<cr>", desc = "Find ALL files" },
     { "<leader>fp", "<cmd>lua require('telescope').extensions.projects.projects()<cr>", desc = "Projects" },
     { "<leader>ft", "<cmd>Telescope live_grep<cr>", desc = "Find Text" },
+    { "<leader>fT", "<cmd>Telescope live_grep additional_args={'--no-ignore'}<cr>", desc = "Find ALL Text" },
     { "<leader>fh", "<cmd>Telescope help_tags<cr>", desc = "Help" },
     { "<leader>fl", "<cmd>Telescope resume<cr>", desc = "Last Search" },
     { "<leader>fr", "<cmd>Telescope oldfiles<cr>", desc = "Recent File" },
@@ -53,9 +55,10 @@ function M.config()
         "--line-number",
         "--column",
         "--smart-case",
-        "--hidden",
-        "--no-ignore",           -- Show git-ignored files
-        "--glob=!.git/",
+        "--hidden",              -- Search hidden files
+        -- Respects .gitignore by default
+        -- ~/.ignore file contains negation patterns to whitelist specific gitignored files
+        "--glob=!.git/",         -- Always exclude .git directory
       },
 
       mappings = {
@@ -87,7 +90,8 @@ function M.config()
         theme = "dropdown",
         previewer = false,
         hidden = true,
-        no_ignore = true,        -- Show git-ignored files
+        -- Respect .gitignore (no no_ignore flag)
+        -- Use vimgrep_arguments --glob patterns above for exceptions
       },
 
       buffers = {

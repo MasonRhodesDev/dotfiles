@@ -54,6 +54,10 @@ function M.config()
       enable = true,
       auto_open = true,
     },
+    git = {
+      enable = true,
+      ignore = true,  -- Respect .gitignore
+    },
     view = {
       relativenumber = true,
       width = {
@@ -146,10 +150,20 @@ function M.config()
       },
     },
     filters = {
-      dotfiles = false,      -- Show dotfiles
-      git_ignored = false,   -- Show git-ignored files
-      custom = {},           -- No custom filters
-      exclude = { "\\.local$" },  -- Always show .local files
+      dotfiles = false,       -- Show dotfiles
+      git_ignored = true,     -- Hide git-ignored files
+      custom = {},            -- Custom patterns to hide (lua patterns)
+      -- Exception patterns - always show these even if they match other filters
+      -- Use lua patterns: . needs escaping as \\.  $ matches end of string
+      exclude = {
+        "%.local$",           -- ALWAYS show *.local files/dirs
+        "%.local%.",          -- ALWAYS show *.local.* files (e.g., config.local.ts)
+        "rc$",                -- ALWAYS show .*rc files (e.g., .bashrc, .vimrc)
+        -- "\\.env\\.local$",    -- Example: always show .env.local
+        -- "^dist",              -- Example: always show dist/ directory
+        -- "%.log$",             -- Example: always show .log files
+        -- "node_modules/my%-package", -- Example: show specific node_modules subfolder
+      },
     },
   }
 end
