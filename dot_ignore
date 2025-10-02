@@ -1,0 +1,10 @@
+# Global ripgrep ignore file
+# Negation patterns (!) whitelist files that would otherwise be gitignored
+# This allows telescope/ripgrep to show these files while respecting other gitignore rules
+
+# Always show .local files
+!*.local
+!*.local.*
+
+# Always show rc files
+!*rc
