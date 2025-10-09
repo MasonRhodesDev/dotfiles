@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+set -e
+
+if [ -n "$WAYLAND_DISPLAY" ]; then
+    types=$(wl-paste --list-types 2>/dev/null || echo "")
+    if grep -q '^image/' <<<"$types"; then
+        ext=$(grep -m1 '^image/' <<<"$types" | cut -d/ -f2 | cut -d';' -f1)
+
+        # Save to temp file first, then hash it
+        tmpfile=$(mktemp)
+        wl-paste > "$tmpfile"
+        hash=$(sha256sum "$tmpfile" | cut -d' ' -f1)
+        file="/tmp/clip_${hash}.${ext}"
+
+        # Move temp file to final location if it doesn't exist
+        if [ ! -f "$file" ]; then
+            mv "$tmpfile" "$file"
+        else
+            rm "$tmpfile"
+        fi
+
+        echo -n "$file"
+    else
+        wl-paste --no-newline 2>/dev/null || echo ""
+    fi
+elif [ -n "$DISPLAY" ]; then
+    types=$(xclip -selection clipboard -t TARGETS -o 2>/dev/null || echo "")
+    if grep -q '^image/' <<<"$types"; then
+        ext=$(grep -m1 '^image/' <<<"$types" | cut -d/ -f2 | cut -d';' -f1)
+
+        # Save to temp file first, then hash it
+        tmpfile=$(mktemp)
+        xclip -selection clipboard -t "image/${ext}" -o > "$tmpfile"
+        hash=$(sha256sum "$tmpfile" | cut -d' ' -f1)
+        file="/tmp/clip_${hash}.${ext}"
+
+        # Move temp file to final location if it doesn't exist
+        if [ ! -f "$file" ]; then
+            mv "$tmpfile" "$file"
+        else
+            rm "$tmpfile"
+        fi
+
+        echo -n "$file"
+    else
+        xclip -selection clipboard -o 2>/dev/null || echo ""
+    fi
+fi
