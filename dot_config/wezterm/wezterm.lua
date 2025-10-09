@@ -7,6 +7,9 @@ config.automatically_reload_config = true
 -- Hide tab bar when only one tab is open
 config.hide_tab_bar_if_only_one_tab = true
 
+-- Enable pasting images
+config.enable_clipboard = true
+
 -- Dynamic opacity based on running process
 config.window_background_opacity = 0.95
 
@@ -91,11 +94,22 @@ config.keys = {
     mods = 'CTRL|SHIFT',
     action = wezterm.action.CopyTo 'Clipboard',
   },
-  -- Paste from system clipboard
+  -- Paste from system clipboard (text)
   {
     key = 'v',
     mods = 'CTRL|SHIFT',
     action = wezterm.action.PasteFrom 'Clipboard',
+  },
+  -- Smart paste: image paths for images, text for text (for Claude Code)
+  {
+    key = 'v',
+    mods = 'CTRL',
+    action = wezterm.action_callback(function(window, pane)
+      local success, stdout, stderr = wezterm.run_child_process({'/home/mason/scripts/wezterm-paste-image'})
+      if success and stdout and stdout ~= "" then
+        pane:send_text(stdout)
+      end
+    end),
   },
   -- Disable Super+N to let Hyprland handle it for swaync
   {
