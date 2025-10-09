@@ -56,3 +56,7 @@ keymap("v", "<PageUp>", ":m '<-2<CR>gv=gv", opts) -- PageUp: Move selected lines
 
 -- Terminal mode escape
 vim.api.nvim_set_keymap("t", "<C-;>", "<C-\\><C-n>", opts) -- Ctrl+; in terminal: Exit to normal mode
+
+-- Fold navigation
+keymap("n", "<C-h>", "zc", opts) -- Ctrl+h: Close fold under cursor
+keymap("n", "<C-l>", "zo", opts) -- Ctrl+l: Open fold under cursor

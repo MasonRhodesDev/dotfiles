@@ -36,6 +36,10 @@ local function on_attach(bufnr)
   
   -- Add our leader key mappings
   tree_keymaps(bufnr)
+
+  -- Fold navigation (directory collapse/expand)
+  vim.keymap.set('n', '<C-h>', api.node.navigate.parent_close, { buffer = bufnr, noremap = true, silent = true })
+  vim.keymap.set('n', '<C-l>', api.node.open.edit, { buffer = bufnr, noremap = true, silent = true })
 end
 
 function M.config()
