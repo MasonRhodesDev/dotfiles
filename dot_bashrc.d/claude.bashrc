@@ -64,12 +64,11 @@ ${staged_diff}")
         echo ""
 
         if $prepare_only; then
-            # Write message to COMMIT_EDITMSG without committing
+            # Write message to COMMIT_EDITMSG and open editor
             echo "$commit_msg" > "$git_dir/COMMIT_EDITMSG"
-            echo -e "\033[32mCommit message written to $git_dir/COMMIT_EDITMSG\033[0m"
+            echo -e "\033[32mOpening editor to finalize commit message...\033[0m"
             echo ""
-            echo "To edit and commit, run:"
-            echo -e "  \033[33mgit commit -e\033[0m"
+            git commit -e
         else
             # Normal commit flow with confirmation
             read -p "Commit with this message? (y/n): " -n 1 confirm
