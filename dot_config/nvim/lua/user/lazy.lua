@@ -23,4 +23,8 @@ require("lazy").setup {
     enabled = true,
     notify = false,
   },
+  lockfile = vim.fn.stdpath("config") .. "/lazy-lock.json",
+  defaults = {
+    version = false, -- Don't use semver, use lockfile commits
+  },
 }
