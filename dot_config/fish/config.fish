@@ -1,8 +1,20 @@
-# Vi keybindings
-fish_vi_key_bindings
-
 # Oh My Posh prompt
 oh-my-posh init fish --config /home/mason/.config/oh-my-posh/bubbles.omp.json | source
+
+# Vi keybindings (must come after oh-my-posh)
+fish_vi_key_bindings
+
+# Vi mode indicator for oh-my-posh
+function rerender_on_bind_mode_change --on-variable fish_bind_mode
+    if test "$fish_bind_mode" != paste -a "$fish_bind_mode" != "$FISH__BIND_MODE"
+        set -gx FISH__BIND_MODE $fish_bind_mode
+        omp_repaint_prompt
+    end
+end
+
+function fish_default_mode_prompt --description "Display vi prompt mode"
+    # Masked - oh-my-posh handles mode display
+end
 
 # Source uwsm environment variables
 if test -f ~/.config/uwsm/env
