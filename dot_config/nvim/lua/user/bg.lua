@@ -1,5 +1,5 @@
 local M = {
-  "b3nj5m1n/bg.nvim",
+  "typicode/bg.nvim",
   commit = "df916e4df2493ee302eea62185ed014ba7ca40d9",
   lazy = false, -- Load immediately to sync terminal background
 }
