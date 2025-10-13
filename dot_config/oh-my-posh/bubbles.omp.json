@@ -1,0 +1,147 @@
+{
+  "$schema": "https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/schema.json",
+  "blocks": [
+    {
+      "alignment": "right",
+      "segments": [
+        {
+          "background": "#29315A",
+          "foreground": "#E64747",
+          "leading_diamond": "",
+          "style": "diamond",
+          "template": "{{ .UserName }}",
+          "trailing_diamond": " ",
+          "type": "session"
+        },
+        {
+          "background": "#29315A",
+          "foreground": "#3EC669",
+          "leading_diamond": "",
+          "properties": {
+            "style": "folder"
+          },
+          "style": "diamond",
+          "template": " {{ .Path }}",
+          "trailing_diamond": "",
+          "type": "path"
+        },
+        {
+          "background": "#29315A",
+          "foreground": "#43CCEA",
+          "leading_diamond": " ",
+          "properties": {
+            "branch_icon": ""
+          },
+          "style": "diamond",
+          "template": "{{ .HEAD }}",
+          "trailing_diamond": "",
+          "type": "git"
+        },
+        {
+          "background": "#29315A",
+          "foreground": "#E4F34A",
+          "leading_diamond": " ",
+          "properties": {
+            "fetch_version": false
+          },
+          "style": "diamond",
+          "template": "{{ if .Error }}{{ .Error }}{{ else }}{{ if .Venv }}{{ .Venv }} {{ end }}{{ .Full }}{{ end }}",
+          "trailing_diamond": "",
+          "type": "python"
+        },
+        {
+          "background": "#29315A",
+          "foreground": "#7FD5EA",
+          "leading_diamond": " ",
+          "properties": {
+            "fetch_version": false
+          },
+          "style": "diamond",
+          "template": "{{ if .Error }}{{ .Error }}{{ else }}{{ .Full }}{{ end }}",
+          "trailing_diamond": "",
+          "type": "go"
+        },
+        {
+          "background": "#29315A",
+          "foreground": "#42E66C",
+          "leading_diamond": " ",
+          "properties": {
+            "fetch_version": false
+          },
+          "style": "diamond",
+          "template": "{{ if .PackageManagerIcon }}{{ .PackageManagerIcon }} {{ end }}{{ .Full }}",
+          "trailing_diamond": "",
+          "type": "node"
+        },
+        {
+          "background": "#29315A",
+          "foreground": "#E64747",
+          "leading_diamond": " ",
+          "properties": {
+            "fetch_version": false
+          },
+          "style": "diamond",
+          "template": "{{ if .Error }}{{ .Error }}{{ else }}{{ .Full }}{{ end }}",
+          "trailing_diamond": "",
+          "type": "ruby"
+        },
+        {
+          "background": "#29315A",
+          "foreground": "#E64747",
+          "leading_diamond": " ",
+          "properties": {
+            "fetch_version": false
+          },
+          "style": "diamond",
+          "template": "{{ if .Error }}{{ .Error }}{{ else }}{{ .Full }}{{ end }}",
+          "trailing_diamond": "",
+          "type": "java"
+        },
+        {
+          "background": "#29315A",
+          "foreground": "#9B6BDF",
+          "leading_diamond": " ",
+          "properties": {
+            "fetch_version": false
+          },
+          "style": "diamond",
+          "template": "{{ if .Error }}{{ .Error }}{{ else }}{{ .Full }}{{ end }} ",
+          "trailing_diamond": "",
+          "type": "julia"
+        }
+      ],
+      "type": "prompt"
+    },
+    {
+      "alignment": "left",
+      "newline": true,
+      "segments": [
+        {
+          "background": "#29315A",
+          "foreground": "#AEA4BF",
+          "leading_diamond": "",
+          "properties": {
+            "style": "austin",
+            "threshold": 150
+          },
+          "style": "diamond",
+          "template": "{{ .FormattedMs }}",
+          "trailing_diamond": " ",
+          "type": "executiontime"
+        },
+        {
+          "background": "#29315A",
+          "foreground": "#7FD5EA",
+          "leading_diamond": "",
+          "style": "diamond",
+          "template": "❯",
+          "trailing_diamond": "",
+          "type": "text"
+        }
+      ],
+      "type": "prompt"
+    }
+  ],
+  "final_space": true,
+  "version": 3
+}
