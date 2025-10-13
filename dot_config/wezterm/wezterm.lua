@@ -7,9 +7,6 @@ config.automatically_reload_config = true
 -- Hide tab bar when only one tab is open
 config.hide_tab_bar_if_only_one_tab = true
 
--- Enable pasting images
-config.enable_clipboard = true
-
 -- Dynamic opacity based on running process
 config.window_background_opacity = 0.95
 
