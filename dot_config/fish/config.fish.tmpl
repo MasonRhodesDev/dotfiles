@@ -1,5 +1,7 @@
-# Oh My Posh prompt
-oh-my-posh init fish --config /home/mason/.config/oh-my-posh/bubbles.omp.json | source
+# Oh My Posh prompt - skip in Cursor integrated terminal
+if not set -q TERM_PROGRAM; or test "$TERM_PROGRAM" != "vscode"
+    oh-my-posh init fish --config {{ .chezmoi.homeDir }}/.config/oh-my-posh/bubbles.omp.json | source
+end
 
 # Vi keybindings (must come after oh-my-posh)
 fish_vi_key_bindings

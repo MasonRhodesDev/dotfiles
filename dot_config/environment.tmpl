@@ -1,0 +1,32 @@
+# Shared environment variables for bash and fish
+# This file uses POSIX sh syntax for compatibility
+
+# Editor configuration
+export EDITOR="{{ .chezmoi.homeDir }}/scripts/nvim-open"
+export VISUAL="{{ .chezmoi.homeDir }}/scripts/nvim-open"
+
+# Environment variables
+export WALLPAPER_PATH="{{ .chezmoi.homeDir }}/Pictures/forrest.png"
+
+# ydotool socket
+export YDOTOOL_SOCKET=/tmp/.ydotool_socket
+
+# PATH additions
+export PATH="{{ .chezmoi.homeDir }}/.claude/local:$PATH"
+export PATH="{{ .chezmoi.homeDir }}/.local/bin:$PATH"
+export PATH="{{ .chezmoi.homeDir }}/scripts:$PATH"
+export PATH="{{ .chezmoi.homeDir }}/bin:$PATH"
+export PATH="$PATH:/opt/nvim-linux-x86_64/bin"
+
+# pnpm
+export PNPM_HOME="{{ .chezmoi.homeDir }}/.local/share/pnpm"
+case ":$PATH:" in
+  *":$PNPM_HOME:"*) ;;
+  *) export PATH="$PNPM_HOME:$PATH" ;;
+esac
+
+# fnm (Fast Node Manager)
+FNM_PATH="{{ .chezmoi.homeDir }}/.local/share/fnm"
+if [ -d "$FNM_PATH" ]; then
+  export PATH="$FNM_PATH:$PATH"
+fi
