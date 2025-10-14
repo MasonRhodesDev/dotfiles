@@ -1,0 +1,47 @@
+# MCPDocSearch alias
+alias add-docs='_add_docs_function'
+
+_add_docs_function() {
+    if [ -z "$1" ]; then
+        echo "Usage: add-docs <url>"
+        echo "Example: add-docs https://example.com/docs"
+        return 1
+    fi
+    
+    cd /home/mason/MCPDocSearch
+
+    echo "📚 Current documentation sites:"
+    if [ -d "storage" ] && [ "$(ls -A storage)" ]; then
+        ls storage/*.md 2>/dev/null | sed 's|storage/||g; s|\.md||g' | nl
+    else
+        echo "  (none yet)"
+    fi
+    echo
+
+    # Extract domain from URL for checking
+    DOMAIN=$(echo "$1" | sed -E 's|https?://([^/]+).*|\1|')
+    EXISTING_FILE="storage/${DOMAIN}.md"
+
+    if [ -f "$EXISTING_FILE" ]; then
+        echo "⚠️  Documentation for $DOMAIN already exists."
+        echo "   File: $EXISTING_FILE"
+        echo "   Continue anyway? (This will overwrite existing content)"
+        read -p "   [y/N]: " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            echo "❌ Crawl cancelled."
+            return 1
+        fi
+    fi
+
+    echo "🕷️  Crawling documentation from: $1"
+    /home/mason/.local/bin/uv run python crawl.py "$1"
+
+    if [ $? -eq 0 ]; then
+        echo "✅ Documentation crawled and indexed successfully!"
+        echo "🔄 Restart Claude Code to refresh the MCP server with new documents."
+    else
+        echo "❌ Crawl failed. Check the error messages above."
+        return 1
+    fi
+}
