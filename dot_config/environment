@@ -1,0 +1,32 @@
+# Shared environment variables for bash and fish
+# This file uses POSIX sh syntax for compatibility
+
+# Editor configuration
+export EDITOR="$HOME/scripts/nvim-open"
+export VISUAL="$HOME/scripts/nvim-open"
+
+# Environment variables
+export WALLPAPER_PATH="$HOME/Pictures/forrest.png"
+
+# ydotool socket
+export YDOTOOL_SOCKET=/tmp/.ydotool_socket
+
+# PATH additions
+export PATH="$HOME/.claude/local:$PATH"
+export PATH="$HOME/.local/bin:$PATH"
+export PATH="$HOME/scripts:$PATH"
+export PATH="$HOME/bin:$PATH"
+export PATH="$PATH:/opt/nvim-linux-x86_64/bin"
+
+# pnpm
+export PNPM_HOME="$HOME/.local/share/pnpm"
+case ":$PATH:" in
+  *":$PNPM_HOME:"*) ;;
+  *) export PATH="$PNPM_HOME:$PATH" ;;
+esac
+
+# fnm (Fast Node Manager)
+FNM_PATH="$HOME/.local/share/fnm"
+if [ -d "$FNM_PATH" ]; then
+  export PATH="$FNM_PATH:$PATH"
+fi
