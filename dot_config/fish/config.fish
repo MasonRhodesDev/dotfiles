@@ -27,10 +27,5 @@ if test -f ~/.config/uwsm/env
     end
 end
 
-# Editor variables (if not already set by uwsm)
-set -gx EDITOR nvim
-set -gx VISUAL nvim
-
-# Add local binaries to PATH
-fish_add_path ~/.local/bin
-fish_add_path ~/bin
+# Note: Most environment variables and PATH are set via conf.d/environment.fish
+# which sources ~/.config/environment (shared with bash)
