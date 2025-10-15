@@ -130,6 +130,7 @@ function M.config()
           buffer = "",
           path = "",
           emoji = "",
+          minuet = "󰧑",
         })[entry.source.name]
 
         if entry.source.name == "emoji" then
@@ -142,12 +143,16 @@ function M.config()
           vim_item.kind_hl_group = "CmpItemKindTabnine"
         end
 
+        if entry.source.name == "minuet" then
+          vim_item.kind = icons.misc.Robot
+          vim_item.kind_hl_group = "CmpItemKindTabnine"
+        end
+
 
         return vim_item
       end,
     },
     sources = {
-      { name = "copilot" },
       { name = "nvim_lsp" },
       { name = "luasnip" },
       { name = "cmp_tabnine" },

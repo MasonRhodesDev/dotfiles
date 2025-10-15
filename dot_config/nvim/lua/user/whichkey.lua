@@ -91,7 +91,6 @@ function M.config()
   which_key.add {
     { "<leader>q", "<cmd>confirm q<CR>", desc = "Quit" },
     { "<leader>h", "<cmd>nohlsearch<CR>", desc = "NOHL" },
-    { "<leader>;", "<cmd>tabnew | terminal<CR>", desc = "Term" },
     { "<leader>v", "<cmd>vsplit<CR>", desc = "Split" },
     { "<leader>b", group = "Buffers" },
     { "<leader>d", group = "Debug" },

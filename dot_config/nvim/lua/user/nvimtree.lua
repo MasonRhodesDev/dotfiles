@@ -21,7 +21,6 @@ local function tree_keymaps(bufnr)
   keymap(bufnr, "n", "<leader>gg", "<cmd>Neogit<cr>", opts)
   keymap(bufnr, "n", "<leader>q", "<cmd>confirm q<cr>", opts)
   keymap(bufnr, "n", "<leader>h", "<cmd>nohlsearch<cr>", opts)
-  keymap(bufnr, "n", "<leader>;", "<cmd>tabnew | terminal<cr>", opts)
   keymap(bufnr, "n", "<leader>v", "<cmd>vsplit<cr>", opts)
   
   -- Harpoon
