@@ -60,3 +60,10 @@ vim.api.nvim_set_keymap("t", "<C-;>", "<C-\\><C-n>", opts) -- Ctrl+; in terminal
 -- Fold navigation
 keymap("n", "<C-h>", "zc", opts) -- Ctrl+h: Close fold under cursor
 keymap("n", "<C-l>", "zo", opts) -- Ctrl+l: Open fold under cursor
+
+-- Tab navigation
+keymap("n", "<leader><tab>c", ":tabclose<CR>", opts) -- Leader+Tab+c: Close current tab
+keymap("n", "<leader><tab>n", ":tabnew<CR>", opts) -- Leader+Tab+n: New tab
+keymap("n", "<leader><tab>o", ":tabonly<CR>", opts) -- Leader+Tab+o: Close all other tabs
+keymap("n", "<leader><tab>h", ":tabprevious<CR>", opts) -- Leader+Tab+h: Previous tab
+keymap("n", "<leader><tab>l", ":tabnext<CR>", opts) -- Leader+Tab+l: Next tab
