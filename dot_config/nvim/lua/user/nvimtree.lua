@@ -39,6 +39,12 @@ local function on_attach(bufnr)
   -- Fold navigation (directory collapse/expand)
   vim.keymap.set('n', '<C-h>', api.node.navigate.parent_close, { buffer = bufnr, noremap = true, silent = true })
   vim.keymap.set('n', '<C-l>', api.node.open.edit, { buffer = bufnr, noremap = true, silent = true })
+  
+  -- Override H to toggle both dotfiles and git-ignored files together
+  vim.keymap.set('n', 'H', function()
+    api.tree.toggle_hidden_filter()
+    api.tree.toggle_gitignore_filter()
+  end, { buffer = bufnr, noremap = true, silent = true, desc = 'Toggle hidden/ignored files' })
 end
 
 function M.config()
@@ -59,7 +65,9 @@ function M.config()
     },
     git = {
       enable = true,
-      ignore = true,  -- Respect .gitignore
+      ignore = false,
+      show_on_dirs = true,
+      show_on_open_dirs = false,
     },
     view = {
       relativenumber = true,
@@ -153,20 +161,10 @@ function M.config()
       },
     },
     filters = {
-      dotfiles = false,       -- Show dotfiles
-      git_ignored = true,     -- Hide git-ignored files
+      dotfiles = false,       -- Show dotfiles by default
+      git_ignored = false,    -- Show git-ignored files by default
       custom = {},            -- Custom patterns to hide (lua patterns)
-      -- Exception patterns - always show these even if they match other filters
-      -- Use lua patterns: . needs escaping as \\.  $ matches end of string
-      exclude = {
-        "%.local$",           -- ALWAYS show *.local files/dirs
-        "%.local%.",          -- ALWAYS show *.local.* files (e.g., config.local.ts)
-        "rc$",                -- ALWAYS show .*rc files (e.g., .bashrc, .vimrc)
-        -- "\\.env\\.local$",    -- Example: always show .env.local
-        -- "^dist",              -- Example: always show dist/ directory
-        -- "%.log$",             -- Example: always show .log files
-        -- "node_modules/my%-package", -- Example: show specific node_modules subfolder
-      },
+      exclude = {},
     },
   }
 end
