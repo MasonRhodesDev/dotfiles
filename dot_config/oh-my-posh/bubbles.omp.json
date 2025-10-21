@@ -143,5 +143,10 @@
     }
   ],
   "final_space": true,
+  "transient_prompt": {
+    "background": "transparent",
+    "foreground": "#7FD5EA",
+    "template": "❯ "
+  },
   "version": 3
 }
