@@ -30,7 +30,6 @@ return {
         auto_trigger_ft = { '*' },
         keymap = {
           accept = '<Tab>',
-          accept_line = '<C-l>',
           accept_n_lines = '<C-k>',
           prev = '<C-p>',
           next = '<C-n>',

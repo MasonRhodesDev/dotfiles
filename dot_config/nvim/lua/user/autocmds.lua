@@ -123,8 +123,11 @@ vim.api.nvim_create_autocmd("VimEnter", {
 -- Highlight active/inactive windows
 vim.api.nvim_create_autocmd({"WinEnter", "BufEnter"}, {
   callback = function()
-    vim.opt_local.cursorline = true
-    vim.opt_local.relativenumber = true
+    local ft = vim.bo.filetype
+    if ft ~= "opencode" and ft ~= "claudecode" and ft ~= "opencode_terminal" and ft ~= "opencode_ask" then
+      vim.opt_local.cursorline = true
+      vim.opt_local.relativenumber = true
+    end
   end
 })
 
@@ -133,6 +136,19 @@ vim.api.nvim_create_autocmd({"WinLeave", "BufLeave"}, {
     vim.opt_local.cursorline = false
     vim.opt_local.relativenumber = false
   end
+})
+
+vim.api.nvim_create_autocmd({"FileType", "BufEnter"}, {
+  pattern = {"opencode", "claudecode", "opencode_terminal", "opencode_ask"},
+  callback = function()
+    vim.opt_local.number = false
+    vim.opt_local.relativenumber = false
+    vim.opt_local.signcolumn = "no"
+    vim.opt_local.numberwidth = 1
+    vim.opt_local.foldcolumn = "0"
+    vim.opt_local.statuscolumn = ""
+    vim.opt_local.sidescrolloff = 0
+  end,
 })
 
 -- Custom filetype detection for .tmpl files (chezmoi templates)
