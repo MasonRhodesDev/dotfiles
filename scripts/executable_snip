@@ -6,4 +6,5 @@
   satty --filename - \
         --copy-command "wl-copy" \
         --early-exit \
-        --default-hide-toolbars
+        --default-hide-toolbars \
+        --initial-tool arrow
