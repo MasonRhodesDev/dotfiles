@@ -1,2 +1,8 @@
 #!/bin/sh
-slurp | grim -g - - | wl-copy
+# Modern screenshot workflow: wayshot + satty for annotation
+# Takes a selection screenshot, opens in satty for annotation/editing
+TEMP_FILE=$(mktemp --suffix=.png)
+~/.cargo/bin/wayshot --stdout -s "$(slurp)" > "$TEMP_FILE"
+satty --filename "$TEMP_FILE" --fullscreen --output-filename "$TEMP_FILE"
+wl-copy < "$TEMP_FILE"
+rm "$TEMP_FILE"

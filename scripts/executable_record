@@ -1,11 +1,19 @@
 #!/bin/sh
+# Modern screen recording with gpu-screen-recorder (hardware encoding)
 FILENAME=~/Videos/$(date +%s).mp4
-pid=`pgrep wf-recorder`
-status=$?
-if [ $status != 0 ]; then
-  wf-recorder -g "$(slurp)" -f $FILENAME
-  # add to clipboard
-  wl-copy < $FILENAME
+PIDFILE=/tmp/gpu-screen-recorder.pid
+
+if [ -f "$PIDFILE" ] && kill -0 $(cat "$PIDFILE") 2>/dev/null; then
+  # Stop recording
+  kill -SIGINT $(cat "$PIDFILE")
+  rm "$PIDFILE"
+  notify-send "Screen Recording" "Recording stopped and saved to $FILENAME"
 else
-  pkill --signal SIGINT wf-recorder
+  # Start recording with region selection
+  REGION=$(slurp)
+  if [ -n "$REGION" ]; then
+    gpu-screen-recorder -w region -region "$REGION" -f 60 -c mp4 -k auto -o "$FILENAME" &
+    echo $! > "$PIDFILE"
+    notify-send "Screen Recording" "Recording started..."
+  fi
 fi
