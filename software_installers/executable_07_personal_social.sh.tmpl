@@ -1,0 +1,19 @@
+#!/bin/bash
+set -eu
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/__helpers.sh"
+
+{{ if not .is_work }}
+echo "=== Installing Social and Security Applications ==="
+
+echo "--- Social Communication ---"
+install_packages_from_registry "social"
+
+echo "--- Password Manager ---"
+install_packages_from_registry "password_manager"
+
+echo "✓ Social and security applications installation complete!"
+{{ else }}
+echo "Skipped personal social applications (work machine)"
+{{ end }}

@@ -1,0 +1,36 @@
+#!/bin/bash
+set -eu
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/__helpers.sh"
+
+{{ if .is_work }}
+echo "=== Installing Work-Specific Tools ==="
+
+echo "--- Docker ---"
+install_packages_from_registry "docker"
+
+echo "--- MongoDB ---"
+install_packages_from_registry "mongodb"
+
+echo "--- AWS Tools ---"
+install_packages_from_registry "aws_tools"
+
+echo "--- VPN Tools ---"
+install_packages_from_registry "vpn_tools"
+
+echo "--- Kubernetes Tools ---"
+install_packages_from_registry "kubernetes"
+
+echo "--- Java Development ---"
+install_packages_from_registry "java_dev"
+
+echo "--- PyCharm IDE ---"
+install_packages_from_registry "pycharm"
+
+echo "✓ Work tools installation complete!"
+echo ""
+echo "IMPORTANT: Log out and back in for group memberships (docker) to take effect"
+{{ else }}
+echo "Skipped work tools (personal machine)"
+{{ end }}

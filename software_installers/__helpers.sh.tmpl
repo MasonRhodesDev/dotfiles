@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# Helper functions for software installation
+PACKAGE_REGISTRY="{{ .chezmoi.sourceDir }}/software_installers/packages.toml"
+PROFILE_TYPE="{{ .profile.type }}"
 
-# Detect distribution
 get_distro() {
     if command -v dnf &> /dev/null; then
         echo "fedora"
@@ -13,7 +13,161 @@ get_distro() {
     fi
 }
 
-# Install packages based on distro
+get_distro_version() {
+    if [ -f /etc/fedora-release ]; then
+        grep -oP '(?<=release )[0-9]+' /etc/fedora-release
+    elif [ -f /etc/os-release ]; then
+        grep -oP '(?<=VERSION_ID=")[^"]+' /etc/os-release
+    fi
+}
+
+ensure_yq() {
+    if ! command -v yq &> /dev/null; then
+        echo "Installing yq for package registry parsing..."
+        local distro=$(get_distro)
+        if [ "$distro" = "fedora" ]; then
+            sudo dnf install -y yq
+        elif [ "$distro" = "arch" ]; then
+            sudo pacman -S --needed --noconfirm yq
+        fi
+    fi
+}
+
+get_category_section() {
+    local category="$1"
+    
+    ensure_yq
+    
+    if yq eval ".common | has(\"$category\")" "$PACKAGE_REGISTRY" 2>/dev/null | grep -q "true"; then
+        echo "common"
+    elif yq eval ".work | has(\"$category\")" "$PACKAGE_REGISTRY" 2>/dev/null | grep -q "true"; then
+        echo "work"
+    elif yq eval ".personal | has(\"$category\")" "$PACKAGE_REGISTRY" 2>/dev/null | grep -q "true"; then
+        echo "personal"
+    else
+        echo "unknown"
+    fi
+}
+
+should_install_category() {
+    local category="$1"
+    local section=$(get_category_section "$category")
+    
+    case $section in
+        "common")
+            return 0
+            ;;
+        "work")
+            [ "$PROFILE_TYPE" = "work" ]
+            return $?
+            ;;
+        "personal")
+            [ "$PROFILE_TYPE" = "personal" ]
+            return $?
+            ;;
+        *)
+            echo "Warning: Unknown section for category $category" >&2
+            return 1
+            ;;
+    esac
+}
+
+parse_packages() {
+    local category="$1"
+    local distro="$2"
+    local package_type="${3:-packages}"
+    local section=$(get_category_section "$category")
+    
+    ensure_yq
+    
+    yq eval ".${section}.${category}.${distro}.${package_type} | .[]" "$PACKAGE_REGISTRY" 2>/dev/null
+}
+
+get_packages() {
+    local category="$1"
+    local distro=$(get_distro)
+    
+    parse_packages "$category" "$distro" "packages"
+}
+
+is_optional() {
+    local category="$1"
+    local section=$(get_category_section "$category")
+    
+    ensure_yq
+    
+    local optional=$(yq eval ".${section}.${category}.optional" "$PACKAGE_REGISTRY" 2>/dev/null)
+    [ "$optional" = "true" ]
+}
+
+is_optional_enabled() {
+    local category="$1"
+    {{ range .profile.optional_packages }}
+    if [ "$category" = "{{ . }}" ]; then
+        return 0
+    fi
+    {{ end }}
+    return 1
+}
+
+check_min_version() {
+    local category="$1"
+    local section=$(get_category_section "$category")
+    local distro=$(get_distro)
+    local current_version=$(get_distro_version)
+    
+    ensure_yq
+    
+    local min_version=$(yq eval ".${section}.${category}.${distro}.min_version" "$PACKAGE_REGISTRY" 2>/dev/null)
+    
+    if [ "$min_version" != "null" ] && [ -n "$min_version" ]; then
+        if [ "$current_version" -lt "$min_version" ]; then
+            echo "Warning: $category requires $distro $min_version+, you have $current_version" >&2
+            return 1
+        fi
+    fi
+    return 0
+}
+
+list_section_categories() {
+    local section="$1"
+    
+    ensure_yq
+    
+    yq eval ".${section} | keys | .[]" "$PACKAGE_REGISTRY" 2>/dev/null
+}
+
+check_package_installed() {
+    local package="$1"
+    local distro=$(get_distro)
+    
+    case $distro in
+        "fedora")
+            rpm -q "$package" &> /dev/null
+            ;;
+        "arch")
+            pacman -Q "$package" &> /dev/null
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+filter_installed_packages() {
+    local packages="$1"
+    local distro=$(get_distro)
+    local to_install=""
+    
+    for pkg in $packages; do
+        if ! check_package_installed "$pkg"; then
+            to_install="$to_install $pkg"
+        fi
+    done
+    
+    echo "$to_install" | xargs
+}
+
 install_packages() {
     local distro=$(get_distro)
     local fedora_packages="$1"
@@ -22,11 +176,18 @@ install_packages() {
     case $distro in
         "fedora")
             if [ -n "$fedora_packages" ]; then
-                sudo dnf install -y $fedora_packages
+                local to_install=$(filter_installed_packages "$fedora_packages")
+                if [ -n "$to_install" ]; then
+                    echo "Installing: $to_install"
+                    sudo dnf install -y $to_install
+                else
+                    echo "All packages already installed"
+                fi
             fi
             ;;
         "arch")
             if [ -n "$arch_packages" ]; then
+                echo "Installing with pacman (uses --needed flag for change detection)"
                 sudo pacman -S --needed --noconfirm $arch_packages
             fi
             ;;
@@ -37,7 +198,11 @@ install_packages() {
     esac
 }
 
-# Install AUR packages (Arch only)
+check_aur_package_installed() {
+    local package="$1"
+    yay -Q "$package" &> /dev/null || pacman -Q "$package" &> /dev/null
+}
+
 install_aur_packages() {
     local packages="$1"
     
@@ -46,7 +211,6 @@ install_aur_packages() {
         return 1
     fi
     
-    # Install yay if not present
     if ! command -v yay &> /dev/null; then
         echo "Installing yay AUR helper..."
         git clone https://aur.archlinux.org/yay.git /tmp/yay
@@ -57,11 +221,367 @@ install_aur_packages() {
     fi
     
     if [ -n "$packages" ]; then
-        yay -S --needed --noconfirm $packages
+        local to_install=""
+        for pkg in $packages; do
+            if ! check_aur_package_installed "$pkg"; then
+                to_install="$to_install $pkg"
+            fi
+        done
+        
+        if [ -n "$to_install" ]; then
+            echo "Installing AUR packages: $to_install"
+            yay -S --needed --noconfirm $to_install
+        else
+            echo "All AUR packages already installed"
+        fi
     fi
 }
 
-# Download and extract latest GitHub release
+check_flatpak_installed() {
+    local package="$1"
+    flatpak list --app | grep -q "^$package"
+}
+
+install_flatpak_packages() {
+    local packages="$1"
+    
+    if ! command -v flatpak &> /dev/null; then
+        echo "Installing flatpak..."
+        if command -v dnf &> /dev/null; then
+            sudo dnf install -y flatpak
+        elif command -v pacman &> /dev/null; then
+            sudo pacman -S --needed --noconfirm flatpak
+        fi
+        
+        flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+    fi
+    
+    local to_install=""
+    for pkg in $packages; do
+        if ! check_flatpak_installed "$pkg"; then
+            to_install="$to_install $pkg"
+        fi
+    done
+    
+    if [ -n "$to_install" ]; then
+        echo "Installing flatpak packages: $to_install"
+        echo "$to_install" | xargs -n1 flatpak install -y flathub
+    else
+        echo "All flatpak packages already installed"
+    fi
+}
+
+check_service_enabled() {
+    local service="$1"
+    systemctl is-enabled "$service" &> /dev/null
+}
+
+check_service_active() {
+    local service="$1"
+    systemctl is-active "$service" &> /dev/null
+}
+
+enable_services() {
+    local services="$1"
+    
+    for service in $services; do
+        if ! check_service_enabled "$service"; then
+            echo "Enabling service: $service"
+            sudo systemctl enable "$service"
+        else
+            echo "Service already enabled: $service"
+        fi
+        
+        if ! check_service_active "$service"; then
+            echo "Starting service: $service"
+            sudo systemctl start "$service" || true
+        else
+            echo "Service already running: $service"
+        fi
+    done
+}
+
+check_user_in_group() {
+    local group="$1"
+    groups "$USER" | grep -q "\b$group\b"
+}
+
+add_user_to_groups() {
+    local groups="$1"
+    
+    for group in $groups; do
+        sudo groupadd -f "$group"
+        
+        if ! check_user_in_group "$group"; then
+            echo "Adding $USER to group: $group"
+            sudo usermod -aG "$group" "$USER"
+        else
+            echo "User already in group: $group"
+        fi
+    done
+}
+
+run_post_install() {
+    local category="$1"
+    local scripts="$2"
+    
+    for script in $scripts; do
+        case $script in
+            "init_replica_set")
+                if command -v mongosh &> /dev/null; then
+                    if ! mongosh --quiet --eval "rs.status()" &> /dev/null; then
+                        echo "Initializing MongoDB replica set..."
+                        mongosh --eval "rs.initiate({_id: 'rs0', members: [{_id: 0, host: 'localhost:27017'}]})"
+                    fi
+                fi
+                ;;
+            *)
+                echo "Unknown post-install script: $script"
+                ;;
+        esac
+    done
+}
+
+enable_repos_from_registry() {
+    local category="$1"
+    local section=$(get_category_section "$category")
+    local distro=$(get_distro)
+    
+    ensure_yq
+    
+    local repos=$(yq eval ".${section}.${category}.${distro}.repos | .[]" "$PACKAGE_REGISTRY" 2>/dev/null)
+    
+    if [ -z "$repos" ] || [ "$repos" = "null" ]; then
+        return 0
+    fi
+    
+    if [ "$distro" = "fedora" ]; then
+        while IFS= read -r repo; do
+            if [ -z "$repo" ] || [ "$repo" = "null" ]; then
+                continue
+            fi
+            
+            if [[ "$repo" =~ ^copr: ]]; then
+                local copr_repo="${repo#copr:}"
+                echo "Enabling COPR repository: $copr_repo"
+                sudo dnf copr enable -y "$copr_repo"
+            elif [[ "$repo" =~ ^https?:// ]]; then
+                echo "Adding repository: $repo"
+                if [[ "$repo" =~ \.repo$ ]]; then
+                    sudo dnf config-manager --add-repo "$repo"
+                else
+                    local repo_name=$(basename "$repo" .repo)
+                    local repo_keys=$(yq eval ".${section}.${category}.${distro}.repo_keys | .[]" "$PACKAGE_REGISTRY" 2>/dev/null)
+                    
+                    if [ -n "$repo_keys" ] && [ "$repo_keys" != "null" ]; then
+                        while IFS= read -r key; do
+                            if [ -n "$key" ] && [ "$key" != "null" ]; then
+                                echo "Importing GPG key: $key"
+                                sudo rpm --import "$key"
+                            fi
+                        done <<< "$repo_keys"
+                    fi
+                    
+                    if [[ "$repo" == *"mongodb"* ]]; then
+                        sudo tee "/etc/yum.repos.d/mongodb-org.repo" > /dev/null <<EOF
+[mongodb-org-8.0]
+name=MongoDB Repository
+baseurl=$repo
+gpgcheck=1
+enabled=1
+gpgkey=https://pgp.mongodb.com/server-8.0.asc
+EOF
+                    else
+                        sudo dnf config-manager --add-repo "$repo"
+                    fi
+                fi
+            fi
+        done <<< "$repos"
+        
+        local priorities=$(yq eval ".${section}.${category}.${distro}.repo_priorities" "$PACKAGE_REGISTRY" 2>/dev/null)
+        if [ -n "$priorities" ] && [ "$priorities" != "null" ]; then
+            local repo_names=$(yq eval ".${section}.${category}.${distro}.repo_priorities | keys | .[]" "$PACKAGE_REGISTRY" 2>/dev/null)
+            while IFS= read -r repo_name; do
+                if [ -z "$repo_name" ] || [ "$repo_name" = "null" ]; then
+                    continue
+                fi
+                local priority=$(yq eval ".${section}.${category}.${distro}.repo_priorities.\"${repo_name}\"" "$PACKAGE_REGISTRY" 2>/dev/null)
+                local repo_file="/etc/yum.repos.d/_copr:copr.fedorainfracloud.org:$(echo "$repo_name" | sed 's/copr://').repo"
+                if [ -f "$repo_file" ]; then
+                    if ! grep -q "priority=" "$repo_file"; then
+                        echo "Setting priority $priority for $repo_name"
+                        sudo sh -c "echo \"priority=$priority\" >> \"$repo_file\""
+                    fi
+                fi
+            done <<< "$repo_names"
+        fi
+    fi
+}
+
+install_custom_packages() {
+    local category="$1"
+    local section=$(get_category_section "$category")
+    local distro=$(get_distro)
+    
+    ensure_yq
+    
+    local custom_packages=$(yq eval ".${section}.${category}.${distro}.custom_packages | .[]" "$PACKAGE_REGISTRY" 2>/dev/null)
+    
+    if [ -n "$custom_packages" ] && [ "$custom_packages" != "null" ]; then
+        echo "Installing custom packages: $custom_packages"
+        if [ "$distro" = "fedora" ]; then
+            sudo dnf install -y $custom_packages
+        elif [ "$distro" = "arch" ]; then
+            sudo pacman -S --needed --noconfirm $custom_packages
+        fi
+    fi
+}
+
+check_cargo_package_installed() {
+    local package="$1"
+    cargo install --list | grep -q "^$package "
+}
+
+install_cargo_packages() {
+    local category="$1"
+    local section=$(get_category_section "$category")
+    local distro=$(get_distro)
+    
+    ensure_yq
+    
+    local cargo_packages=$(yq eval ".${section}.${category}.${distro}.cargo_packages | .[]" "$PACKAGE_REGISTRY" 2>/dev/null)
+    
+    if [ -n "$cargo_packages" ] && [ "$cargo_packages" != "null" ]; then
+        if ! command -v cargo &> /dev/null; then
+            echo "Cargo not found, installing..."
+            if [ "$distro" = "fedora" ]; then
+                sudo dnf install -y cargo
+            elif [ "$distro" = "arch" ]; then
+                sudo pacman -S --needed --noconfirm rust
+            fi
+        fi
+        
+        local to_install=""
+        for pkg in $cargo_packages; do
+            if ! check_cargo_package_installed "$pkg"; then
+                to_install="$to_install $pkg"
+            fi
+        done
+        
+        if [ -n "$to_install" ]; then
+            echo "Installing cargo packages: $to_install"
+            cargo install $to_install
+        else
+            echo "All cargo packages already installed"
+        fi
+    fi
+}
+
+get_install_summary() {
+    local category="$1"
+    local distro=$(get_distro)
+    local section=$(get_category_section "$category")
+    
+    echo "=== $section.$category ==="
+    
+    local packages=$(parse_packages "$category" "$distro" "packages")
+    if [ -n "$packages" ] && [ "$packages" != "null" ]; then
+        echo "  Packages: $(echo "$packages" | wc -w) items"
+    fi
+    
+    if [ "$distro" = "arch" ]; then
+        local aur=$(parse_packages "$category" "$distro" "aur_packages")
+        if [ -n "$aur" ] && [ "$aur" != "null" ]; then
+            echo "  AUR: $(echo "$aur" | wc -w) items"
+        fi
+    fi
+    
+    local flatpak=$(parse_packages "$category" "$distro" "flatpak")
+    if [ -n "$flatpak" ] && [ "$flatpak" != "null" ]; then
+        echo "  Flatpak: $(echo "$flatpak" | wc -w) items"
+    fi
+}
+
+install_packages_from_registry() {
+    local category="$1"
+    local force="${2:-false}"
+    
+    if [ "$force" != "true" ]; then
+        if ! should_install_category "$category"; then
+            local section=$(get_category_section "$category")
+            echo "⊘ Skipping $category (in $section section, profile is $PROFILE_TYPE)"
+            return 0
+        fi
+        
+        if is_optional "$category" && ! is_optional_enabled "$category"; then
+            echo "⊘ Skipping $category (optional and not enabled)"
+            return 0
+        fi
+    fi
+    
+    local section=$(get_category_section "$category")
+    echo ""
+    echo "━━━ Installing $section.$category ($PROFILE_TYPE profile) ━━━"
+    
+    local distro=$(get_distro)
+    
+    if ! check_min_version "$category"; then
+        echo "Skipping $category due to version requirements"
+        return 1
+    fi
+    
+    enable_repos_from_registry "$category"
+    
+    local packages=$(get_packages "$category")
+    if [ -n "$packages" ] && [ "$packages" != "null" ]; then
+        install_packages "$packages" "$packages"
+    fi
+    
+    install_custom_packages "$category"
+    
+    install_cargo_packages "$category"
+    
+    if [ "$distro" = "arch" ]; then
+        local aur_packages=$(parse_packages "$category" "$distro" "aur_packages")
+        if [ -n "$aur_packages" ] && [ "$aur_packages" != "null" ]; then
+            install_aur_packages "$aur_packages"
+        fi
+    fi
+    
+    local flatpak_packages=$(parse_packages "$category" "$distro" "flatpak")
+    if [ -n "$flatpak_packages" ] && [ "$flatpak_packages" != "null" ]; then
+        install_flatpak_packages "$flatpak_packages"
+    fi
+    
+    local services=$(parse_packages "$category" "$distro" "services")
+    if [ -n "$services" ] && [ "$services" != "null" ]; then
+        enable_services "$services"
+    fi
+    
+    local groups=$(parse_packages "$category" "$distro" "user_groups")
+    if [ -n "$groups" ] && [ "$groups" != "null" ]; then
+        add_user_to_groups "$groups"
+    fi
+    
+    local post_install=$(parse_packages "$category" "$distro" "post_install")
+    if [ -n "$post_install" ] && [ "$post_install" != "null" ]; then
+        run_post_install "$category" "$post_install"
+    fi
+}
+
+install_section() {
+    local section="$1"
+    
+    echo "Installing $section packages..."
+    
+    local categories=$(list_section_categories "$section")
+    while IFS= read -r category; do
+        if [ -n "$category" ] && [ "$category" != "null" ]; then
+            install_packages_from_registry "$category"
+        fi
+    done <<< "$categories"
+}
+
 download_and_extract_latest_release() {
     local username="$1"
     local repo="$2"
@@ -98,13 +618,11 @@ download_and_extract_latest_release() {
     echo "$extract_dir"
 }
 
-# Download AppImage and integrate with AppImageLauncher
 install_appimage() {
     local name="$1"
     local download_url="$2"
     local apps_dir="{{ .chezmoi.homeDir }}/Applications"
     
-    # Ensure AppImageLauncher is installed
     install_packages "AppImageLauncher" "appimagelauncher"
     
     mkdir -p "$apps_dir"

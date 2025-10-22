@@ -1,0 +1,28 @@
+#!/bin/bash
+set -eu
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/__helpers.sh"
+
+{{ if not .is_work }}
+echo "=== Installing Personal Applications ==="
+
+echo "--- Gaming Platforms ---"
+install_packages_from_registry "gaming"
+
+echo "--- Media Creation Tools ---"
+install_packages_from_registry "media_creation"
+
+echo "--- Music Players ---"
+install_packages_from_registry "music"
+
+echo "--- Emulators ---"
+install_packages_from_registry "emulators"
+
+echo "--- Torrents ---"
+install_packages_from_registry "torrents"
+
+echo "✓ Personal applications installation complete!"
+{{ else }}
+echo "Skipped personal applications (work machine)"
+{{ end }}

@@ -14,6 +14,10 @@ is_recording() {
     if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
         return 0
     fi
+    # Clean up stale PID file
+    if [[ -f "$PIDFILE" ]]; then
+        rm -f "$PIDFILE" "$STATE_FILE"
+    fi
     return 1
 }
 
