@@ -1,0 +1,7 @@
+# Generated color files - system-specific, not tracked in dotfiles
+.config/matugen/colors.css
+.config/matugen/colors-dark.css
+.config/matugen/colors-light.css
+
+# Cache files
+.cache/wallpaper.hash
