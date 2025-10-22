@@ -1,15 +1,16 @@
 #!/bin/bash
 # Modern screenshot workflow: wayshot + satty for annotation
 # Takes a selection screenshot, opens in satty for annotation/editing
-TEMP_FILE=$(mktemp --suffix=.png)
-~/.cargo/bin/wayshot --stdout -s "$(slurp)" > "$TEMP_FILE"
-satty --filename "$TEMP_FILE" --fullscreen --output-filename "$TEMP_FILE"
 
-# Copy both image data and file reference to clipboard for maximum compatibility
+# Save to Pictures with timestamp for persistence
+FILENAME=~/Pictures/screenshot-$(date +%Y%m%d-%H%M%S).png
+~/.cargo/bin/wayshot --stdout -s "$(slurp)" > "$FILENAME"
+satty --filename "$FILENAME" --fullscreen --output-filename "$FILENAME"
+
+# Copy both file URI (for Slack/Discord uploads) and image data (for inline paste)
 {
-  echo "file://$TEMP_FILE"
-  echo "$TEMP_FILE"
+  echo "file://$FILENAME"
+  echo "$FILENAME"
 } | wl-copy --type text/uri-list
 
-wl-copy < "$TEMP_FILE"
-rm "$TEMP_FILE"
+wl-copy < "$FILENAME"
