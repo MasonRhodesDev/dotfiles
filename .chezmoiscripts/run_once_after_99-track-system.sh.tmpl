@@ -1,0 +1,40 @@
+#!/bin/bash
+set -eu
+
+MANIFEST_FILE="{{ .chezmoi.sourceDir }}/{{ .tracking.manifest_file }}"
+HOSTNAME="{{ .chezmoi.hostname }}"
+OS="{{ .chezmoi.os }}"
+DISTRO="{{ .system.os_release_id }}"
+VERSION="{{ .system.os_release_version }}"
+ARCH="{{ .chezmoi.arch }}"
+PROFILE="{{ .profile.type }}"
+TIMESTAMP="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+
+echo "Tracking system: $HOSTNAME ($DISTRO $VERSION, $PROFILE profile)"
+
+if [ ! -f "$MANIFEST_FILE" ]; then
+    echo '{"systems": {}, "last_updated": "'$TIMESTAMP'"}' > "$MANIFEST_FILE"
+fi
+
+jq --arg host "$HOSTNAME" \
+   --arg os "$OS" \
+   --arg distro "$DISTRO" \
+   --arg version "$VERSION" \
+   --arg arch "$ARCH" \
+   --arg profile "$PROFILE" \
+   --arg timestamp "$TIMESTAMP" \
+   --argjson optional_packages '{{ .profile.optional_packages | toJson }}' \
+   '.systems[$host] = {
+       "os": $os,
+       "distro": $distro,
+       "version": $version,
+       "arch": $arch,
+       "profile": $profile,
+       "optional_packages": $optional_packages,
+       "last_seen": $timestamp,
+       "first_seen": (.systems[$host].first_seen // $timestamp)
+   } | .last_updated = $timestamp' "$MANIFEST_FILE" > "$MANIFEST_FILE.tmp"
+
+mv "$MANIFEST_FILE.tmp" "$MANIFEST_FILE"
+
+echo "System tracking updated: $MANIFEST_FILE"
