@@ -1,0 +1,28 @@
+/* Material You Color Overrides for GTK 4 */
+
+@define-color accent_bg_color @primary;
+@define-color accent_color @primary;
+@define-color accent_fg_color @on_primary;
+@define-color window_bg_color @surface;
+@define-color window_fg_color @on_surface;
+@define-color view_bg_color @surface;
+@define-color view_fg_color @on_surface;
+@define-color headerbar_bg_color @surface_container;
+@define-color headerbar_fg_color @on_surface;
+@define-color card_bg_color @surface_container;
+@define-color card_fg_color @on_surface;
+@define-color dialog_bg_color @surface;
+@define-color dialog_fg_color @on_surface;
+@define-color popover_bg_color @surface_bright;
+@define-color popover_fg_color @on_surface;
+@define-color sidebar_bg_color @surface_container;
+@define-color sidebar_fg_color @on_surface;
+@define-color success_bg_color @primary;
+@define-color success_fg_color @on_primary;
+@define-color warning_bg_color @secondary;
+@define-color warning_fg_color @on_secondary;
+@define-color error_bg_color @error;
+@define-color error_fg_color @on_error;
+
+/* Import Material You colors from matugen */
+@import url('../matugen/colors.css');
