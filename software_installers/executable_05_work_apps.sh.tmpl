@@ -1,0 +1,22 @@
+#!/bin/bash
+set -eu
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/__helpers.sh"
+
+{{ if .is_work }}
+echo "=== Installing Work Applications ==="
+
+echo "--- Slack ---"
+install_packages_from_registry "slack"
+
+echo "--- Zoom ---"
+install_packages_from_registry "zoom"
+
+echo "--- Postman ---"
+install_packages_from_registry "postman"
+
+echo "✓ Work applications installation complete!"
+{{ else }}
+echo "Skipped work applications (personal machine)"
+{{ end }}

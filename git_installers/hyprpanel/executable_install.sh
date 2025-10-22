@@ -1,10 +1,13 @@
 #!/bin/bash
 set -e
 
-# Only run on Fedora
-if ! command -v dnf &> /dev/null; then
-    echo "This installer is only for Fedora systems"
-    exit 0
+if command -v dnf > /dev/null 2>&1; then
+    PKG_MGR="dnf"
+elif command -v pacman > /dev/null 2>&1; then
+    PKG_MGR="pacman"
+else
+    echo "Unsupported platform"
+    exit 1
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -12,31 +15,51 @@ REPO_DIR="$SCRIPT_DIR/HyprPanel"
 
 echo "Installing HyprPanel build dependencies..."
 
-# Install build dependencies for Fedora
-sudo dnf install -y --skip-unavailable \
-    meson ninja-build \
-    gtk3-devel \
-    gtk4-devel \
-    gtksourceview3-devel \
-    libgtop2-devel \
-    libsoup3-devel \
-    wireplumber-devel \
-    bluez-libs-devel \
-    NetworkManager-libnm-devel \
-    sassc \
-    wl-clipboard \
-    upower-devel \
-    gvfs
+if [ "$PKG_MGR" = "dnf" ]; then
+    sudo dnf install -y --skip-unavailable \
+        meson ninja-build \
+        gtk3-devel \
+        gtk4-devel \
+        gtksourceview3-devel \
+        libgtop2-devel \
+        libsoup3-devel \
+        wireplumber-devel \
+        bluez-libs-devel \
+        NetworkManager-libnm-devel \
+        sassc \
+        wl-clipboard \
+        upower-devel \
+        gvfs
 
-# Install AGS v3 dependencies
-echo "Installing AGS v3 dependencies..."
-sudo dnf install -y --skip-unavailable \
-    golang gobject-introspection-devel \
-    gtk-layer-shell-devel gtk4-layer-shell-devel
+    echo "Installing AGS v3 dependencies..."
+    sudo dnf install -y --skip-unavailable \
+        golang gobject-introspection-devel \
+        gtk-layer-shell-devel gtk4-layer-shell-devel
 
-# Install astal libraries from COPR
-sudo dnf install -y --skip-unavailable \
-    astal astal-gjs astal-gtk4 astal-io astal-libs
+    sudo dnf install -y --skip-unavailable \
+        astal astal-gjs astal-gtk4 astal-io astal-libs
+        
+elif [ "$PKG_MGR" = "pacman" ]; then
+    sudo pacman -S --needed --noconfirm \
+        meson ninja \
+        gtk3 \
+        gtk4 \
+        gtksourceview3 \
+        libgtop \
+        libsoup3 \
+        wireplumber \
+        bluez-libs \
+        networkmanager \
+        sassc \
+        wl-clipboard \
+        upower \
+        gvfs
+
+    echo "Installing AGS v3 dependencies..."
+    sudo pacman -S --needed --noconfirm \
+        go gobject-introspection \
+        gtk-layer-shell gtk4-layer-shell
+fi
 
 # Install AGS v3 if not present or wrong version
 AGS_VERSION=$(ags --version 2>/dev/null | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' || echo "0.0.0")

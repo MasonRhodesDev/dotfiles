@@ -24,7 +24,7 @@ if is_recording; then
   fi
 else
   # Start recording with region selection
-  REGION=$(slurp)
+  REGION=$(slurp -f "%wx%h+%x+%y")
   if [ -n "$REGION" ]; then
     FILENAME=~/Videos/$(date +%s).mp4
     
