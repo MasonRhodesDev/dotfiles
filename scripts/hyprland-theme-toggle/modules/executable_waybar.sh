@@ -37,18 +37,20 @@ EOF
     log_module "$module_name" "Generated colors file: $colors_file"
 
     # Restart waybar using systemd if running (more reliable than SIGUSR2)
-    if pgrep -x waybar >/dev/null; then
-        log_module "$module_name" "Restarting waybar via systemd"
-        systemctl --user restart waybar 2>/dev/null || {
-            # Fallback to pkill if systemd service not available
-            log_module "$module_name" "Systemd service not found, restarting manually"
-            pkill waybar
-            sleep 0.2
-            waybar &>/dev/null &
-        }
-    else
-        log_module "$module_name" "Waybar not running, no reload needed"
-    fi
+    # COMMENTED OUT FOR DEBUGGING - waybar reload causing freezes
+    # if pgrep -x waybar >/dev/null; then
+    #     log_module "$module_name" "Restarting waybar via systemd"
+    #     systemctl --user restart waybar 2>/dev/null || {
+    #         # Fallback to pkill if systemd service not available
+    #         log_module "$module_name" "Systemd service not found, restarting manually"
+    #         pkill waybar
+    #         sleep 0.2
+    #         waybar &>/dev/null &
+    #     }
+    # else
+    #     log_module "$module_name" "Waybar not running, no reload needed"
+    # fi
+    log_module "$module_name" "Waybar reload disabled for debugging"
 
     return 0
 }
