@@ -16,12 +16,24 @@ else
     exit 1
 fi
 
-echo "Installing Python vosk package..."
+echo "Installing Python packages (vosk, PyAudio)..."
 if ! python3 -c "import vosk" 2>/dev/null; then
     $PYTHON_PIP install --user vosk
     echo "Vosk installed successfully"
 else
     echo "Vosk already installed"
+fi
+
+if ! python3 -c "import pyaudio" 2>/dev/null; then
+    if [ "$PACKAGE_MANAGER" = "dnf" ]; then
+        sudo dnf install -y portaudio-devel python3-devel
+    elif [ "$PACKAGE_MANAGER" = "pacman" ]; then
+        sudo pacman -S --noconfirm portaudio python-pyaudio
+    fi
+    $PYTHON_PIP install --user PyAudio
+    echo "PyAudio installed successfully"
+else
+    echo "PyAudio already installed"
 fi
 
 echo "Installing wtype for Wayland input simulation..."
@@ -60,38 +72,275 @@ else
     echo "Vosk model already exists"
 fi
 
-echo "Creating dictation control wrapper script..."
-cat > "$HOME/scripts/dictation-control" << 'EOF'
+echo "Creating dictation GUI script..."
+cat > "$HOME/scripts/dictation-gui" << 'EOF'
+#!/usr/bin/env python3
+
+import gi
+gi.require_version('Gtk', '4.0')
+gi.require_version('Gdk', '4.0')
+from gi.repository import Gtk, Gdk, GLib, GObject
+import subprocess
+import threading
+import struct
+import math
+import sys
+import os
+
+try:
+    import pyaudio
+    PYAUDIO_AVAILABLE = True
+except ImportError:
+    PYAUDIO_AVAILABLE = False
+
+class DictationWindow(Gtk.ApplicationWindow):
+    def __init__(self, app):
+        super().__init__(application=app)
+        
+        self.audio_level = 0.0
+        self.bars = []
+        self.monitoring = False
+        
+        self.set_title("Voice Dictation")
+        self.set_default_size(300, 60)
+        self.set_decorated(False)
+        self.set_resizable(False)
+        
+        self.set_can_focus(False)
+        
+        css_provider = Gtk.CssProvider()
+        css_provider.load_from_data(b"""
+            window {
+                background-color: rgba(30, 30, 46, 0.95);
+                border-radius: 30px;
+            }
+            .pill-box {
+                padding: 15px 25px;
+            }
+            .soundwave-bar {
+                background-color: rgba(137, 180, 250, 0.8);
+                border-radius: 2px;
+                min-width: 3px;
+                margin: 0 2px;
+            }
+        """)
+        
+        Gtk.StyleContext.add_provider_for_display(
+            Gdk.Display.get_default(),
+            css_provider,
+            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+        )
+        
+        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=5)
+        box.add_css_class("pill-box")
+        box.set_halign(Gtk.Align.CENTER)
+        box.set_valign(Gtk.Align.CENTER)
+        
+        for i in range(12):
+            bar = Gtk.Box()
+            bar.add_css_class("soundwave-bar")
+            bar.set_size_request(3, 10)
+            box.append(bar)
+            self.bars.append(bar)
+        
+        self.set_child(box)
+        
+        self.position_window()
+        
+        GLib.timeout_add(50, self.animate_soundwave)
+        
+        threading.Thread(target=self.monitor_audio, daemon=True).start()
+    
+    def position_window(self):
+        display = Gdk.Display.get_default()
+        monitor = display.get_monitors()[0]
+        geometry = monitor.get_geometry()
+        
+        width = 300
+        height = 60
+        x = (geometry.width - width) // 2
+        y = geometry.height - height - 80
+        
+        self.present()
+    
+    def animate_soundwave(self):
+        if not self.monitoring:
+            return False
+        
+        import random
+        base_level = self.audio_level
+        
+        for i, bar in enumerate(self.bars):
+            offset = abs(i - 6) / 6.0
+            noise = random.uniform(0.7, 1.3)
+            level = base_level * (1.0 - offset * 0.5) * noise
+            
+            min_height = 5
+            max_height = 35
+            height = int(min_height + level * (max_height - min_height))
+            
+            bar.set_size_request(3, height)
+        
+        return True
+    
+    def monitor_audio(self):
+        self.monitoring = True
+        
+        if PYAUDIO_AVAILABLE:
+            self.monitor_audio_pyaudio()
+        else:
+            self.monitor_audio_fallback()
+    
+    def monitor_audio_pyaudio(self):
+        try:
+            p = pyaudio.PyAudio()
+            
+            stream = p.open(
+                format=pyaudio.paInt16,
+                channels=1,
+                rate=44100,
+                input=True,
+                frames_per_buffer=1024
+            )
+            
+            while self.monitoring:
+                try:
+                    data = stream.read(1024, exception_on_overflow=False)
+                    
+                    audio_data = struct.unpack(str(1024) + 'h', data)
+                    
+                    peak = max(abs(x) for x in audio_data)
+                    
+                    normalized = peak / 32768.0
+                    
+                    self.audio_level = min(1.0, normalized * 2.0)
+                    
+                except Exception as e:
+                    pass
+            
+            stream.stop_stream()
+            stream.close()
+            p.terminate()
+            
+        except Exception as e:
+            print(f"PyAudio monitoring error: {e}", file=sys.stderr)
+            self.monitor_audio_fallback()
+    
+    def monitor_audio_fallback(self):
+        try:
+            cmd = ['pactl', 'subscribe']
+            process = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+            
+            while self.monitoring:
+                line = process.stdout.readline()
+                if not line:
+                    break
+                
+                if 'source' in line.lower():
+                    self.audio_level = min(1.0, self.audio_level + 0.1)
+                
+                GLib.timeout_add(100, self.decay_audio)
+        
+        except Exception as e:
+            print(f"Audio monitoring error: {e}", file=sys.stderr)
+    
+    def decay_audio(self):
+        self.audio_level = max(0.0, self.audio_level - 0.05)
+        return False
+    
+    def cleanup(self):
+        self.monitoring = False
+
+class DictationApp(Gtk.Application):
+    def __init__(self):
+        super().__init__(application_id='dev.mason.dictation')
+        self.window = None
+    
+    def do_activate(self):
+        if not self.window:
+            self.window = DictationWindow(self)
+        self.window.present()
+    
+    def do_shutdown(self):
+        if self.window:
+            self.window.cleanup()
+        Gtk.Application.do_shutdown(self)
+
+if __name__ == '__main__':
+    app = DictationApp()
+    app.run(sys.argv)
+EOF
+
+chmod +x "$HOME/scripts/dictation-gui"
+echo "Dictation GUI script created successfully"
+
+echo "Creating dictation daemon script..."
+cat > "$HOME/scripts/dictation-daemon" << 'EOF'
 #!/bin/bash
 
 NERD_DICTATION="$HOME/scripts/nerd-dictation/nerd-dictation"
 VOSK_MODEL="$HOME/.config/nerd-dictation/model"
 INPUT_TOOL="WTYPE"
 
+if pgrep -f "nerd-dictation begin.*suspend-on-start" > /dev/null; then
+    exit 0
+fi
+
+$NERD_DICTATION begin \
+    --vosk-model-dir="$VOSK_MODEL" \
+    --simulate-input-tool="$INPUT_TOOL" \
+    --suspend-on-start \
+    --continuous &
+EOF
+
+chmod +x "$HOME/scripts/dictation-daemon"
+echo "Dictation daemon script created successfully"
+
+echo "Creating dictation control wrapper script..."
+cat > "$HOME/scripts/dictation-control" << 'EOF'
+#!/bin/bash
+
+NERD_DICTATION="$HOME/scripts/nerd-dictation/nerd-dictation"
+DICTATION_DAEMON="$HOME/scripts/dictation-daemon"
+DICTATION_GUI="$HOME/scripts/dictation-gui"
+STATE_FILE="/tmp/dictation-active"
+
+if ! pgrep -f "nerd-dictation begin.*suspend-on-start" > /dev/null; then
+    $DICTATION_DAEMON
+    sleep 1
+fi
+
 case "$1" in
     start)
-        if pgrep -f "nerd-dictation begin" > /dev/null; then
-            notify-send -u normal "Voice Dictation" "Already running"
-        else
-            notify-send -u normal "Voice Dictation" "Starting... Speak now" -i microphone-sensitivity-high
-            $NERD_DICTATION begin --vosk-model-dir="$VOSK_MODEL" --simulate-input-tool="$INPUT_TOOL" &
+        if [ -f "$STATE_FILE" ]; then
+            exit 0
         fi
+        $DICTATION_GUI &
+        $NERD_DICTATION resume
+        touch "$STATE_FILE"
         ;;
     stop)
-        if pgrep -f "nerd-dictation begin" > /dev/null; then
-            $NERD_DICTATION end
-            notify-send -u normal "Voice Dictation" "Stopped" -i microphone-sensitivity-muted
-        else
-            notify-send -u normal "Voice Dictation" "Not running"
+        if [ ! -f "$STATE_FILE" ]; then
+            exit 0
         fi
+        $NERD_DICTATION suspend
+        pkill -f "dictation-gui"
+        rm -f "$STATE_FILE"
         ;;
     toggle)
-        if pgrep -f "nerd-dictation begin" > /dev/null; then
-            $NERD_DICTATION end
-            notify-send -u normal "Voice Dictation" "Stopped" -i microphone-sensitivity-muted
+        if [ -f "$STATE_FILE" ]; then
+            $NERD_DICTATION suspend
+            pkill -f "dictation-gui"
+            rm -f "$STATE_FILE"
         else
-            notify-send -u normal "Voice Dictation" "Starting... Speak now" -i microphone-sensitivity-high
-            $NERD_DICTATION begin --vosk-model-dir="$VOSK_MODEL" --simulate-input-tool="$INPUT_TOOL" &
+            $DICTATION_GUI &
+            $NERD_DICTATION resume
+            touch "$STATE_FILE"
         fi
         ;;
     *)
