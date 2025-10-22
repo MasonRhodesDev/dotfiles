@@ -28,6 +28,17 @@ windowrulev2=pin, title:^(meet.google.com is sharing.*)
 windowrulev2=float, title:^(.*Bitwarden.*)$
 windowrulev2=pin, class:^(gcr-prompter)$
 windowrulev2=float, class:^(gcr-prompter)$
+
+# Voice dictation window - change 80 in move rule below to adjust bottom offset
+windowrulev2=float, class:^(dev.mason.dictation)$
+windowrulev2=pin, class:^(dev.mason.dictation)$
+windowrulev2=size 200 50, class:^(dev.mason.dictation)$
+windowrulev2=move 50%-100 95%, class:^(dev.mason.dictation)$
+windowrulev2=noborder, class:^(dev.mason.dictation)$
+windowrulev2=noblur, class:^(dev.mason.dictation)$
+windowrulev2=noshadow, class:^(dev.mason.dictation)$
+windowrulev2=noinitialfocus, class:^(dev.mason.dictation)$
+windowrulev2=nofocus, class:^(dev.mason.dictation)$
 windowrulev2=center, class:^(gcr-prompter)$
 windowrulev2=stayfocused, class:^(gcr-prompter)$
 windowrulev2=float, title:^(PRE_SLEEP_WINDOW)$
