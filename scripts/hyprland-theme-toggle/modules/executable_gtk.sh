@@ -51,7 +51,27 @@ gtk_apply_theme() {
         else
             gsettings set org.gnome.desktop.interface gtk-application-prefer-dark-theme false 2>/dev/null || true
         fi
+        
+        # Set cursor theme (Adwaita works for both light/dark)
+        gsettings set org.gnome.desktop.interface cursor-theme "Adwaita" 2>/dev/null || true
+        gsettings set org.gnome.desktop.interface cursor-size 24 2>/dev/null || true
+        
+        # Set icon theme based on mode
+        if [[ "$mode" == "light" ]]; then
+            gsettings set org.gnome.desktop.interface icon-theme "breeze" 2>/dev/null || true
+        else
+            gsettings set org.gnome.desktop.interface icon-theme "breeze-dark" 2>/dev/null || true
+        fi
     fi
+    
+    # Update cursor theme environment variables
+    export XCURSOR_THEME="Adwaita"
+    export XCURSOR_SIZE=24
+    systemctl --user set-environment XCURSOR_THEME="Adwaita"
+    systemctl --user set-environment XCURSOR_SIZE=24
+    dbus-update-activation-environment --systemd XCURSOR_THEME="Adwaita" XCURSOR_SIZE=24
+    hyprctl setenv XCURSOR_THEME Adwaita 2>/dev/null || true
+    hyprctl setenv XCURSOR_SIZE 24 2>/dev/null || true
     
     # Only create config files if they don't exist (avoid overriding user customizations)
     setup_gtk_config_files "$mode"
