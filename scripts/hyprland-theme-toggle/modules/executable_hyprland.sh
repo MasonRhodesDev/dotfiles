@@ -28,10 +28,12 @@ hyprland_apply_theme() {
     fi
     
     # Extract colors (remove # and @define-color prefix)
-    local error_color=$(grep "@define-color error " "$colors_file" | sed 's/@define-color error #//' | sed 's/;//')
-    local outline_color=$(grep "@define-color outline " "$colors_file" | sed 's/@define-color outline #//' | sed 's/;//')
+    local primary_color=$(grep "@define-color primary " "$colors_file" | sed 's/@define-color primary #//' | sed 's/;//' | head -1)
+    local secondary_color=$(grep "@define-color secondary " "$colors_file" | sed 's/@define-color secondary #//' | sed 's/;//' | head -1)
+    local outline_color=$(grep "@define-color outline " "$colors_file" | sed 's/@define-color outline #//' | sed 's/;//' | head -1)
+    local shadow_color=$(grep "@define-color shadow " "$colors_file" | sed 's/@define-color shadow #//' | sed 's/;//' | head -1)
     
-    if [[ -z "$error_color" || -z "$outline_color" ]]; then
+    if [[ -z "$primary_color" || -z "$outline_color" ]]; then
         log_module "$module_name" "Could not extract colors from $colors_file"
         return 1
     fi
@@ -44,22 +46,40 @@ hyprland_apply_theme() {
         return 1
     fi
     
-    # Update active border color (use error color for high contrast)
-    sed -i "s/col.active_border=.*/col.active_border=rgb($error_color)/" "$style_config"
+    # Update active border with gradient (primary + secondary for dynamic effect)
+    if [[ -n "$secondary_color" ]]; then
+        sed -i "s/col.active_border=.*/col.active_border=rgb($primary_color) rgb($secondary_color) 45deg/" "$style_config"
+    else
+        sed -i "s/col.active_border=.*/col.active_border=rgb($primary_color)/" "$style_config"
+    fi
     
     # Update inactive border color
     sed -i "s/col.inactive_border=.*/col.inactive_border=rgb($outline_color)/" "$style_config"
     
-    # Update group border colors
-    sed -i "s/col.border_active=.*/col.border_active=rgb($error_color)/" "$style_config"
+    # Update group border colors with gradient
+    if [[ -n "$secondary_color" ]]; then
+        sed -i "s/col.border_active=.*/col.border_active=rgb($primary_color) rgb($secondary_color) 45deg/" "$style_config"
+    else
+        sed -i "s/col.border_active=.*/col.border_active=rgb($primary_color)/" "$style_config"
+    fi
     sed -i "s/col.border_inactive=.*/col.border_inactive=rgb($outline_color)/" "$style_config"
     
-    # Update groupbar colors
-    sed -i "/groupbar {/,/}/ s/col.active=.*/col.active=rgb($error_color)/" "$style_config"
+    # Update groupbar colors with gradient
+    if [[ -n "$secondary_color" ]]; then
+        sed -i "/groupbar {/,/}/ s/col.active=.*/col.active=rgb($primary_color) rgb($secondary_color) 45deg/" "$style_config"
+    else
+        sed -i "/groupbar {/,/}/ s/col.active=.*/col.active=rgb($primary_color)/" "$style_config"
+    fi
     sed -i "/groupbar {/,/}/ s/col.inactive=.*/col.inactive=rgb($outline_color)/" "$style_config"
     
+    # Update shadow color if specified in config
+    if [[ -n "$shadow_color" ]]; then
+        sed -i "s/col.shadow=.*/col.shadow=rgb($shadow_color)/" "$style_config" 2>/dev/null || true
+        sed -i "s/col.shadow_inactive=.*/col.shadow_inactive=rgb($shadow_color)/" "$style_config" 2>/dev/null || true
+    fi
+    
     # Note: Hyprland will automatically pick up config changes
-    log_module "$module_name" "Updated border colors (restart Hyprland to apply)"
+    log_module "$module_name" "Updated border colors with Material You gradient and shadows"
     
     return 0
 }
