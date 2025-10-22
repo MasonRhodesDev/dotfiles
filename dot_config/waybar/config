@@ -185,7 +185,7 @@
         "custom/screen-recorder": {
             "format": "{}",
             "return-type": "json",
-            "interval": 1,
+            "interval": "once",
             "exec": "$HOME/scripts/screen-recorder/waybar-module.sh",
             "on-click": "$HOME/scripts/record",
             "signal": 10
