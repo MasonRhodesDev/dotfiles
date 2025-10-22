@@ -1,19 +1,40 @@
-#!/bin/sh
+#!/bin/bash
 # Modern screen recording with gpu-screen-recorder (hardware encoding)
-FILENAME=~/Videos/$(date +%s).mp4
-PIDFILE=/tmp/gpu-screen-recorder.pid
 
-if [ -f "$PIDFILE" ] && kill -0 $(cat "$PIDFILE") 2>/dev/null; then
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/screen-recorder/modules/base.sh"
+
+if is_recording; then
   # Stop recording
-  kill -SIGINT $(cat "$PIDFILE")
-  rm "$PIDFILE"
-  notify-send "Screen Recording" "Recording stopped and saved to $FILENAME"
+  FILENAME=$(get_output_file)
+  PID=$(get_recording_pid)
+  
+  kill -SIGINT "$PID" 2>/dev/null
+  
+  # Wait a moment for file to finalize
+  sleep 0.5
+  
+  clear_state
+  refresh_waybar
+  
+  if [ -f "$FILENAME" ]; then
+    notify-send "Screen Recording" "Recording stopped and saved to:\n$FILENAME"
+  else
+    notify-send "Screen Recording" "Recording stopped"
+  fi
 else
   # Start recording with region selection
   REGION=$(slurp)
   if [ -n "$REGION" ]; then
+    FILENAME=~/Videos/$(date +%s).mp4
+    
     gpu-screen-recorder -w region -region "$REGION" -f 60 -c mp4 -k auto -o "$FILENAME" &
-    echo $! > "$PIDFILE"
+    PID=$!
+    
+    echo "$PID" > "$PIDFILE"
+    set_output_file "$FILENAME"
+    refresh_waybar
+    
     notify-send "Screen Recording" "Recording started..."
   fi
 fi
