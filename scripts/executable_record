@@ -18,7 +18,8 @@ if is_recording; then
   refresh_waybar
   
   if [ -f "$FILENAME" ]; then
-    notify-send "Screen Recording" "Recording stopped and saved to:\n$FILENAME"
+    echo "file://$FILENAME" | wl-copy --type text/uri-list
+    notify-send "Screen Recording" "Recording stopped and saved to:\n$FILENAME\n(File copied to clipboard)"
   else
     notify-send "Screen Recording" "Recording stopped"
   fi
