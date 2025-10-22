@@ -3,7 +3,7 @@
         "position": "top",
         "reload_style_on_change": true,
         "modules-left": ["hyprland/workspaces"],
-        "modules-center": ["custom/media"],
+        "modules-center": ["custom/screen-recorder", "custom/media"],
         "modules-right": [
             "group/expand",
             "bluetooth",
@@ -11,7 +11,6 @@
             "pulseaudio",
             "tray",
             "custom/updates",
-            "custom/screen-recorder",
             "custom/idle-inhibitor",
             "clock",
             "custom/notification",
@@ -186,7 +185,7 @@
         "custom/screen-recorder": {
             "format": "{}",
             "return-type": "json",
-            "interval": "once",
+            "interval": 1,
             "exec": "$HOME/scripts/screen-recorder/waybar-module.sh",
             "on-click": "$HOME/scripts/record",
             "signal": 10

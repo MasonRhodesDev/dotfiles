@@ -38,6 +38,32 @@ window#waybar {
     box-shadow: none;
 }
 
+/* Screen recorder module - prominent red when recording */
+#custom-screen-recorder {
+    padding-left: 12px;
+    padding-right: 12px;
+    border-radius: 8px;
+    margin: 0px;
+    margin-right: 8px;
+    background: transparent;
+}
+
+#custom-screen-recorder.recording {
+    background: alpha(#ff0000, 0.15);
+    color: #ff3333;
+    font-weight: bold;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
 /* Media module - same height as other containers, auto-hide when empty */
 #custom-media {
     padding-left: 12px;

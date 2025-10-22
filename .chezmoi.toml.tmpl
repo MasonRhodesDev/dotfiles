@@ -11,6 +11,30 @@
     work_machine = "mason-work"
     wallpaper = {{ if eq .chezmoi.hostname "mason-work" }}"/home/mason/Pictures/forrest.png"{{ else }}"/home/mason/Pictures/landscape.png"{{ end }}
     is_work = {{ if eq .chezmoi.hostname "mason-work" }}true{{ else }}false{{ end }}
+
 [data.paths]
     config = "/home/mason/.config/hypr"
     scripts = "/home/mason/scripts"
+
+# Profile configuration
+[data.profile]
+    type = {{ if eq .chezmoi.hostname "mason-work" }}"work"{{ else }}"personal"{{ end }}
+    
+    # Optional package groups to install (can be customized per system)
+    optional_packages = [
+        "python_dev",
+        {{ if eq .chezmoi.hostname "mason-work" }}"java_dev", "pycharm", "aws_tools"{{ end }}
+    ]
+
+# System tracking - updated on each chezmoi apply
+[data.system]
+    hostname = "{{ .chezmoi.hostname }}"
+    os = "{{ .chezmoi.os }}"
+    os_release_id = "{{ .chezmoi.osRelease.id }}"
+    os_release_version = "{{ .chezmoi.osRelease.versionID }}"
+    arch = "{{ .chezmoi.arch }}"
+    last_updated = "{{ now | date "2006-01-02T15:04:05Z07:00" }}"
+    
+# System manifest tracking file location
+[data.tracking]
+    manifest_file = ".system_manifest.json"
