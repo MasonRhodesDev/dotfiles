@@ -1,0 +1,36 @@
+/* Material You Color Overrides for GTK 3 */
+
+/* Import Material You colors from matugen */
+@import url('../matugen/colors.css');
+
+/* Apply Material You colors to GTK 3 widgets */
+@define-color theme_bg_color @surface;
+@define-color theme_fg_color @on_surface;
+@define-color theme_base_color @surface;
+@define-color theme_text_color @on_surface;
+@define-color theme_selected_bg_color @primary;
+@define-color theme_selected_fg_color @on_primary;
+@define-color insensitive_bg_color @surface_container;
+@define-color insensitive_fg_color @outline;
+@define-color insensitive_base_color @surface_container;
+@define-color theme_unfocused_bg_color @surface;
+@define-color theme_unfocused_fg_color @on_surface;
+@define-color theme_unfocused_base_color @surface;
+@define-color theme_unfocused_text_color @on_surface;
+@define-color theme_unfocused_selected_bg_color @primary_container;
+@define-color theme_unfocused_selected_fg_color @on_primary;
+@define-color borders @outline;
+@define-color unfocused_borders @outline_variant;
+
+/* Button colors */
+@define-color button_bg_color @surface_container;
+@define-color button_fg_color @on_surface;
+
+/* Link colors */
+@define-color link_color @tertiary;
+@define-color link_visited_color @secondary;
+
+/* Success/Warning/Error colors */
+@define-color success_color @primary;
+@define-color warning_color @secondary;
+@define-color error_color @error;
