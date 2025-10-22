@@ -64,6 +64,12 @@ window#waybar {
     }
 }
 
+@keyframes blink {
+    to {
+        opacity: 0.5;
+    }
+}
+
 /* Media module - same height as other containers, auto-hide when empty */
 #custom-media {
     padding-left: 12px;
