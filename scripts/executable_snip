@@ -1,16 +1,9 @@
 #!/bin/bash
 # Modern screenshot workflow: wayshot + satty for annotation
-# Takes a selection screenshot, opens in satty for annotation/editing
+# Pipe-based: capture → annotate → copy to clipboard
 
-# Save to Pictures with timestamp for persistence
-FILENAME=~/Pictures/screenshot-$(date +%Y%m%d-%H%M%S).png
-~/.cargo/bin/wayshot --stdout -s "$(slurp)" > "$FILENAME"
-satty --filename "$FILENAME" --fullscreen --output-filename "$FILENAME"
-
-# Copy both file URI (for Slack/Discord uploads) and image data (for inline paste)
-{
-  echo "file://$FILENAME"
-  echo "$FILENAME"
-} | wl-copy --type text/uri-list
-
-wl-copy < "$FILENAME"
+~/.cargo/bin/wayshot --stdout -s "$(slurp)" | \
+  satty --filename - \
+        --copy-command "wl-copy" \
+        --early-exit \
+        --default-hide-toolbars
