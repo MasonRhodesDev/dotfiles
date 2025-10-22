@@ -4,11 +4,18 @@ set -e
 INSTALL_DIR="$HOME/git_installers/astal"
 REPO_URL="https://github.com/aylur/astal.git"
 
-# Create install directory
+if command -v dnf > /dev/null 2>&1; then
+    PKG_MGR="dnf"
+elif command -v pacman > /dev/null 2>&1; then
+    PKG_MGR="pacman"
+else
+    echo "Unsupported platform"
+    exit 1
+fi
+
 mkdir -p "$INSTALL_DIR"
 cd "$INSTALL_DIR"
 
-# Clone or update the repository
 if [ -d "astal" ]; then
     echo "Updating existing astal repository..."
     cd astal
@@ -20,10 +27,16 @@ else
 fi
 
 echo "Installing dependencies..."
-sudo dnf install -y \
-  meson vala valadoc gobject-introspection-devel wayland-protocols-devel \
-  gtk3-devel gtk-layer-shell-devel \
-  gtk4-devel gtk4-layer-shell-devel
+if [ "$PKG_MGR" = "dnf" ]; then
+    sudo dnf install -y \
+      meson vala valadoc gobject-introspection-devel wayland-protocols-devel \
+      gtk3-devel gtk-layer-shell-devel \
+      gtk4-devel gtk4-layer-shell-devel
+elif [ "$PKG_MGR" = "pacman" ]; then
+    sudo pacman -S --needed --noconfirm \
+      meson vala vala-docs gobject-introspection wayland-protocols \
+      gtk3 gtk-layer-shell gtk4 gtk4-layer-shell
+fi
 
 echo "Building and installing astal-io dependency..."
 cd lib/astal/io

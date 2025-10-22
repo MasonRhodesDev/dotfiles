@@ -1,0 +1,41 @@
+#!/bin/bash
+set -eu
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/__helpers.sh"
+
+echo "=== Installing Development Tools ==="
+
+install_packages_from_registry "ide"
+
+if ! command -v cursor &> /dev/null && [ ! -f "{{ .chezmoi.homeDir }}/Applications/Cursor.AppImage" ]; then
+    echo "Installing Cursor..."
+    
+    cursor_url=$(curl -s "https://api.github.com/repos/getcursor/cursor/releases/latest" | jq -r '.assets[] | select(.name | contains("AppImage")) | .browser_download_url')
+    
+    if [ "$cursor_url" != "null" ] && [ -n "$cursor_url" ]; then
+        install_appimage "Cursor" "$cursor_url"
+    else
+        echo "Could not find Cursor AppImage download URL"
+    fi
+fi
+
+echo "=== Running Git-based Installers ==="
+
+GIT_INSTALLERS_DIR="{{ .chezmoi.homeDir }}/git_installers"
+
+run_if_exists() {
+  if [ -x "$1" ]; then
+    echo "Running $1"
+    "$1"
+  else
+    echo "Skipping $1 (not found or not executable)"
+  fi
+}
+
+run_if_exists "$GIT_INSTALLERS_DIR/astal/install.sh"
+
+install_packages_from_registry "python_dev"
+install_packages_from_registry "rust_dev"
+
+echo "✓ Development tools installation complete!"
