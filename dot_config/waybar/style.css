@@ -49,18 +49,21 @@ window#waybar {
 }
 
 #custom-screen-recorder.recording {
-    background: alpha(#ff0000, 0.15);
+    background: rgba(255, 0, 0, 0.15);
     color: #ff3333;
     font-weight: bold;
     animation: pulse 2s ease-in-out infinite;
 }
 
 @keyframes pulse {
-    0%, 100% {
+    0% {
         opacity: 1;
     }
     50% {
         opacity: 0.7;
+    }
+    100% {
+        opacity: 1;
     }
 }
 
