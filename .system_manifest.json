@@ -1,0 +1,20 @@
+{
+  "systems": {
+    "mason-work": {
+      "os": "linux",
+      "distro": "fedora",
+      "version": "41",
+      "arch": "amd64",
+      "profile": "work",
+      "optional_packages": [
+        "python_dev",
+        "java_dev",
+        "pycharm",
+        "aws_tools"
+      ],
+      "last_seen": "2025-10-22T19:13:52Z",
+      "first_seen": "2025-10-22T19:13:52Z"
+    }
+  },
+  "last_updated": "2025-10-22T19:13:52Z"
+}

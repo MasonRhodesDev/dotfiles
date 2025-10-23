@@ -10,7 +10,7 @@ vscode_enhanced_apply_theme() {
     local state_file="$3"
     
     local module_name="VSCode-Enhanced"
-    local colors_file="$HOME/.config/matugen/colors.css"
+    local colors_file="$HOME/.config/matugen/lmtt-colors.css"
     
     log_module "$module_name" "Generating Material You workbench colors for $mode theme"
     
