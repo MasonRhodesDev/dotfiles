@@ -43,14 +43,51 @@ fi
 # Update state file
 echo "$NEW_STATE" > "$STATE_FILE"
 
-# Generate matugen colors JSON for the new mode
-echo "Generating Material You colors from wallpaper..."
-COLORS_JSON=$(matugen --json hex --dry-run image "$WALLPAPER_PATH" --mode "$MATUGEN_MODE" --type scheme-expressive)
+# Generate color schemes if wallpaper changed
+if wallpaper_changed "$WALLPAPER_PATH"; then
+    echo "Wallpaper changed, regenerating color schemes for both modes..."
+    
+    # Generate dark mode colors
+    echo "Generating dark mode colors..."
+    COLORS_JSON_DARK=$(matugen --json hex --dry-run image "$WALLPAPER_PATH" --mode dark --type scheme-expressive)
+    if [[ $? -ne 0 ]]; then
+        echo "Error: Failed to generate dark colors with matugen"
+        exit 1
+    fi
+    
+    # Generate light mode colors
+    echo "Generating light mode colors..."
+    COLORS_JSON_LIGHT=$(matugen --json hex --dry-run image "$WALLPAPER_PATH" --mode light --type scheme-expressive)
+    if [[ $? -ne 0 ]]; then
+        echo "Error: Failed to generate light colors with matugen"
+        exit 1
+    fi
+    
+    # Create lmtt-colors-dark.css and lmtt-colors-light.css
+    MATUGEN_DIR="$HOME/.config/matugen"
+    mkdir -p "$MATUGEN_DIR"
+    
+    generate_css_from_json "$COLORS_JSON_DARK" "dark" "$MATUGEN_DIR/lmtt-colors-dark.css"
+    generate_css_from_json "$COLORS_JSON_LIGHT" "light" "$MATUGEN_DIR/lmtt-colors-light.css"
+    
+    # Update wallpaper cache
+    update_wallpaper_cache "$WALLPAPER_PATH"
+    
+    echo "Color schemes generated and cached"
+else
+    echo "Using cached color schemes (wallpaper unchanged)"
+fi
 
-# Check if matugen succeeded
-if [[ $? -ne 0 ]]; then
-    echo "Error: Failed to generate colors with matugen"
-    exit 1
+# Copy the active theme to lmtt-colors.css (triggers file watchers)
+MATUGEN_DIR="$HOME/.config/matugen"
+cp "$MATUGEN_DIR/lmtt-colors-${NEW_STATE}.css" "$MATUGEN_DIR/lmtt-colors.css"
+echo "Updated lmtt-colors.css to $NEW_STATE mode"
+
+# For backward compatibility, still pass colors JSON to modules
+if [[ "$NEW_STATE" == "dark" ]]; then
+    COLORS_JSON="${COLORS_JSON_DARK:-$(matugen --json hex --dry-run image "$WALLPAPER_PATH" --mode dark --type scheme-expressive)}"
+else
+    COLORS_JSON="${COLORS_JSON_LIGHT:-$(matugen --json hex --dry-run image "$WALLPAPER_PATH" --mode light --type scheme-expressive)}"
 fi
 
 echo "Applying themes to installed applications..."

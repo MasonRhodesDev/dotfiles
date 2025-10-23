@@ -11,7 +11,7 @@ waybar_apply_theme() {
     local colors_json="$4"
     
     local module_name="Waybar"
-    local colors_file="$HOME/.config/matugen/colors.css"
+    local colors_file="$HOME/.config/matugen/lmtt-colors.css"
     
     # Check if Waybar is installed
     if ! app_installed "waybar"; then

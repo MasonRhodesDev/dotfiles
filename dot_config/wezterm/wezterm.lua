@@ -35,8 +35,8 @@ wezterm.on('user-var-changed', function(window, pane, name, value)
   window:set_config_overrides(overrides)
 end)
 
--- Load dynamic colors from theme switcher
-local colors_file = wezterm.config_dir .. '/wezterm-colors.lua'
+-- Load dynamic colors from lmtt (Linux Matugen Theme Toggle)
+local colors_file = wezterm.config_dir .. '/lmtt-colors.lua'
 
 -- Add the colors file to the watch list for automatic reloading
 wezterm.add_to_config_reload_watch_list(colors_file)
