@@ -20,7 +20,7 @@ wofi_apply_theme() {
     log_module "$module_name" "Using centralized colors for $mode theme"
     
     # Wofi will automatically use the updated colors from the centralized CSS file
-    # No action needed - the CSS file imports from matugen/colors.css
+    # No action needed - the CSS file imports from matugen/lmtt-colors.css
     
     return 0
 }

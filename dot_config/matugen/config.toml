@@ -2,8 +2,8 @@
 
 [templates.colors]
 input_path = "~/.config/matugen/templates/colors.css"
-output_path = "~/.config/matugen/colors.css"
+output_path = "~/.config/matugen/lmtt-colors.css"
 
 [templates.fish-colors]
 input_path = "~/.config/matugen/templates/fish-colors.fish"
-output_path = "~/.config/fish/conf.d/theme-colors.fish"
+output_path = "~/.config/fish/conf.d/lmtt-colors.fish"

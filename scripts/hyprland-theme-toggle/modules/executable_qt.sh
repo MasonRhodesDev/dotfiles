@@ -10,7 +10,7 @@ qt_apply_theme() {
     local state_file="$3"
     
     local module_name="Qt"
-    local colors_css="$HOME/.config/matugen/colors.css"
+    local colors_css="$HOME/.config/matugen/lmtt-colors.css"
     
     # Check if Qt6 configuration tools are available
     if ! app_installed "qt6ct"; then
@@ -30,17 +30,17 @@ qt_apply_theme() {
     local colorscheme_dir="$HOME/.local/share/color-schemes"
     mkdir -p "$colorscheme_dir"
     
-    local scheme_file="$colorscheme_dir/MaterialYou$(echo "$mode" | sed 's/.*/\u&/').colors"
+    local scheme_file="$colorscheme_dir/lmtt-$(echo "$mode").colors"
     
     if [[ -f "$colors_css" ]]; then
         generate_kde_colorscheme "$colors_css" "$mode" "$scheme_file"
         log_module "$module_name" "Generated Material You color scheme: $scheme_file"
     else
-        log_module "$module_name" "Warning: colors.css not found, using fallback"
+        log_module "$module_name" "Warning: lmtt-colors.css not found, using fallback"
     fi
     
     # Create or update qt6ct configuration
-    local qt6ct_config="$HOME/.config/qt6ct/qt6ct.conf"
+    local qt6ct_config="$HOME/.config/qt6ct/lmtt-qt6ct.conf"
     mkdir -p "$(dirname "$qt6ct_config")"
     
     if [[ ! -f "$qt6ct_config" ]]; then
@@ -84,7 +84,7 @@ EOF
     
     # Also set for Qt5 if qt5ct is available
     if app_installed "qt5ct"; then
-        local qt5ct_config="$HOME/.config/qt5ct/qt5ct.conf"
+        local qt5ct_config="$HOME/.config/qt5ct/lmtt-qt5ct.conf"
         mkdir -p "$(dirname "$qt5ct_config")"
         
         if [[ ! -f "$qt5ct_config" ]]; then
