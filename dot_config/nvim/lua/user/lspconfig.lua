@@ -68,6 +68,124 @@ M.toggle_inlay_hints = function()
   vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled { bufnr }, { bufnr })
 end
 
+M.diagnostic_with_spell = function()
+  local bufnr = vim.api.nvim_get_current_buf()
+  local cursor_pos = vim.api.nvim_win_get_cursor(0)
+  local line = cursor_pos[1] - 1
+  local col = cursor_pos[2]
+
+  -- Get LSP diagnostics
+  local diagnostics = vim.diagnostic.get(bufnr, { lnum = line })
+  local has_diagnostics = false
+
+  for _, diag in ipairs(diagnostics) do
+    if diag.col <= col and col <= diag.end_col then
+      has_diagnostics = true
+      break
+    end
+  end
+
+  -- Check for spell errors if spell is enabled
+  local has_spell_error = false
+  if vim.wo.spell then
+    local spell_result = vim.fn.spellbadword()
+    has_spell_error = spell_result[1] ~= ""
+  end
+
+  -- Prioritize: spell error > LSP diagnostic
+  if has_spell_error then
+    -- Get spelling suggestions and show in picker
+    local spell_result = vim.fn.spellbadword()
+    local word = spell_result[1]
+    local suggestions = vim.fn.spellsuggest(word, 20)
+
+    if #suggestions == 0 then
+      vim.notify("No spelling suggestions for '" .. word .. "'", vim.log.levels.INFO)
+      return
+    end
+
+    -- Add special options
+    table.insert(suggestions, 1, "[Add to dictionary]")
+    table.insert(suggestions, 2, "[Ignore]")
+
+    vim.ui.select(suggestions, {
+      prompt = "Spelling suggestions for '" .. word .. "':",
+    }, function(choice)
+      if not choice then
+        return
+      end
+
+      if choice == "[Add to dictionary]" then
+        vim.cmd("normal! zg")
+      elseif choice == "[Ignore]" then
+        vim.cmd("normal! zG")
+      else
+        -- Replace word with selected suggestion
+        local col_start = vim.fn.col(".")
+        vim.cmd("normal! ciw" .. choice)
+        vim.cmd("stopinsert")
+      end
+    end)
+  elseif has_diagnostics then
+    -- Show LSP diagnostics
+    vim.diagnostic.open_float()
+  else
+    -- No issues at cursor, show general diagnostic float
+    vim.diagnostic.open_float()
+  end
+end
+
+M.goto_next_spell = function()
+  if not vim.wo.spell then
+    vim.notify("Spell check is not enabled", vim.log.levels.WARN)
+    return
+  end
+
+  local cursor_pos = vim.api.nvim_win_get_cursor(0)
+  local current_line = cursor_pos[1]
+  local current_col = cursor_pos[2]
+
+  -- Move cursor forward by one character to start search
+  vim.fn.cursor(current_line, current_col + 1)
+
+  local search_result = vim.fn.search('\\<\\k*\\>', 'W')
+  while search_result ~= 0 do
+    local spell_result = vim.fn.spellbadword()
+    if spell_result[1] ~= "" then
+      -- Found a spelling error, cursor is already positioned
+      return
+    end
+    search_result = vim.fn.search('\\<\\k*\\>', 'W')
+  end
+
+  -- No more spelling errors found, restore position
+  vim.api.nvim_win_set_cursor(0, cursor_pos)
+  vim.notify("No more spelling errors", vim.log.levels.INFO)
+end
+
+M.goto_prev_spell = function()
+  if not vim.wo.spell then
+    vim.notify("Spell check is not enabled", vim.log.levels.WARN)
+    return
+  end
+
+  local cursor_pos = vim.api.nvim_win_get_cursor(0)
+
+  local search_result = vim.fn.search('\\<\\k*\\>', 'bW')
+  while search_result ~= 0 do
+    local spell_result = vim.fn.spellbadword()
+    if spell_result[1] ~= "" then
+      -- Found a spelling error, cursor is already positioned
+      return
+    end
+    search_result = vim.fn.search('\\<\\k*\\>', 'bW')
+  end
+
+  -- No more spelling errors found, restore position
+  vim.api.nvim_win_set_cursor(0, cursor_pos)
+  vim.notify("No more spelling errors", vim.log.levels.INFO)
+end
+
 function M.config()
   -- Setup neodev for Lua development (requires lspconfig.util)
   require("neodev").setup {}

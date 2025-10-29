@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//home/mason/.local/share/nvim/lazy/nvim-dap/**)",
+      "Read(//home/mason/.local/share/nvim/lazy/vscode-js-debug/**)",
+      "WebSearch",
+      "Read(//home/mason/.local/share/nvim/lazy/nvim-tree.lua/lua/nvim-tree/renderer/**)",
+      "Read(//home/mason/.local/share/nvim/lazy/nvim-tree.lua/lua/nvim-tree/**)",
+      "Read(//home/mason/.local/share/nvim/lazy/nvim-tree.lua/**)",
+      "Read(//home/mason/.local/share/nvim/lazy/nvim-bqf/**)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

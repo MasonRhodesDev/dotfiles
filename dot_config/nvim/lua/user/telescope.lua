@@ -9,6 +9,10 @@ local M = {
       lazy = true
     },
     {
+      "nvim-telescope/telescope-ui-select.nvim",
+      commit = "6e51d7da30bd139a6950adf2a47fda6df9fa06d2",
+    },
+    {
       "nvim-lua/plenary.nvim",
       commit = "b9fd5226c2f76c951fc8ed5923d85e4de065e509",
     },
@@ -149,8 +153,16 @@ function M.config()
         override_file_sorter = true, -- override the file sorter
         case_mode = "smart_case", -- or "ignore_case" or "respect_case"
       },
+      ["ui-select"] = {
+        require("telescope.themes").get_dropdown({
+          previewer = false,
+        })
+      },
     },
   }
+
+  -- Load extensions
+  require("telescope").load_extension("ui-select")
 
   -- Use theme default borders for telescope
 end
