@@ -1,0 +1,13 @@
+/* Minimal gtkgreet theme with background */
+
+window {
+    background-image: url("file:///var/lib/greetd/wallpaper.png");
+    background-size: cover;
+    background-position: center;
+}
+
+box#body {
+    background-color: rgba(30, 30, 46, 0.9);
+    border-radius: 16px;
+    padding: 40px;
+}
