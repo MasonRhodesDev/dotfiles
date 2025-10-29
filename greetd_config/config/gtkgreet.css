@@ -1,0 +1,8 @@
+/* gtkgreet CSS - imports main theme and sets background */
+@import url("/etc/greetd/css/regreet.css");
+
+window {
+    background-image: url("file:///var/lib/greetd/wallpaper.png");
+    background-size: cover;
+    background-position: center;
+}
