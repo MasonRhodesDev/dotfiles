@@ -1,9 +1,11 @@
 #!/bin/bash
 
-# Base module functions for idle inhibitor system
-
 STATE_FILE="/tmp/idle-inhibitor-state"
 INHIBIT_PID_FILE="/tmp/idle-inhibitor-systemd.pid"
+
+DBUS_SERVICE="com.idleinhibitor.Control"
+DBUS_PATH="/com/idleinhibitor/Control"
+DBUS_INTERFACE="com.idleinhibitor.Control"
 
 # Get current idle inhibitor state
 get_state() {
@@ -84,4 +86,17 @@ init_state() {
     set_state "0"
     stop_inhibit
     log_daemon "Initialized with idle inhibitor OFF"
+}
+
+emit_disable() {
+    dbus-send --session --type=signal "$DBUS_PATH" "${DBUS_INTERFACE}.Disable" 2>/dev/null || true
+}
+
+emit_toggle() {
+    dbus-send --session --type=signal "$DBUS_PATH" "${DBUS_INTERFACE}.Toggle" 2>/dev/null || true
+}
+
+emit_set_state() {
+    local state="$1"
+    dbus-send --session --type=signal "$DBUS_PATH" "${DBUS_INTERFACE}.SetState" string:"$state" 2>/dev/null || true
 }
