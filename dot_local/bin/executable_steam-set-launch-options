@@ -1,0 +1,394 @@
+#!/usr/bin/env bash
+#
+# steam-set-launch-options - Update Steam game launch options with AMD/Wayland optimizations
+#
+# Usage: steam-set-launch-options <game search terms...>
+# Example: steam-set-launch-options borderlands 4
+#
+
+set -euo pipefail
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Default launch options template
+DEFAULT_LAUNCH_OPTIONS="AMD_VULKAN_ICD=RADV RADV_PERFTEST=aco VKD3D_CONFIG=dxr11 DXVK_ASYNC=1 SDL_VIDEODRIVER=wayland gamemoderun mangohud %command%"
+
+# Find Steam installation
+find_steam_root() {
+    local steam_paths=(
+        "$HOME/.steam/steam"
+        "$HOME/.local/share/Steam"
+        "$HOME/.var/app/com.valvesoftware.Steam/.local/share/Steam"  # Flatpak
+    )
+
+    for path in "${steam_paths[@]}"; do
+        if [[ -d "$path" ]]; then
+            echo "$path"
+            return 0
+        fi
+    done
+
+    return 1
+}
+
+# Parse VDF format (basic parser for localconfig.vdf)
+parse_vdf_get_launch_options() {
+    local file="$1"
+    local appid="$2"
+
+    # Extract the LaunchOptions for specific appid
+    # VDF structure: "appid" { "LaunchOptions" "value" }
+    awk -v appid="$appid" '
+        BEGIN { in_app=0; }
+        $0 ~ "\"" appid "\"" { in_app=1; next; }
+        in_app && /LaunchOptions/ {
+            match($0, /"([^"]*)"[[:space:]]*$/, arr);
+            print arr[1];
+            exit;
+        }
+        in_app && /^\s*}/ { in_app=0; }
+    ' "$file"
+}
+
+# Update launch options in localconfig.vdf
+update_vdf_launch_options() {
+    local file="$1"
+    local appid="$2"
+    local new_options="$3"
+    local backup="${file}.backup.$(date +%s)"
+
+    # Create backup
+    cp "$file" "$backup"
+    echo -e "${BLUE}Created backup: $backup${NC}"
+
+    # Escape special characters for sed
+    local escaped_options=$(printf '%s\n' "$new_options" | sed 's/[\/&]/\\&/g')
+
+    # Use awk to update the launch options
+    awk -v appid="$appid" -v newopts="$escaped_options" '
+        BEGIN { in_app=0; updated=0; }
+
+        # Found the app section
+        $0 ~ "\"" appid "\"" {
+            in_app=1;
+            print;
+            next;
+        }
+
+        # In app section, found LaunchOptions
+        in_app && /LaunchOptions/ && !updated {
+            # Replace or add the line
+            sub(/"[^"]*"[[:space:]]*$/, "\"" newopts "\"");
+            updated=1;
+            print;
+            next;
+        }
+
+        # Exiting app section
+        in_app && /^\s*}/ {
+            # If we never found LaunchOptions, add it before closing brace
+            if (!updated) {
+                print "\t\t\t\t\t\"LaunchOptions\"\t\t\"" newopts "\"";
+                updated=1;
+            }
+            in_app=0;
+        }
+
+        { print }
+    ' "$file" > "${file}.tmp" && mv "${file}.tmp" "$file"
+
+    echo -e "${GREEN}Updated launch options in: $file${NC}"
+}
+
+# Search for game in Steam library
+search_game() {
+    local search_term="$1"
+    local steam_root="$2"
+    local results=()
+
+    # Find all library folders
+    local library_file="${steam_root}/steamapps/libraryfolders.vdf"
+    local library_paths=("${steam_root}/steamapps")
+
+    if [[ -f "$library_file" ]]; then
+        # Parse additional library folders from vdf
+        while IFS= read -r line; do
+            if [[ "$line" =~ \"path\"[[:space:]]+\"([^\"]+)\" ]]; then
+                library_paths+=("${BASH_REMATCH[1]}/steamapps")
+            fi
+        done < "$library_file"
+    fi
+
+    # Search through all manifests
+    for lib_path in "${library_paths[@]}"; do
+        if [[ ! -d "$lib_path" ]]; then
+            continue
+        fi
+
+        for manifest in "$lib_path"/appmanifest_*.acf; do
+            if [[ ! -f "$manifest" ]]; then
+                continue
+            fi
+
+            # Extract appid and name
+            local appid=$(basename "$manifest" | sed 's/appmanifest_\([0-9]*\)\.acf/\1/')
+            local name=$(grep -E '^\s*"name"' "$manifest" | head -1 | sed 's/.*"\([^"]*\)"[^"]*$/\1/')
+
+            # Case-insensitive search
+            if echo "$name" | grep -iq "$search_term"; then
+                results+=("$appid|$name")
+            fi
+        done
+    done
+
+    printf '%s\n' "${results[@]}"
+}
+
+# Interactive prompt for launch options
+prompt_launch_options() {
+    local current_options="$1"
+
+    echo -e "${YELLOW}Current launch options:${NC}"
+    if [[ -z "$current_options" ]]; then
+        echo -e "${BLUE}  (none)${NC}"
+    else
+        echo -e "${BLUE}  $current_options${NC}"
+    fi
+    echo
+
+    echo -e "${YELLOW}Recommended AMD + Wayland launch options:${NC}"
+    echo -e "${GREEN}  $DEFAULT_LAUNCH_OPTIONS${NC}"
+    echo
+
+    echo "Choose an option:"
+    echo "  1) Use recommended AMD + Wayland options (default)"
+    echo "  2) Append recommended options to existing"
+    echo "  3) Enter custom options"
+    echo "  4) Keep current options (no change)"
+    echo
+
+    read -p "Selection [1-4]: " -r choice
+    choice=${choice:-1}
+
+    case "$choice" in
+        1)
+            echo "$DEFAULT_LAUNCH_OPTIONS"
+            ;;
+        2)
+            if [[ -n "$current_options" ]]; then
+                echo "$current_options $DEFAULT_LAUNCH_OPTIONS"
+            else
+                echo "$DEFAULT_LAUNCH_OPTIONS"
+            fi
+            ;;
+        3)
+            read -p "Enter custom launch options: " -r custom
+            echo "$custom"
+            ;;
+        4)
+            echo "$current_options"
+            return 1  # Signal no change
+            ;;
+        *)
+            echo -e "${RED}Invalid choice, using recommended options${NC}"
+            echo "$DEFAULT_LAUNCH_OPTIONS"
+            ;;
+    esac
+    return 0
+}
+
+# Check if Steam is running
+is_steam_running() {
+    pgrep -x steam >/dev/null 2>&1 || pgrep -x steamwebhelper >/dev/null 2>&1
+}
+
+# Kill Steam
+kill_steam() {
+    echo -e "${YELLOW}Closing Steam...${NC}"
+
+    if command -v steam >/dev/null 2>&1; then
+        steam -shutdown 2>/dev/null &
+        sleep 2
+    fi
+
+    # Force kill if still running
+    if is_steam_running; then
+        pkill -9 steam steamwebhelper 2>/dev/null || true
+        sleep 1
+    fi
+
+    echo -e "${GREEN}Steam closed${NC}"
+}
+
+# Start Steam
+start_steam() {
+    echo -e "${YELLOW}Starting Steam...${NC}"
+
+    if command -v steam >/dev/null 2>&1; then
+        steam >/dev/null 2>&1 &
+    elif flatpak list | grep -q com.valvesoftware.Steam; then
+        flatpak run com.valvesoftware.Steam >/dev/null 2>&1 &
+    else
+        echo -e "${RED}Could not find Steam executable${NC}"
+        return 1
+    fi
+
+    echo -e "${GREEN}Steam starting...${NC}"
+}
+
+# Main
+main() {
+    if [[ $# -eq 0 ]]; then
+        echo "Usage: $0 <game search terms...>"
+        echo
+        echo "Example:"
+        echo "  $0 borderlands 4"
+        echo "  $0 elden ring"
+        echo "  $0 cyberpunk"
+        exit 1
+    fi
+
+    # Combine all arguments into search term
+    local search_term="${*}"
+
+    echo -e "${BLUE}=== Steam Launch Options Updater ===${NC}"
+    echo -e "${BLUE}Search term: ${search_term}${NC}"
+    echo
+
+    # Find Steam
+    local steam_root
+    if ! steam_root=$(find_steam_root); then
+        echo -e "${RED}Error: Could not find Steam installation${NC}"
+        echo -e "${YELLOW}Expected locations:${NC}"
+        echo "  ~/.steam/steam"
+        echo "  ~/.local/share/Steam"
+        echo "  ~/.var/app/com.valvesoftware.Steam/.local/share/Steam (Flatpak)"
+        exit 1
+    fi
+
+    echo -e "${GREEN}Found Steam: ${steam_root}${NC}"
+    echo
+
+    # Search for games
+    echo -e "${YELLOW}Searching for games...${NC}"
+    local results
+    mapfile -t results < <(search_game "$search_term" "$steam_root")
+
+    if [[ ${#results[@]} -eq 0 ]]; then
+        echo -e "${RED}No games found matching: ${search_term}${NC}"
+        exit 1
+    fi
+
+    # Display results
+    echo -e "${GREEN}Found ${#results[@]} game(s):${NC}"
+    for i in "${!results[@]}"; do
+        IFS='|' read -r appid name <<< "${results[$i]}"
+        echo "  $((i+1))) [$appid] $name"
+    done
+    echo
+
+    # Select game
+    local selection
+    if [[ ${#results[@]} -eq 1 ]]; then
+        selection=0
+        echo -e "${YELLOW}Auto-selecting only match${NC}"
+    else
+        read -p "Select game [1-${#results[@]}]: " -r selection
+        selection=$((selection - 1))
+
+        if [[ $selection -lt 0 || $selection -ge ${#results[@]} ]]; then
+            echo -e "${RED}Invalid selection${NC}"
+            exit 1
+        fi
+    fi
+
+    IFS='|' read -r appid name <<< "${results[$selection]}"
+    echo -e "${GREEN}Selected: ${name} (${appid})${NC}"
+    echo
+
+    # Find localconfig.vdf
+    local userdata_dir="${steam_root}/userdata"
+    local config_files=()
+
+    for user_dir in "$userdata_dir"/*; do
+        if [[ -d "$user_dir" ]] && [[ $(basename "$user_dir") =~ ^[0-9]+$ ]]; then
+            local config="${user_dir}/config/localconfig.vdf"
+            if [[ -f "$config" ]]; then
+                config_files+=("$config")
+            fi
+        fi
+    done
+
+    if [[ ${#config_files[@]} -eq 0 ]]; then
+        echo -e "${RED}Error: Could not find localconfig.vdf${NC}"
+        exit 1
+    fi
+
+    # Use first config (or prompt if multiple users)
+    local config_file="${config_files[0]}"
+    if [[ ${#config_files[@]} -gt 1 ]]; then
+        echo -e "${YELLOW}Found ${#config_files[@]} Steam users:${NC}"
+        for i in "${!config_files[@]}"; do
+            local userid=$(basename "$(dirname "$(dirname "${config_files[$i]}")")")
+            echo "  $((i+1))) User ID: $userid"
+        done
+        read -p "Select user [1-${#config_files[@]}]: " -r user_selection
+        config_file="${config_files[$((user_selection - 1))]}"
+    fi
+
+    echo -e "${GREEN}Using config: ${config_file}${NC}"
+    echo
+
+    # Get current launch options
+    local current_options
+    current_options=$(parse_vdf_get_launch_options "$config_file" "$appid")
+
+    # Prompt for new options
+    local new_options
+    if ! new_options=$(prompt_launch_options "$current_options"); then
+        echo -e "${YELLOW}No changes made${NC}"
+        exit 0
+    fi
+
+    echo
+    echo -e "${YELLOW}New launch options:${NC}"
+    echo -e "${GREEN}  $new_options${NC}"
+    echo
+
+    read -p "Apply these launch options? [Y/n]: " -r confirm
+    confirm=${confirm:-Y}
+
+    if [[ ! "$confirm" =~ ^[Yy] ]]; then
+        echo -e "${YELLOW}Cancelled${NC}"
+        exit 0
+    fi
+
+    # Close Steam if running
+    if is_steam_running; then
+        kill_steam
+        sleep 2
+    fi
+
+    # Update config
+    update_vdf_launch_options "$config_file" "$appid" "$new_options"
+
+    echo
+    read -p "Start Steam now? [Y/n]: " -r start_confirm
+    start_confirm=${start_confirm:-Y}
+
+    if [[ "$start_confirm" =~ ^[Yy] ]]; then
+        start_steam
+    fi
+
+    echo
+    echo -e "${GREEN}✓ Launch options updated successfully!${NC}"
+    echo -e "${BLUE}Game: ${name} (${appid})${NC}"
+    echo -e "${BLUE}Options: ${new_options}${NC}"
+}
+
+main "$@"
