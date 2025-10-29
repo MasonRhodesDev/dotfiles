@@ -1,7 +1,11 @@
 #!/bin/bash
 
-# Signal idle inhibitor daemon about lock event
-touch /tmp/idle-inhibitor-lock-signal
+IDLE_INHIBITOR_BASE="$HOME/scripts/idle-inhibitor/modules/base.sh"
+
+if [[ -f "$IDLE_INHIBITOR_BASE" ]]; then
+    source "$IDLE_INHIBITOR_BASE"
+    emit_disable
+fi
 
 hyprlock
 # swaylock \
