@@ -76,7 +76,7 @@
             "tooltip-format-connected": "{controller_alias}\t{controller_address}\n\n{num_connections} connected\n\n{device_enumerate}",
             "tooltip-format-enumerate-connected": "{device_alias}\n{device_address}",
             "tooltip-format-enumerate-connected-battery": "{device_alias}\n{device_address}\n{device_battery_percentage}%",
-            "on-click-right": "blueman-manager",
+            "on-click-right": "blueman-manager"
         }, 
         "battery": {
             "interval":30,
@@ -96,7 +96,7 @@
             "󰂀",
             "󰂂",
             "󰁹"
-            ],
+            ]
         },
         "custom/updates": {
             "format": "󰅢   {}",
@@ -111,7 +111,7 @@
             "on-click": "wezterm sh -c 'if command -v yay >/dev/null 2>&1; then yay -Syu; else sudo pacman -Syu; fi; echo Done - Press enter to exit; read'; pkill -SIGRTMIN+8 waybar",
 {{- end }}
             "signal": 8,
-            "tooltip": false,
+            "tooltip": false
         },
         "custom/expand": {
             "format": "",
@@ -128,7 +128,7 @@
                 "transition-to-left": true,
                 "click-to-reveal": true
             },
-            "modules": ["custom/expand", "custom/colorpicker","cpu","memory","temperature","custom/endpoint"],
+            "modules": ["custom/expand", "custom/colorpicker","cpu","memory","temperature","custom/endpoint"]
         },
         "custom/colorpicker": {
             "format": "{}",
@@ -147,7 +147,7 @@
         },
         "temperature": {
             "critical-threshold": 80,
-            "format": "",
+            "format": ""
         },
         "custom/media": {
             "return-type": "json",
@@ -183,10 +183,10 @@
         "custom/idle-inhibitor": {
             "format": "{}",
             "return-type": "json",
-            "interval": "once",
-            "exec": "timeout 5 $HOME/scripts/idle-inhibitor/waybar-module.sh",
-            "on-click": "$HOME/scripts/idle-inhibitor/toggle.sh",
-            "signal": 9
+            "restart-interval": 3,
+            "exec": "$HOME/.config/waybar/scripts/logind-idle-monitor.sh",
+            "on-click": "logind-idle-control toggle",
+            "escape": false
         },
         "custom/screen-recorder": {
             "format": "{}",
