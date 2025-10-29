@@ -58,6 +58,12 @@ vim.api.nvim_create_autocmd({ "FileType" }, {
   callback = function()
     vim.opt_local.wrap = true
     vim.opt_local.spell = true
+
+    -- Spell checking keymaps (buffer-local)
+    local opts = { noremap = true, silent = true, buffer = true }
+    vim.keymap.set("n", "gl", "<cmd>lua require('user.lspconfig').diagnostic_with_spell()<CR>", opts)
+    vim.keymap.set("n", "gj", "<cmd>lua require('user.lspconfig').goto_next_spell()<CR>", opts)
+    vim.keymap.set("n", "gk", "<cmd>lua require('user.lspconfig').goto_prev_spell()<CR>", opts)
   end,
 })
 
