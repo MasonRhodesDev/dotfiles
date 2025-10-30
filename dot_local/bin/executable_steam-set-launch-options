@@ -83,12 +83,19 @@ fetch_protondb_data() {
     fi
 
     # Get Steam game details
-    local steam_data=$(curl -s "https://store.steampowered.com/api/appdetails?appids=${appid}" 2>/dev/null | jq -r ".\"${appid}\".data" 2>/dev/null)
+    local steam_response=$(curl -s "https://store.steampowered.com/api/appdetails?appids=${appid}" 2>/dev/null)
+
+    if [[ -z "$steam_response" ]]; then
+        echo -e "${YELLOW}Failed to fetch Steam data${NC}" >&2
+        steam_response="{}"
+    fi
+
+    local steam_data=$(echo "$steam_response" | jq -r ".\"${appid}\".data // {}" 2>/dev/null)
 
     # Extract useful info
     local game_name=$(echo "$steam_data" | jq -r '.name // "Unknown"' 2>/dev/null)
-    local genres=$(echo "$steam_data" | jq -r '.genres[]?.description // empty' 2>/dev/null | head -3 | paste -sd, -)
-    local multiplayer=$(echo "$steam_data" | jq -r 'if .categories[]?.description | contains("Multi-player") then "yes" else "no" end' 2>/dev/null | head -1)
+    local genres=$(echo "$steam_data" | jq -r '[.genres[]?.description] | join(", ") // "Unknown"' 2>/dev/null)
+    local multiplayer=$(echo "$steam_data" | jq -r 'if (.categories[]?.description | contains("Multi-player")) then "yes" else "no" end' 2>/dev/null)
 
     # NOTE: Detailed user reports require a hash that ProtonDB generates client-side
     # This would need a headless browser (Playwright) to extract
