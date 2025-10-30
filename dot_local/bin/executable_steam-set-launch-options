@@ -15,8 +15,197 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Default launch options template
-DEFAULT_LAUNCH_OPTIONS="AMD_VULKAN_ICD=RADV RADV_PERFTEST=aco VKD3D_CONFIG=dxr11 DXVK_ASYNC=1 SDL_VIDEODRIVER=wayland gamemoderun mangohud %command%"
+
+# Build launch options based on installed software
+build_launch_options() {
+    local options=""
+
+    # AMD/RADV optimizations (always include if on AMD)
+    options="AMD_VULKAN_ICD=RADV RADV_PERFTEST=aco VKD3D_CONFIG=dxr11 DXVK_ASYNC=1"
+
+    # Wayland SDL support
+    options="$options SDL_VIDEODRIVER=wayland"
+
+    # Check for gamemode
+    if command -v gamemoderun >/dev/null 2>&1; then
+        options="$options gamemoderun"
+    fi
+
+    # Check for mangohud
+    if command -v mangohud >/dev/null 2>&1; then
+        options="$options mangohud"
+    fi
+
+    # Always end with %command%
+    options="$options %command%"
+
+    echo "$options"
+}
+
+# Default launch options template (dynamically generated)
+DEFAULT_LAUNCH_OPTIONS=$(build_launch_options)
+
+# Display which components were included/excluded
+show_component_status() {
+    local gamemode_available=0
+    local mangohud_available=0
+
+    command -v gamemoderun >/dev/null 2>&1 && gamemode_available=1
+    command -v mangohud >/dev/null 2>&1 && mangohud_available=1
+
+    echo -e "${YELLOW}Optional components:${NC}"
+
+    if [[ $gamemode_available -eq 1 ]]; then
+        echo -e "  ${GREEN}✓ gamemode${NC} - CPU/GPU performance management"
+    else
+        echo -e "  ${RED}✗ gamemode${NC} - not installed"
+    fi
+
+    if [[ $mangohud_available -eq 1 ]]; then
+        echo -e "  ${GREEN}✓ MangoHUD${NC} - performance overlay"
+    else
+        echo -e "  ${RED}✗ MangoHUD${NC} - not installed"
+    fi
+}
+
+# Fetch ProtonDB summary data (reports require hash that needs headless browser)
+fetch_protondb_data() {
+    local appid="$1"
+
+    echo -e "${BLUE}→ Fetching ProtonDB summary...${NC}"
+
+    # Get summary data (tier/confidence/totals)
+    local summary=$(curl -s "https://www.protondb.com/api/v1/reports/summaries/${appid}.json" 2>/dev/null)
+
+    if [[ -z "$summary" ]] || [[ "$summary" == "null" ]]; then
+        echo -e "${RED}Failed to fetch ProtonDB data${NC}"
+        return 1
+    fi
+
+    # Get Steam game details
+    local steam_data=$(curl -s "https://store.steampowered.com/api/appdetails?appids=${appid}" 2>/dev/null | jq -r ".\"${appid}\".data" 2>/dev/null)
+
+    # Extract useful info
+    local game_name=$(echo "$steam_data" | jq -r '.name // "Unknown"' 2>/dev/null)
+    local genres=$(echo "$steam_data" | jq -r '.genres[]?.description // empty' 2>/dev/null | head -3 | paste -sd, -)
+    local multiplayer=$(echo "$steam_data" | jq -r 'if .categories[]?.description | contains("Multi-player") then "yes" else "no" end' 2>/dev/null | head -1)
+
+    # NOTE: Detailed user reports require a hash that ProtonDB generates client-side
+    # This would need a headless browser (Playwright) to extract
+    # For now, we provide summary data and direct users to ProtonDB for details
+
+    # Compile data for LLM
+    jq -n \
+        --arg appid "$appid" \
+        --arg name "$game_name" \
+        --arg genres "$genres" \
+        --arg multiplayer "$multiplayer" \
+        --argjson summary "$summary" \
+        '{
+            appid: $appid,
+            name: $name,
+            genres: $genres,
+            multiplayer: $multiplayer,
+            protondb: $summary,
+            user_reports: [],
+            extracted_launch_options: ""
+        }'
+}
+
+# Call Claude CLI to analyze
+call_claude() {
+    local prompt="$1"
+
+    if ! command -v claude >/dev/null 2>&1; then
+        return 1
+    fi
+
+    claude -p "$prompt" 2>/dev/null
+}
+
+# Analyze ProtonDB reports using Claude API
+analyze_protondb() {
+    local appid="$1"
+    local game_name="$2"
+
+    echo -e "${BLUE}Analyzing ProtonDB for ${game_name}...${NC}"
+
+    # Check for required tools
+    if ! command -v curl >/dev/null 2>&1 || ! command -v jq >/dev/null 2>&1; then
+        echo -e "${YELLOW}curl/jq not found, skipping analysis${NC}"
+        echo
+        return 1
+    fi
+
+    # Fetch comprehensive game data
+    echo -e "${BLUE}→ Fetching game data...${NC}"
+    local game_data=$(fetch_protondb_data "$appid")
+
+    if [[ -z "$game_data" ]] || [[ "$game_data" == "null" ]]; then
+        echo -e "${YELLOW}Could not fetch data${NC}"
+        echo -e "  View: ${BLUE}https://www.protondb.com/app/${appid}${NC}"
+        echo
+        return 1
+    fi
+
+    # Extract basic info for display
+    local tier=$(echo "$game_data" | jq -r '.protondb.tier // "unknown"')
+    local confidence=$(echo "$game_data" | jq -r '.protondb.confidence // "unknown"')
+    local total=$(echo "$game_data" | jq -r '.protondb.total // 0')
+    local best_tier=$(echo "$game_data" | jq -r '.protondb.bestReportedTier // "unknown"')
+    local trending_tier=$(echo "$game_data" | jq -r '.protondb.trendingTier // "unknown"')
+    local genres=$(echo "$game_data" | jq -r '.genres // "unknown"')
+    local multiplayer=$(echo "$game_data" | jq -r '.multiplayer // "unknown"')
+
+    # Try LLM analysis if claude CLI available
+    if command -v claude >/dev/null 2>&1; then
+        echo -e "${BLUE}→ Calling Claude for analysis...${NC}"
+
+        # Build simplified prompt using summary data
+        local analysis_prompt="Analyze Linux gaming compatibility for ${game_name} (App ID: ${appid}) on AMD GPU + Wayland + Arch Linux.
+
+GAME INFO:
+- Genres: ${genres}
+- Multiplayer: ${multiplayer}
+- ProtonDB Tier: ${tier} (${confidence} confidence, ${total} community reports)
+- Best Reported: ${best_tier}
+- Trending: ${trending_tier}
+
+Based on the ProtonDB rating, provide:
+1. General compatibility assessment
+2. Recommended Proton version (latest stable vs GE vs Experimental)
+3. Standard AMD+Wayland launch options to try
+4. If multiplayer: anti-cheat concerns (EAC, BattlEye)
+5. Bottom line: worth trying or skip
+
+Max 8 lines, plain text, no markdown. Direct users to https://www.protondb.com/app/${appid} for detailed user reports."
+
+        local analysis=$(call_claude "$analysis_prompt")
+
+        if [[ -n "$analysis" ]]; then
+            echo -e "${GREEN}=== ProtonDB Analysis ===${NC}"
+            echo "$analysis" | sed 's/^/  /'
+            echo
+        else
+            echo -e "${YELLOW}Claude unavailable${NC}"
+            echo -e "  Tier: ${GREEN}${tier}${NC} (${confidence}, ${total} reports)"
+            echo -e "  Best: ${best_tier} | Trending: ${trending_tier}"
+            echo -e "  View: ${BLUE}https://www.protondb.com/app/${appid}${NC}"
+            echo
+        fi
+    else
+        # No claude CLI - show basic data
+        echo -e "  ProtonDB Tier: ${GREEN}${tier}${NC} (${confidence}, ${total} reports)"
+        echo -e "  Best Reported: ${best_tier} | Trending: ${trending_tier}"
+        echo -e "  Genres: ${genres}"
+        echo -e "  Multiplayer: ${multiplayer}"
+        echo -e "  View details: ${BLUE}https://www.protondb.com/app/${appid}${NC}"
+        echo -e "  ${YELLOW}Tip: Install 'claude' CLI for AI-powered recommendations${NC}"
+        echo
+    fi
+
+    return 0
+}
 
 # Find Steam installation
 find_steam_root() {
@@ -165,6 +354,9 @@ prompt_launch_options() {
     echo -e "${GREEN}  $DEFAULT_LAUNCH_OPTIONS${NC}"
     echo
 
+    show_component_status
+    echo
+
     echo "Choose an option:"
     echo "  1) Use recommended AMD + Wayland options (default)"
     echo "  2) Append recommended options to existing"
@@ -310,6 +502,9 @@ main() {
     IFS='|' read -r appid name <<< "${results[$selection]}"
     echo -e "${GREEN}Selected: ${name} (${appid})${NC}"
     echo
+
+    # Analyze ProtonDB for this game
+    analyze_protondb "$appid" "$name"
 
     # Find localconfig.vdf
     local userdata_dir="${steam_root}/userdata"
