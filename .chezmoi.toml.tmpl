@@ -31,7 +31,7 @@
     hostname = "{{ .chezmoi.hostname }}"
     os = "{{ .chezmoi.os }}"
     os_release_id = "{{ .chezmoi.osRelease.id }}"
-    os_release_version = "{{ .chezmoi.osRelease.versionID }}"
+    os_release_version = "{{ if hasKey .chezmoi.osRelease "versionID" }}{{ .chezmoi.osRelease.versionID }}{{ else }}rolling{{ end }}"
     arch = "{{ .chezmoi.arch }}"
     last_updated = "{{ now | date "2006-01-02T15:04:05Z07:00" }}"
     
