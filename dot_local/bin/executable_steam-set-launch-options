@@ -72,13 +72,13 @@ show_component_status() {
 fetch_protondb_data() {
     local appid="$1"
 
-    echo -e "${BLUE}→ Fetching ProtonDB summary...${NC}"
+    echo -e "${BLUE}→ Fetching ProtonDB summary...${NC}" >&2
 
     # Get summary data (tier/confidence/totals)
     local summary=$(curl -s "https://www.protondb.com/api/v1/reports/summaries/${appid}.json" 2>/dev/null)
 
     if [[ -z "$summary" ]] || [[ "$summary" == "null" ]]; then
-        echo -e "${RED}Failed to fetch ProtonDB data${NC}"
+        echo -e "${RED}Failed to fetch ProtonDB data${NC}" >&2
         return 1
     fi
 
@@ -127,7 +127,15 @@ call_claude() {
         return 1
     fi
 
-    claude -p "$prompt" 2>/dev/null
+    # Claude may wrap JSON in markdown code fences, extract it
+    local response=$(claude -p "$prompt" 2>&1)
+
+    # Try to extract JSON from markdown fences
+    if echo "$response" | grep -q '```json'; then
+        echo "$response" | sed -n '/```json/,/```/p' | sed '1d;$d'
+    else
+        echo "$response"
+    fi
 }
 
 # Analyze ProtonDB reports using Claude API
@@ -135,7 +143,7 @@ analyze_protondb() {
     local appid="$1"
     local game_name="$2"
 
-    echo -e "${BLUE}Analyzing ProtonDB for ${game_name}...${NC}"
+    echo -e "${BLUE}Analyzing ProtonDB for ${game_name}...${NC}" >&2
 
     # Check for required tools
     if ! command -v curl >/dev/null 2>&1 || ! command -v jq >/dev/null 2>&1; then
@@ -145,7 +153,7 @@ analyze_protondb() {
     fi
 
     # Fetch comprehensive game data
-    echo -e "${BLUE}→ Fetching game data...${NC}"
+    echo -e "${BLUE}→ Fetching game data...${NC}" >&2
     local game_data=$(fetch_protondb_data "$appid")
 
     if [[ -z "$game_data" ]] || [[ "$game_data" == "null" ]]; then
@@ -166,9 +174,9 @@ analyze_protondb() {
 
     # Try LLM analysis if claude CLI available
     if command -v claude >/dev/null 2>&1; then
-        echo -e "${BLUE}→ Calling Claude for analysis...${NC}"
+        echo -e "${BLUE}→ Calling Claude for analysis...${NC}" >&2
 
-        # Build simplified prompt using summary data
+        # Build structured prompt for JSON response
         local analysis_prompt="Analyze Linux gaming compatibility for ${game_name} (App ID: ${appid}) on AMD GPU + Wayland + Arch Linux.
 
 GAME INFO:
@@ -178,40 +186,62 @@ GAME INFO:
 - Best Reported: ${best_tier}
 - Trending: ${trending_tier}
 
-Based on the ProtonDB rating, provide:
-1. General compatibility assessment
-2. Recommended Proton version (latest stable vs GE vs Experimental)
-3. Standard AMD+Wayland launch options to try
-4. If multiplayer: anti-cheat concerns (EAC, BattlEye)
-5. Bottom line: worth trying or skip
+Provide 3-5 specific launch option configurations as JSON array. Each option should be based on ProtonDB user reports and AMD+Wayland best practices.
 
-Max 8 lines, plain text, no markdown. Direct users to https://www.protondb.com/app/${appid} for detailed user reports."
+Output ONLY valid JSON in this exact format:
+{
+  \"summary\": \"1-2 sentence compatibility assessment\",
+  \"options\": [
+    {
+      \"label\": \"Short option name\",
+      \"launch_options\": \"exact launch options string\",
+      \"description\": \"What this does and when to use it\",
+      \"confidence\": \"high|medium|low\"
+    }
+  ]
+}
+
+For the confidence field, estimate community confidence based on:
+- Tier (Platinum/Gold = high confidence for that config)
+- Report volume (more reports = higher confidence)
+- Best reported tier vs current tier (shows what's achievable)
+- For \"no changes needed\": high confidence only if tier is Platinum/Gold with many reports
+
+Include these option types:
+1. If ProtonDB shows it works without changes: \"No changes needed\" with empty launch_options (confidence: high only if Platinum/Gold tier)
+2. Standard AMD+Wayland optimizations (RADV, DXVK_ASYNC, etc) - confidence based on tier
+3. Any game-specific tweaks mentioned in reports
+4. Proton version recommendations in description
+5. Wayland compatibility flags if needed
+
+For multiplayer games, mention anti-cheat (EAC/BattlEye) in descriptions.
+Direct users to https://www.protondb.com/app/${appid} in summary."
 
         local analysis=$(call_claude "$analysis_prompt")
 
         if [[ -n "$analysis" ]]; then
-            echo -e "${GREEN}=== ProtonDB Analysis ===${NC}"
-            echo "$analysis" | sed 's/^/  /'
-            echo
-        else
-            echo -e "${YELLOW}Claude unavailable${NC}"
-            echo -e "  Tier: ${GREEN}${tier}${NC} (${confidence}, ${total} reports)"
-            echo -e "  Best: ${best_tier} | Trending: ${trending_tier}"
-            echo -e "  View: ${BLUE}https://www.protondb.com/app/${appid}${NC}"
-            echo
+            # Parse JSON response
+            local summary=$(echo "$analysis" | jq -r '.summary // empty' 2>/dev/null)
+
+            if [[ -n "$summary" ]]; then
+                echo -e "${GREEN}=== ProtonDB Analysis ===${NC}" >&2
+                echo -e "  ${summary}" >&2
+                echo >&2
+
+                # Return ONLY the JSON for use by prompt_launch_options
+                echo "$analysis"
+                return 0
+            fi
         fi
-    else
-        # No claude CLI - show basic data
-        echo -e "  ProtonDB Tier: ${GREEN}${tier}${NC} (${confidence}, ${total} reports)"
-        echo -e "  Best Reported: ${best_tier} | Trending: ${trending_tier}"
-        echo -e "  Genres: ${genres}"
-        echo -e "  Multiplayer: ${multiplayer}"
-        echo -e "  View details: ${BLUE}https://www.protondb.com/app/${appid}${NC}"
-        echo -e "  ${YELLOW}Tip: Install 'claude' CLI for AI-powered recommendations${NC}"
-        echo
+
+        # If we get here, Claude failed or returned invalid JSON
+        echo -e "${RED}Failed to get analysis from Claude${NC}" >&2
+        return 1
     fi
 
-    return 0
+    # No claude CLI available
+    echo -e "${RED}Claude CLI not found${NC}" >&2
+    return 1
 }
 
 # Find Steam installation
@@ -348,6 +378,7 @@ search_game() {
 # Interactive prompt for launch options
 prompt_launch_options() {
     local current_options="$1"
+    local options_json="$2"
 
     echo -e "${YELLOW}Current launch options:${NC}"
     if [[ -z "$current_options" ]]; then
@@ -357,47 +388,81 @@ prompt_launch_options() {
     fi
     echo
 
-    echo -e "${YELLOW}Recommended AMD + Wayland launch options:${NC}"
-    echo -e "${GREEN}  $DEFAULT_LAUNCH_OPTIONS${NC}"
-    echo
-
     show_component_status
     echo
 
-    echo "Choose an option:"
-    echo "  1) Use recommended AMD + Wayland options (default)"
-    echo "  2) Append recommended options to existing"
-    echo "  3) Enter custom options"
-    echo "  4) Keep current options (no change)"
-    echo
+    # Parse options from JSON and build menu
+    local option_count=$(echo "$options_json" | jq -r '.options | length' 2>/dev/null)
 
-    read -p "Selection [1-4]: " -r choice
-    choice=${choice:-1}
+    if [[ -z "$option_count" ]] || [[ "$option_count" == "0" ]] || [[ "$option_count" == "null" ]]; then
+        echo -e "${RED}No options available from ProtonDB analysis${NC}"
+        echo -e "${YELLOW}Debug: JSON length = ${#options_json}, count = '$option_count'${NC}"
+        echo -e "${YELLOW}Debug: First 200 chars of JSON: ${options_json:0:200}${NC}"
+        return 1
+    fi
 
-    case "$choice" in
-        1)
-            echo "$DEFAULT_LAUNCH_OPTIONS"
-            ;;
-        2)
-            if [[ -n "$current_options" ]]; then
-                echo "$current_options $DEFAULT_LAUNCH_OPTIONS"
-            else
-                echo "$DEFAULT_LAUNCH_OPTIONS"
-            fi
-            ;;
-        3)
-            read -p "Enter custom launch options: " -r custom
-            echo "$custom"
-            ;;
-        4)
-            echo "$current_options"
-            return 1  # Signal no change
-            ;;
-        *)
-            echo -e "${RED}Invalid choice, using recommended options${NC}"
-            echo "$DEFAULT_LAUNCH_OPTIONS"
-            ;;
-    esac
+    echo -e "${YELLOW}Available configurations:${NC}" >&2
+
+    local i
+    for ((i=0; i<option_count; i++)); do
+        local label=$(echo "$options_json" | jq -r ".options[$i].label" 2>/dev/null)
+        local launch_opts=$(echo "$options_json" | jq -r ".options[$i].launch_options" 2>/dev/null)
+        local desc=$(echo "$options_json" | jq -r ".options[$i].description" 2>/dev/null)
+        local confidence=$(echo "$options_json" | jq -r ".options[$i].confidence // \"unknown\"" 2>/dev/null)
+
+        # Set confidence indicator
+        local confidence_indicator=""
+        case "$confidence" in
+            high)
+                confidence_indicator="${GREEN}🟢 High confidence${NC}"
+                ;;
+            medium)
+                confidence_indicator="${YELLOW}🟡 Medium confidence${NC}"
+                ;;
+            low)
+                confidence_indicator="${RED}🔴 Low confidence${NC}"
+                ;;
+            *)
+                confidence_indicator="${YELLOW}❓ Unknown${NC}"
+                ;;
+        esac
+
+        echo -e "  $((i+1))) ${GREEN}${label}${NC} [${confidence_indicator}]" >&2
+        echo -e "     ${desc}" >&2
+        if [[ -n "$launch_opts" ]]; then
+            echo -e "     ${BLUE}Will set: ${launch_opts}${NC}" >&2
+        else
+            echo -e "     ${BLUE}Will set: (no changes)${NC}" >&2
+        fi
+        echo >&2
+    done
+
+    # Add "keep current" option
+    echo -e "  $((option_count+1))) ${GREEN}Keep current options (cancel)${NC}" >&2
+    echo -e "     ${BLUE}Will set: ${current_options:-"(none)"}${NC}" >&2
+    echo >&2
+
+    read -p "Selection [1-$((option_count+1))]: " -r choice
+
+    if [[ -z "$choice" ]] || [[ ! "$choice" =~ ^[0-9]+$ ]]; then
+        echo -e "${RED}Invalid selection${NC}"
+        return 1
+    fi
+
+    # Check if user chose "keep current"
+    if [[ "$choice" -eq $((option_count+1)) ]]; then
+        return 1  # Signal no change
+    fi
+
+    # Validate selection
+    if [[ "$choice" -lt 1 ]] || [[ "$choice" -gt "$option_count" ]]; then
+        echo -e "${RED}Invalid selection${NC}"
+        return 1
+    fi
+
+    # Return selected launch options
+    local selected_opts=$(echo "$options_json" | jq -r ".options[$((choice-1))].launch_options" 2>/dev/null)
+    echo "$selected_opts"
     return 0
 }
 
@@ -442,13 +507,23 @@ start_steam() {
 
 # Main
 main() {
+    local dry_run=0
+
+    # Parse flags
+    if [[ "${1:-}" == "--dry-run" ]]; then
+        dry_run=1
+        shift
+    fi
+
     if [[ $# -eq 0 ]]; then
-        echo "Usage: $0 <game search terms...>"
+        echo "Usage: $0 [--dry-run] <game search terms...>"
+        echo
+        echo "Options:"
+        echo "  --dry-run    Show analysis and menu without making changes"
         echo
         echo "Example:"
         echo "  $0 borderlands 4"
-        echo "  $0 elden ring"
-        echo "  $0 cyberpunk"
+        echo "  $0 --dry-run planetside"
         exit 1
     fi
 
@@ -510,8 +585,14 @@ main() {
     echo -e "${GREEN}Selected: ${name} (${appid})${NC}"
     echo
 
-    # Analyze ProtonDB for this game
-    analyze_protondb "$appid" "$name"
+    # Analyze ProtonDB for this game and get JSON options
+    local protondb_json
+    protondb_json=$(analyze_protondb "$appid" "$name")
+
+    if [[ -z "$protondb_json" ]]; then
+        echo -e "${RED}Failed to get ProtonDB analysis${NC}"
+        exit 1
+    fi
 
     # Find localconfig.vdf
     local userdata_dir="${steam_root}/userdata"
@@ -550,9 +631,9 @@ main() {
     local current_options
     current_options=$(parse_vdf_get_launch_options "$config_file" "$appid")
 
-    # Prompt for new options
+    # Prompt for new options with ProtonDB recommendations
     local new_options
-    if ! new_options=$(prompt_launch_options "$current_options"); then
+    if ! new_options=$(prompt_launch_options "$current_options" "$protondb_json"); then
         echo -e "${YELLOW}No changes made${NC}"
         exit 0
     fi
@@ -561,6 +642,13 @@ main() {
     echo -e "${YELLOW}New launch options:${NC}"
     echo -e "${GREEN}  $new_options${NC}"
     echo
+
+    if [[ $dry_run -eq 1 ]]; then
+        echo -e "${YELLOW}[DRY RUN] Would update launch options but not actually applying${NC}"
+        echo -e "${BLUE}Game: ${name} (${appid})${NC}"
+        echo -e "${BLUE}Options: ${new_options}${NC}"
+        exit 0
+    fi
 
     read -p "Apply these launch options? [Y/n]: " -r confirm
     confirm=${confirm:-Y}
