@@ -1,0 +1,89 @@
+#!/bin/bash
+# Helper script to set up Google Authenticator TOTP 2FA
+# Must be run as the user who will use 2FA for login
+
+set -e
+
+echo "==> Google Authenticator 2FA Setup"
+echo
+
+# Check if running as root
+if [ "$EUID" -eq 0 ]; then
+    echo "ERROR: Do not run this script as root!"
+    echo "Run as the user who will use 2FA for login:"
+    echo "  ./setup-google-auth"
+    exit 1
+fi
+
+# Check if google-authenticator is installed
+if ! command -v google-authenticator &> /dev/null; then
+    echo "ERROR: google-authenticator command not found"
+    echo
+    echo "Install it first:"
+    echo "  Fedora: sudo dnf install google-authenticator"
+    echo "  Arch:   sudo pacman -S libpam-google-authenticator"
+    exit 1
+fi
+
+echo "This script will set up Time-based One-Time Password (TOTP) 2FA"
+echo "for your login using Google Authenticator."
+echo
+echo "You will need:"
+echo "  - A smartphone with an authenticator app installed"
+echo "    (Google Authenticator, Authy, 1Password, etc.)"
+echo "  - The ability to scan a QR code or manually enter a secret"
+echo
+echo "IMPORTANT: You will be asked several configuration questions."
+echo "Recommended answers are provided below."
+echo
+
+read -p "Continue? (Y/n) " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Nn]$ ]]; then
+    exit 0
+fi
+
+echo
+echo "==> Running google-authenticator setup"
+echo
+echo "Recommended answers:"
+echo "  1. Time-based tokens: YES"
+echo "  2. Update ~/.google_authenticator: YES"
+echo "  3. Disallow multiple uses: YES (more secure)"
+echo "  4. Rate limiting: YES (prevents brute force)"
+echo "  5. Time window: NO (unless you have clock sync issues)"
+echo
+echo "After answering questions, you'll see:"
+echo "  - A QR code (scan with your authenticator app)"
+echo "  - A secret key (backup in case QR doesn't work)"
+echo "  - Emergency scratch codes (save these securely!)"
+echo
+
+read -p "Press Enter to start setup..."
+echo
+
+# Run google-authenticator
+if google-authenticator; then
+    echo
+    echo "==> Setup Complete!"
+    echo
+    echo "IMPORTANT: Save your emergency scratch codes!"
+    echo "They are stored in ~/.google_authenticator"
+    echo
+    echo "To view them again:"
+    echo "  tail -5 ~/.google_authenticator"
+    echo
+    echo "IMPORTANT: Test login in a separate terminal before logging out!"
+    echo "  1. Switch to TTY2: Ctrl+Alt+F2"
+    echo "  2. Try logging in with your password + 6-digit code"
+    echo "  3. If successful, return here: Ctrl+Alt+F1"
+    echo
+    echo "If you get locked out, you can:"
+    echo "  - Use an emergency scratch code (one-time use)"
+    echo "  - Boot to recovery and remove ~/.google_authenticator"
+    echo
+else
+    echo
+    echo "✗ Setup failed or was cancelled"
+    exit 1
+fi

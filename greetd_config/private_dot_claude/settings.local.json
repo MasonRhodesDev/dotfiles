@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:packages.fedoraproject.org)",
+      "Bash(journalctl:*)",
+      "Bash(hyprctl monitors:*)",
+      "Bash(sudo journalctl:*)",
+      "WebFetch(domain:wiki.hypr.land)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
