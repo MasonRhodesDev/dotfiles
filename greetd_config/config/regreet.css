@@ -1,0 +1,6 @@
+/* Minimal CSS to make regreet window background transparent */
+/* Only affects the window itself, not the UI elements */
+
+window {
+    background-color: transparent;
+}

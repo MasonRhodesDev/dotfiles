@@ -1,0 +1,111 @@
+#!/bin/bash
+# Helper script to set up U2F hardware token authentication
+# Must be run as the user who will use U2F for login
+
+set -e
+
+echo "==> U2F Hardware Token Setup"
+echo
+
+# Check if running as root
+if [ "$EUID" -eq 0 ]; then
+    echo "ERROR: Do not run this script as root!"
+    echo "Run as the user who will use U2F for login:"
+    echo "  ./setup-u2f"
+    exit 1
+fi
+
+# Check if pam_u2f is installed
+if [ ! -f /usr/lib/security/pam_u2f.so ] && [ ! -f /lib/security/pam_u2f.so ]; then
+    echo "ERROR: pam_u2f is not installed"
+    echo
+    echo "Install it first:"
+    echo "  Fedora: sudo dnf install pam-u2f"
+    echo "  Arch:   sudo pacman -S pam-u2f"
+    exit 1
+fi
+
+# Check if pamu2fcfg command exists
+if ! command -v pamu2fcfg &> /dev/null; then
+    echo "ERROR: pamu2fcfg command not found"
+    echo "This command should come with pam-u2f package"
+    exit 1
+fi
+
+echo "This script will register your U2F hardware token(s) for login."
+echo
+echo "You can register multiple tokens (recommended for backup)."
+echo "Each token will allow you to log in to this account."
+echo
+
+read -p "Continue? (Y/n) " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Nn]$ ]]; then
+    exit 0
+fi
+
+# Create u2f config directory
+mkdir -p ~/.config/Yubico
+
+echo
+echo "==> Registering first U2F token"
+echo
+echo "When prompted:"
+echo "  1. Insert your U2F token (if not already inserted)"
+echo "  2. Touch the token when it blinks"
+echo
+read -p "Press Enter when ready..."
+
+# Register first token
+if pamu2fcfg -u "$USER" > ~/.config/Yubico/u2f_keys; then
+    echo
+    echo "✓ First token registered successfully"
+else
+    echo
+    echo "✗ Failed to register token"
+    exit 1
+fi
+
+# Offer to register additional tokens
+while true; do
+    echo
+    read -p "Register another token for backup? (y/N) " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        break
+    fi
+
+    echo
+    echo "==> Registering additional U2F token"
+    echo "Insert a different token and touch it when it blinks..."
+    echo
+    read -p "Press Enter when ready..."
+
+    if pamu2fcfg -u "$USER" -n >> ~/.config/Yubico/u2f_keys; then
+        echo
+        echo "✓ Additional token registered"
+    else
+        echo
+        echo "✗ Failed to register token"
+    fi
+done
+
+# Set appropriate permissions
+chmod 600 ~/.config/Yubico/u2f_keys
+
+echo
+echo "==> U2F Setup Complete!"
+echo
+echo "Registered tokens:"
+grep -c "^${USER}:" ~/.config/Yubico/u2f_keys || echo "1"
+echo
+echo "You can now use your U2F token(s) to log in."
+echo
+echo "IMPORTANT: Test login in a separate terminal before logging out!"
+echo "  1. Switch to TTY2: Ctrl+Alt+F2"
+echo "  2. Try logging in with your token"
+echo "  3. If successful, return here: Ctrl+Alt+F1"
+echo
+echo "If you get locked out, you can remove U2F by booting to recovery"
+echo "and deleting ~/.config/Yubico/u2f_keys"
+echo

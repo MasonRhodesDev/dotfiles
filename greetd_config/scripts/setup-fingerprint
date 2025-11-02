@@ -1,0 +1,138 @@
+#!/bin/bash
+# Helper script to enroll fingerprints for authentication
+# Must be run as the user who will use fingerprint login
+
+set -e
+
+echo "==> Fingerprint Enrollment"
+echo
+
+# Check if running as root
+if [ "$EUID" -eq 0 ]; then
+    echo "ERROR: Do not run this script as root!"
+    echo "Run as the user who will use fingerprint login:"
+    echo "  ./setup-fingerprint"
+    exit 1
+fi
+
+# Check if fprintd is installed
+if ! command -v fprintd-enroll &> /dev/null; then
+    echo "ERROR: fprintd-enroll command not found"
+    echo
+    echo "Install it first:"
+    echo "  Fedora: sudo dnf install fprintd"
+    echo "  Arch:   sudo pacman -S fprintd"
+    echo
+    echo "Also ensure fprintd service is running:"
+    echo "  sudo systemctl enable --now fprintd.service"
+    exit 1
+fi
+
+# Check if fprintd service is running
+if ! systemctl is-active --quiet fprintd.service; then
+    echo "WARNING: fprintd service is not running"
+    read -p "Start it now? (Y/n) " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+        sudo systemctl start fprintd.service
+    else
+        echo "Cannot continue without fprintd service"
+        exit 1
+    fi
+fi
+
+# List available fingerprint readers
+echo "Detecting fingerprint readers..."
+if ! fprintd-list "$USER" &> /dev/null; then
+    echo "ERROR: No fingerprint reader detected or fprintd not working"
+    echo
+    echo "Troubleshooting:"
+    echo "  1. Check if your device has a fingerprint reader"
+    echo "  2. Verify kernel drivers are loaded: lsusb | grep -i finger"
+    echo "  3. Check fprintd logs: journalctl -u fprintd"
+    exit 1
+fi
+
+echo
+echo "This script will enroll your fingerprints for login."
+echo "You can enroll multiple fingers (recommended for backup)."
+echo
+
+read -p "Continue? (Y/n) " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Nn]$ ]]; then
+    exit 0
+fi
+
+# Function to enroll a finger
+enroll_finger() {
+    local finger=$1
+    echo
+    echo "==> Enrolling: $finger"
+    echo "Follow the on-screen instructions."
+    echo "You will need to scan your finger multiple times."
+    echo
+
+    if fprintd-enroll -f "$finger" "$USER"; then
+        echo "✓ $finger enrolled successfully"
+        return 0
+    else
+        echo "✗ Failed to enroll $finger"
+        return 1
+    fi
+}
+
+# Suggest which fingers to enroll
+echo
+echo "Recommended fingers to enroll:"
+echo "  1. right-index-finger (primary)"
+echo "  2. left-index-finger (backup)"
+echo "  3. right-thumb (alternative)"
+echo
+echo "Available finger names:"
+echo "  left-thumb, left-index-finger, left-middle-finger,"
+echo "  left-ring-finger, left-little-finger, right-thumb,"
+echo "  right-index-finger, right-middle-finger,"
+echo "  right-ring-finger, right-little-finger"
+echo
+
+# Enroll primary finger
+enroll_finger "right-index-finger"
+
+# Offer to enroll additional fingers
+while true; do
+    echo
+    read -p "Enroll another finger for backup? (y/N) " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        break
+    fi
+
+    echo
+    echo "Enter finger name (e.g., left-index-finger):"
+    read -r finger_name
+
+    if [ -z "$finger_name" ]; then
+        echo "No finger name provided, skipping"
+        continue
+    fi
+
+    enroll_finger "$finger_name"
+done
+
+echo
+echo "==> Fingerprint Enrollment Complete!"
+echo
+echo "Enrolled fingerprints:"
+fprintd-list "$USER"
+echo
+echo "You can now use your fingerprint(s) to log in."
+echo
+echo "IMPORTANT: Test login before logging out!"
+echo "  1. Lock your screen or switch to TTY2: Ctrl+Alt+F2"
+echo "  2. Try logging in with your fingerprint"
+echo "  3. You can always fall back to password if fingerprint fails"
+echo
+echo "To remove all fingerprints:"
+echo "  fprintd-delete \"\$USER\""
+echo
