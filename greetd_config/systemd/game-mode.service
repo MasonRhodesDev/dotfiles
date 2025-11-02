@@ -1,0 +1,26 @@
+[Unit]
+Description=Game Mode Service
+After=greetd.service
+Wants=greetd.service
+BindsTo=greetd.service
+
+[Service]
+Type=simple
+WorkingDirectory=/etc/greetd
+ExecStart=/usr/local/bin/game-mode
+Restart=on-failure
+RestartSec=5
+StandardOutput=append:/etc/greetd/logs/game-mode.log
+StandardError=append:/etc/greetd/logs/game-mode.log
+User=greeter
+Group=greeter
+
+# Add necessary environment variables
+Environment=RUST_LOG=game_mode=debug
+Environment=RUST_BACKTRACE=1
+
+# Add necessary device access
+SupplementaryGroups=input video
+
+[Install]
+WantedBy=greetd.service 

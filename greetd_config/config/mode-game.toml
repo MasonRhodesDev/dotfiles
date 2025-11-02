@@ -1,0 +1,8 @@
+[terminal]
+vt = 1
+[default_session]
+# command = "steam -tenfoot"
+command = "/usr/bin/gamescope -e -- /usr/bin/steam -gamepadui"
+# command = "/etc/greetd/game-mode-wrapper.sh"
+user = "mason"
+autologin = true
