@@ -108,7 +108,12 @@ The user has ALREADY made changes to their local file and wants the template upd
    - If timestamps are ambiguous or the change is significant, present the timestamp information and ask which direction to sync
    - Most commonly, the local file is newer and should be saved to the template
 
-6. **Update the template to match the local file exactly:**
+6. **Use `chezmoi add` for non-template files:**
+   - If the file is NOT a `.tmpl` file and local is newer, use `chezmoi add <file>` to save local changes to the template
+   - Example: `chezmoi add ~/.bashrc`
+   - This is the preferred method for simple files
+
+7. **For template files, update manually:**
    - Edit the template file directly using the Edit tool
    - Pay attention to:
      - Commented vs uncommented lines
@@ -116,7 +121,7 @@ The user has ALREADY made changes to their local file and wants the template upd
      - Line endings
      - Exact character positions
 
-7. **Verify the fix:**
+8. **Verify the fix:**
    ```bash
    chezmoi diff ~/.config/path/to/file
    ```
@@ -126,6 +131,7 @@ The user has ALREADY made changes to their local file and wants the template upd
 
 - **Confusing diff symbols with chronology**: The `-` and `+` symbols show SOURCE (template vs local), NOT time (old vs new). Use timestamps to determine which change is newer.
 - **Reading files instead of diff**: Always read BOTH the template file AND the local file directly to verify their actual content. Don't rely solely on diff interpretation.
+- **Describing changes backwards**: When describing what will happen, be clear about the direction. DON'T say "The local file has X changes" when you mean "The template will be updated with X changes from the local file." The local file ALREADY HAS the changes; they are being SAVED TO the template.
 - **Invisible whitespace**: Trailing spaces are significant. Use `cat -A` or `od -c` to see them.
 - **Assuming templates need git commits**: Templates are read from the filesystem, not git HEAD. Changes take effect immediately without committing.
 - **Swapping logic**: If local file has line A active and line B commented, the template must also have line A active and line B commented.
