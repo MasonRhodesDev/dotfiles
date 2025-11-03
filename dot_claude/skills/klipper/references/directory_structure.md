@@ -1,0 +1,125 @@
+# Directory Structure
+
+Complete directory layout of the Klipper installation on printer@192.168.1.216.
+
+## Root Directory
+
+Path: `~/printer_ender3v2_data/`
+
+```
+printer_ender3v2_data/
+├── config/              - Klipper configuration files
+├── logs/                - Log files
+├── gcodes/              - G-code files for printing
+├── database/            - Moonraker database
+├── comms/               - Communication sockets
+├── certs/               - SSL certificates
+├── systemd/             - Systemd service files
+└── misc/                - Miscellaneous files
+```
+
+## config/ Directory
+
+Contains all Klipper configuration files and the klipper-macros submodule.
+
+```
+config/
+├── printer.cfg          - Main configuration file (4.5KB)
+├── moonraker.conf       - Moonraker API configuration
+├── fluidd.cfg           - Symlink to /home/printer/fluidd-config/fluidd.cfg
+└── klipper-macros/      - Git submodule with macro files
+    ├── globals.cfg      - Variable definitions (20KB)
+    ├── start_end.cfg    - Start/end print sequences
+    ├── pause_resume_cancel.cfg
+    ├── filament.cfg
+    ├── bed_mesh_fast.cfg
+    ├── bed_surface.cfg
+    ├── layers.cfg
+    ├── heaters.cfg
+    ├── fans.cfg
+    ├── park.cfg
+    ├── velocity.cfg
+    ├── kinematics.cfg
+    └── optional/
+        └── bed_mesh.cfg
+```
+
+## logs/ Directory
+
+Contains Klipper and Moonraker log files.
+
+```
+logs/
+├── klippy.log           - Main Klipper log (most important)
+├── klippy.log.1         - Rotated log file
+├── klippy.log.2         - Older rotated log
+├── moonraker.log        - Moonraker API log
+└── [other rotated logs]
+```
+
+### Log Rotation
+
+- Logs rotate automatically when they reach a certain size
+- Most recent log is always `klippy.log`
+- Check rotated logs for historical errors
+
+## gcodes/ Directory
+
+Storage location for G-code files sent from slicers.
+
+```
+gcodes/
+├── [uploaded .gcode files]
+└── [uploaded .ufp files]
+```
+
+- Files uploaded from OrcaSlicer appear here
+- Virtual SD path configured in klipper-macros globals.cfg
+- Moonraker serves files from this directory via API
+
+## database/ Directory
+
+Moonraker's internal database storage.
+
+```
+database/
+├── data.mdb
+└── lock.mdb
+```
+
+- Contains Moonraker state and configuration
+- Do not modify manually
+- Backed up automatically by Moonraker
+
+## comms/ Directory
+
+Unix domain sockets for process communication.
+
+```
+comms/
+├── klippy.sock          - Klipper API socket
+└── moonraker.sock       - Moonraker API socket
+```
+
+- Used for inter-process communication
+- Do not modify or delete while services are running
+
+## Git Repository
+
+The config/ directory is version-controlled:
+
+- **Remote**: git@github.com:MasonRhodesDev/ender3v2_klipper_config.git
+- **Submodule**: klipper-macros at config/klipper-macros/
+
+### Git Operations
+
+```bash
+# Check status
+klipper_exec "cd config && git status"
+
+# View recent commits
+klipper_exec "cd config && git log -5 --oneline"
+
+# Check submodule status
+klipper_exec "cd config && git submodule status"
+```

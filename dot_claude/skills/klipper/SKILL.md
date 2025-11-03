@@ -1,0 +1,144 @@
+---
+name: klipper
+description: Manage Klipper 3D printer configuration and troubleshooting. Use when working with Ender 3 V2 Klipper configs, analyzing printer logs, modifying printer.cfg, or troubleshooting print issues.
+---
+
+# Klipper Printer Management
+
+Expert assistance with Klipper 3D printer configuration, troubleshooting, and maintenance for the Ender 3 V2.
+
+## Overview
+
+This skill provides procedural knowledge and helper functions for managing a Klipper-based 3D printer. Use this skill when asked to:
+
+- View or edit Klipper configuration files
+- Analyze printer logs for errors
+- Backup or restore printer configurations
+- Troubleshoot BLTouch, bed mesh, or motion issues
+- Modify macros or printer settings
+- Work with the remote printer at 192.168.1.216
+
+## Setup
+
+Before performing any operations, ensure remote access is available:
+
+```bash
+source ~/.claude/scripts/klipper-mount.sh
+ensure_klipper_access || exit 1
+```
+
+## Helper Functions
+
+Source the klipper-mount.sh script to access these functions:
+
+- `klipper_list [path]` - List remote directory contents
+- `klipper_read <file>` - Read remote file content
+- `klipper_write <file>` - Write to remote file (pipe content)
+- `klipper_exec <command>` - Execute command in printer_ender3v2_data/
+- `klipper_sync_down <remote> [local]` - Download files via rsync
+- `klipper_sync_up <local> <remote>` - Upload files via rsync
+
+## Printer Information
+
+- **Host**: printer@192.168.1.216
+- **Remote Path**: ~/printer_ender3v2_data/
+- **Local Cache**: ~/.cache/klipper/
+- **Printer Model**: Ender 3 V2
+- **Git Repo**: git@github.com:MasonRhodesDev/ender3v2_klipper_config.git
+
+## Common Tasks
+
+### Reading Configuration
+
+```bash
+klipper_read config/printer.cfg
+klipper_read config/klipper-macros/globals.cfg
+klipper_list config/klipper-macros
+```
+
+### Editing Configuration
+
+```bash
+# Download for local editing
+klipper_sync_down config/ ~/.cache/klipper/config/
+
+# Edit locally, then upload
+klipper_sync_up ~/.cache/klipper/config/printer.cfg config/
+```
+
+### Viewing Logs
+
+```bash
+klipper_exec "tail -100 logs/klippy.log"
+klipper_read logs/klippy.log | grep -i error
+```
+
+### Backup Configuration
+
+Use the backup script:
+
+```bash
+scripts/backup_config.sh
+```
+
+Or manually:
+
+```bash
+klipper_sync_down config/ ~/backups/klipper-$(date +%Y%m%d-%H%M%S)/
+```
+
+### Analyzing Logs
+
+Use the log analyzer script:
+
+```bash
+scripts/analyze_logs.sh
+```
+
+Or manually:
+
+```bash
+klipper_exec "tail -500 logs/klippy.log | grep -E 'error|warn|MCU'"
+```
+
+## Best Practices
+
+1. **Always backup** before making changes: `scripts/backup_config.sh`
+2. **Read current config** before suggesting changes: `klipper_read config/printer.cfg`
+3. **Check git status** in config directory: `klipper_exec "cd config && git status"`
+4. **Review macro defaults** in globals.cfg before overriding in printer.cfg
+5. **Test incrementally** - suggest small changes and validation steps
+6. **Check dependencies** - many features require specific macro includes
+7. **Validate syntax** - suggest running FIRMWARE_RESTART after config changes
+
+## Safety Notes
+
+- Never modify temperature limits without user confirmation
+- Warn about changes that affect motion limits or speeds
+- Always validate pin assignments match the actual hardware
+- BLTouch offsets are critical - incorrect values can crash the nozzle
+- Remind users to test moves at safe heights before printing
+- Changes to safe_z_home position must account for probe offsets
+
+## Reference Material
+
+For detailed information, refer to:
+
+- `references/hardware_config.md` - BLTouch specs, bed mesh, motion limits
+- `references/directory_structure.md` - Complete directory layout
+- `references/macro_system.md` - Detailed macro documentation
+- `references/troubleshooting.md` - Common issues and solutions
+
+## Resources
+
+### scripts/
+
+- `backup_config.sh` - Automated configuration backup with timestamps
+- `analyze_logs.sh` - Log analysis with error filtering and summary
+
+### references/
+
+- `hardware_config.md` - Hardware specifications and calibration data
+- `directory_structure.md` - Complete printer directory layout
+- `macro_system.md` - Klipper-macros system documentation
+- `troubleshooting.md` - Common problems and solutions

@@ -1,0 +1,54 @@
+#!/bin/bash
+# Automated Klipper configuration backup with timestamps
+
+set -e
+
+# Source klipper helper functions
+if [ -f ~/.claude/scripts/klipper-mount.sh ]; then
+    source ~/.claude/scripts/klipper-mount.sh
+else
+    echo "Error: klipper-mount.sh not found"
+    exit 1
+fi
+
+# Ensure remote access
+ensure_klipper_access || exit 1
+
+# Generate timestamp
+TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+BACKUP_DIR="$HOME/backups/klipper-$TIMESTAMP"
+
+echo "Creating backup directory: $BACKUP_DIR"
+mkdir -p "$BACKUP_DIR"
+
+echo "Backing up config/ directory..."
+klipper_sync_down config/ "$BACKUP_DIR/config/"
+
+echo "Backing up logs/ directory..."
+klipper_sync_down logs/ "$BACKUP_DIR/logs/"
+
+echo "Creating backup summary..."
+cat > "$BACKUP_DIR/backup_info.txt" <<EOF
+Klipper Backup
+Created: $(date)
+Source: printer@192.168.1.216:~/printer_ender3v2_data/
+
+Contents:
+- config/        - Klipper configuration files
+- logs/          - Log files
+
+To restore:
+  klipper_sync_up "$BACKUP_DIR/config/" config/
+EOF
+
+# Count files
+CONFIG_COUNT=$(find "$BACKUP_DIR/config" -type f | wc -l)
+LOG_COUNT=$(find "$BACKUP_DIR/logs" -type f | wc -l)
+
+echo ""
+echo "Backup completed successfully!"
+echo "Location: $BACKUP_DIR"
+echo "Files backed up: $CONFIG_COUNT config files, $LOG_COUNT log files"
+echo ""
+echo "To restore this backup:"
+echo "  klipper_sync_up \"$BACKUP_DIR/config/\" config/"
