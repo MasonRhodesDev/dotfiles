@@ -63,6 +63,70 @@ Chezmoi source files are stored in `~/.local/share/chezmoi/`
 3. **Verify with diff:** `chezmoi diff` (optional)
 4. **Commit changes:** Standard git operations in `~/.local/share/chezmoi/`
 
+## Handling Local Changes to Template Files
+
+When a user reports that their local file has changes that differ from the chezmoi template:
+
+### Critical Understanding
+The user has ALREADY made changes to their local file and wants the template updated to MATCH those changes. Do NOT suggest applying the template to overwrite their local changes.
+
+### Step-by-Step Process
+
+1. **Identify the exact local changes:**
+   ```bash
+   chezmoi diff ~/.config/path/to/file
+   ```
+   This shows what the local file contains vs what chezmoi would generate.
+
+2. **Find the template source file:**
+   ```bash
+   chezmoi source-path ~/.config/path/to/file
+   ```
+   This returns the path to the `.tmpl` file (e.g., `~/.local/share/chezmoi/dot_config/path/to/file.tmpl`)
+
+3. **Read both files to understand the exact difference:**
+   - Read the template file directly to see its current content
+   - Use `cat -A` or `od -c` to reveal hidden characters (trailing spaces, tabs, etc.)
+   - Compare line-by-line, character-by-character if needed
+
+4. **Update the template to match the local file exactly:**
+   - Edit the template file directly using the Edit tool
+   - Pay attention to:
+     - Commented vs uncommented lines
+     - Trailing whitespace (spaces, tabs)
+     - Line endings
+     - Exact character positions
+
+5. **Verify the fix:**
+   ```bash
+   chezmoi diff ~/.config/path/to/file
+   ```
+   This should show NO diff if the template was updated correctly.
+
+### Common Pitfalls
+
+- **Reading comprehension errors**: The diff shows `-old_content` and `+new_content`. The `+` lines are what the LOCAL file contains and what the template should be updated TO.
+- **Invisible whitespace**: Trailing spaces are significant. Use `cat -A` or `od -c` to see them.
+- **Assuming templates need git commits**: Templates are read from the filesystem, not git HEAD. Changes take effect immediately without committing.
+- **Swapping logic**: If local file has line A active and line B commented, the template must also have line A active and line B commented.
+
+### Example Scenario
+
+User says: "My local monitors.conf has changes"
+
+**Correct approach:**
+1. Run `chezmoi diff ~/.config/hypr/configs/monitors.conf`
+2. Read the diff carefully - the `+` lines show what the local file contains
+3. Find the template: `chezmoi source-path ~/.config/hypr/configs/monitors.conf`
+4. Edit the template to match the local file (the `+` lines from the diff)
+5. Verify with `chezmoi diff` - should show no differences
+
+**Incorrect approach:**
+- Suggesting `chezmoi apply` to overwrite local changes
+- Misreading the diff and updating the template backwards
+- Ignoring whitespace differences
+- Claiming the template is correct when a diff still exists
+
 ## Template Variables
 
 Access chezmoi data in templates:
