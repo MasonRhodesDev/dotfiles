@@ -1,6 +1,6 @@
 ---
 name: chezmoi
-description: Manage dotfiles with chezmoi. Use when user needs to track config files, compare dotfiles, check status, or work with chezmoi templates. CRITICAL SAFETY RULES ENFORCED.
+description: This skill should be used whenever the user mentions "chezmoi" in any way. Manages dotfiles with chezmoi including tracking config files, comparing dotfiles, checking status, working with chezmoi templates, and handling local file changes. CRITICAL SAFETY RULES ENFORCED.
 ---
 
 # Chezmoi Dotfiles Management
@@ -76,7 +76,13 @@ The user has ALREADY made changes to their local file and wants the template upd
    ```bash
    chezmoi diff ~/.config/path/to/file
    ```
-   This shows what the local file contains vs what chezmoi would generate.
+   This shows the difference between what chezmoi would generate vs what exists locally.
+
+   **CRITICAL - Understanding the diff output:**
+   - Lines starting with `-` show what the TEMPLATE would generate (template's current state)
+   - Lines starting with `+` show what the LOCAL FILE contains (local file's current state)
+   - These symbols indicate SOURCE, not chronology
+   - To update template to match local: Replace template content that produces `-` lines with content that produces `+` lines
 
 2. **Find the template source file:**
    ```bash
@@ -84,12 +90,25 @@ The user has ALREADY made changes to their local file and wants the template upd
    ```
    This returns the path to the `.tmpl` file (e.g., `~/.local/share/chezmoi/dot_config/path/to/file.tmpl`)
 
-3. **Read both files to understand the exact difference:**
+3. **Check modification timestamps to determine which is newer:**
+   ```bash
+   stat -c '%y %n' ~/.config/path/to/file && chezmoi source-path ~/.config/path/to/file | xargs stat -c '%y %n'
+   ```
+   This shows the modification times of both files. The newer file typically represents the user's intended state.
+   - If local file is newer: User likely made intentional changes to be saved to the template
+   - If template is newer: Template may have been updated from another machine or git pull
+   - Present this information to help guide the decision
+
+4. **Read both files to understand the exact difference:**
    - Read the template file directly to see its current content
    - Use `cat -A` or `od -c` to reveal hidden characters (trailing spaces, tabs, etc.)
    - Compare line-by-line, character-by-character if needed
 
-4. **Update the template to match the local file exactly:**
+5. **Confirm with user if needed:**
+   - If timestamps are ambiguous or the change is significant, present the timestamp information and ask which direction to sync
+   - Most commonly, the local file is newer and should be saved to the template
+
+6. **Update the template to match the local file exactly:**
    - Edit the template file directly using the Edit tool
    - Pay attention to:
      - Commented vs uncommented lines
@@ -97,7 +116,7 @@ The user has ALREADY made changes to their local file and wants the template upd
      - Line endings
      - Exact character positions
 
-5. **Verify the fix:**
+7. **Verify the fix:**
    ```bash
    chezmoi diff ~/.config/path/to/file
    ```
@@ -105,7 +124,8 @@ The user has ALREADY made changes to their local file and wants the template upd
 
 ### Common Pitfalls
 
-- **Reading comprehension errors**: The diff shows `-old_content` and `+new_content`. The `+` lines are what the LOCAL file contains and what the template should be updated TO.
+- **Confusing diff symbols with chronology**: The `-` and `+` symbols show SOURCE (template vs local), NOT time (old vs new). Use timestamps to determine which change is newer.
+- **Reading files instead of diff**: Always read BOTH the template file AND the local file directly to verify their actual content. Don't rely solely on diff interpretation.
 - **Invisible whitespace**: Trailing spaces are significant. Use `cat -A` or `od -c` to see them.
 - **Assuming templates need git commits**: Templates are read from the filesystem, not git HEAD. Changes take effect immediately without committing.
 - **Swapping logic**: If local file has line A active and line B commented, the template must also have line A active and line B commented.
