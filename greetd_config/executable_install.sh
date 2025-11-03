@@ -155,7 +155,9 @@ else
 # JumpCloud integration
 # Check if JumpCloud PAM module is installed
 JUMPCLOUD_DETECTED=false
-if [ -f /lib/security/pam_jc_account_expiration.so ] || [ -f /usr/lib/security/pam_jc_account_expiration.so ]; then
+if [ -f /lib/security/pam_jc_account_expiration.so ] || \
+   [ -f /usr/lib/security/pam_jc_account_expiration.so ] || \
+   [ -f /usr/lib64/security/pam_jc_account_expiration.so ]; then
     JUMPCLOUD_DETECTED=true
 fi
 
@@ -178,14 +180,33 @@ fi
 echo
 info "Additional authentication methods (optional):"
 
-# Fingerprint authentication
-read -p "Enable fingerprint reader support (fprintd)? (y/N) " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-    ENABLE_FINGERPRINT=true
-    info "  ✓ Fingerprint authentication enabled"
+# Fingerprint authentication - detect hardware
+FINGERPRINT_DETECTED=false
+if lsusb 2>/dev/null | grep -qi "fingerprint\|biometric\|goodix\|validity\|synaptics\|elan"; then
+    FINGERPRINT_DETECTED=true
+fi
+
+if [ "$FINGERPRINT_DETECTED" = true ]; then
+    info "Fingerprint reader detected"
+    read -p "Enable fingerprint reader support (fprintd)? (Y/n) " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Nn]$ ]]; then
+        ENABLE_FINGERPRINT=false
+        info "  ✓ Fingerprint authentication disabled"
+    else
+        ENABLE_FINGERPRINT=true
+        info "  ✓ Fingerprint authentication enabled"
+    fi
 else
-    ENABLE_FINGERPRINT=false
+    read -p "Enable fingerprint reader support (fprintd)? (y/N) " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        ENABLE_FINGERPRINT=true
+        info "  ✓ Fingerprint authentication enabled"
+    else
+        ENABLE_FINGERPRINT=false
+        info "  ✓ Fingerprint authentication disabled"
+    fi
 fi
 
 # U2F hardware tokens
@@ -447,24 +468,15 @@ info "[3/14] Determining required packages..."
 
 # Base packages needed for all configurations
 BASE_PACKAGES=()
+BUILD_REGREET=false
 case "$DISTRO" in
     fedora)
         BASE_PACKAGES+=("greetd" "jq" "socat")
-        # regreet requires COPR on Fedora
-        info "regreet requires COPR repository on Fedora"
-        info "Enabling COPR: psoldunov/regreet"
-
-        if dnf copr enable -y psoldunov/regreet; then
-            success "COPR repository enabled"
-            BASE_PACKAGES+=("regreet")
-        else
-            error "Failed to enable COPR repository"
-            read -p "Continue without regreet? (y/N) " -n 1 -r
-            echo
-            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-                exit 1
-            fi
-        fi
+        # regreet must be built from source on Fedora
+        info "regreet will be built from source (no Fedora 41 packages available)"
+        BUILD_REGREET=true
+        # Add build dependencies
+        BASE_PACKAGES+=("rust" "cargo" "gtk4-devel" "gcc" "git")
         ;;
     arch)
         BASE_PACKAGES+=("greetd" "greetd-regreet" "swaybg" "jq" "socat")
@@ -674,6 +686,51 @@ fi
 if [ "$ENABLE_GAME_MODE" = true ]; then
     usermod -a -G input,video greeter
     info "Greeter user added to input and video groups"
+fi
+
+# ============================================================================
+# BUILD REGREET FROM SOURCE (FEDORA ONLY)
+# ============================================================================
+
+if [ "$BUILD_REGREET" = true ]; then
+    info "[5.5/14] Building regreet from source..."
+
+    REGREET_BUILD_DIR="$ACTUAL_HOME/.cache/regreet-build-$$"
+
+    info "Cloning regreet repository..."
+    if sudo -u "$ACTUAL_USER" git clone https://github.com/rharish101/ReGreet.git "$REGREET_BUILD_DIR"; then
+        success "Repository cloned"
+
+        info "Building regreet (this may take a few minutes)..."
+
+        # Build as the actual user in their home directory to avoid permission issues
+        if sudo -u "$ACTUAL_USER" bash -c "cd '$REGREET_BUILD_DIR' && cargo build --release"; then
+            success "Build completed"
+
+            # Install binary
+            install -Dm755 "$REGREET_BUILD_DIR/target/release/regreet" /usr/bin/regreet
+            success "regreet installed to /usr/bin/regreet"
+
+            # Clean up
+            sudo -u "$ACTUAL_USER" rm -rf "$REGREET_BUILD_DIR"
+            info "Build directory cleaned up"
+        else
+            error "Failed to build regreet"
+            sudo -u "$ACTUAL_USER" rm -rf "$REGREET_BUILD_DIR"
+            read -p "Continue without regreet? (y/N) " -n 1 -r
+            echo
+            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                exit 1
+            fi
+        fi
+    else
+        error "Failed to clone regreet repository"
+        read -p "Continue without regreet? (y/N) " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            exit 1
+        fi
+    fi
 fi
 
 # ============================================================================
@@ -890,9 +947,11 @@ generate_pam_config() {
 
 # Verify JumpCloud if enabled
 if [ "$ENABLE_JUMPCLOUD" = true ]; then
-    if [ ! -f /lib/security/pam_jc_account_expiration.so ] && [ ! -f /usr/lib/security/pam_jc_account_expiration.so ]; then
+    if [ ! -f /lib/security/pam_jc_account_expiration.so ] && \
+       [ ! -f /usr/lib/security/pam_jc_account_expiration.so ] && \
+       [ ! -f /usr/lib64/security/pam_jc_account_expiration.so ]; then
         warn "JumpCloud PAM module not found!"
-        echo "Expected location: /lib/security/pam_jc_account_expiration.so"
+        echo "Expected locations: /lib/security/, /usr/lib/security/, /usr/lib64/security/"
         echo "Install JumpCloud agent or authentication will fail."
         read -p "Continue anyway? (y/N) " -n 1 -r
         echo
