@@ -14,22 +14,17 @@ REGREET_PID=$!
 # Wait a moment for window to appear
 sleep 0.3
 
-# Move regreet workspace to the active monitor and focus it
+# Focus workspace 1 on the active monitor (swaps if necessary)
 if [ -n "$ACTIVE_MONITOR" ]; then
-    hyprctl dispatch moveworkspacetomonitor 1 "$ACTIVE_MONITOR" 2>/dev/null
-    hyprctl dispatch workspace 1 2>/dev/null
+    hyprctl dispatch focusworkspaceoncurrentmonitor 1 2>/dev/null
 fi
 
 # Monitor focus changes and move regreet window dynamically
 (
     socat -U - UNIX-CONNECT:"$XDG_RUNTIME_DIR/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket2.sock" 2>/dev/null | \
     grep --line-buffered "focusedmon>>" | \
-    while IFS='>' read -r _ _ monitor_info; do
-        MONITOR_NAME=$(echo "$monitor_info" | cut -d',' -f1)
-        if [ -n "$MONITOR_NAME" ]; then
-            hyprctl dispatch moveworkspacetomonitor 1 "$MONITOR_NAME" 2>/dev/null
-            hyprctl dispatch workspace 1 2>/dev/null
-        fi
+    while read -r _; do
+        hyprctl dispatch focusworkspaceoncurrentmonitor 1 2>/dev/null
     done
 ) &
 MONITOR_PID=$!
