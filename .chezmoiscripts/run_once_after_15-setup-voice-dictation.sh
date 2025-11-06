@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+exit 0
+
 echo "Setting up voice dictation with nerd-dictation..."
 
 if command -v dnf > /dev/null 2>&1; then
