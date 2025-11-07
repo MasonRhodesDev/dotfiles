@@ -12,3 +12,7 @@ software_installers.backup-*/
 # Plan files
 .plans/
 CURRENT_PLAN.md
+
+# Test infrastructure
+tests/
+.github/
