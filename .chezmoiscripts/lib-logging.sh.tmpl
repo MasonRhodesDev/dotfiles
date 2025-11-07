@@ -1,0 +1,143 @@
+#!/bin/bash
+# Logging library for chezmoi installation scripts
+# Provides structured logging with levels and formatting
+
+# Log level control
+LOG_LEVEL="${LOG_LEVEL:-INFO}"  # DEBUG, INFO, WARN, ERROR
+
+# Color codes for output
+if [ -t 1 ]; then
+    COLOR_RESET='\033[0m'
+    COLOR_DEBUG='\033[0;36m'    # Cyan
+    COLOR_INFO='\033[0;32m'     # Green
+    COLOR_WARN='\033[0;33m'     # Yellow
+    COLOR_ERROR='\033[0;31m'    # Red
+    COLOR_HEADER='\033[1;34m'   # Bold Blue
+else
+    COLOR_RESET=''
+    COLOR_DEBUG=''
+    COLOR_INFO=''
+    COLOR_WARN=''
+    COLOR_ERROR=''
+    COLOR_HEADER=''
+fi
+
+# Log level functions
+log_debug() {
+    if [ "$LOG_LEVEL" = "DEBUG" ]; then
+        echo -e "${COLOR_DEBUG}[DEBUG]${COLOR_RESET} $*" >&2
+    fi
+}
+
+log_info() {
+    echo -e "${COLOR_INFO}[INFO]${COLOR_RESET} $*"
+}
+
+log_warn() {
+    echo -e "${COLOR_WARN}[WARN]${COLOR_RESET} $*" >&2
+}
+
+log_error() {
+    echo -e "${COLOR_ERROR}[ERROR]${COLOR_RESET} $*" >&2
+}
+
+# Phase header formatting
+log_phase_start() {
+    local phase_name="$1"
+    echo ""
+    echo -e "${COLOR_HEADER}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${COLOR_RESET}"
+    echo -e "${COLOR_HEADER}  $phase_name${COLOR_RESET}"
+    echo -e "${COLOR_HEADER}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${COLOR_RESET}"
+    echo ""
+}
+
+log_phase_end() {
+    local phase_name="$1"
+    echo ""
+    echo -e "${COLOR_INFO}✓ $phase_name complete${COLOR_RESET}"
+    echo ""
+}
+
+# Category header formatting
+log_category_start() {
+    local category="$1"
+    echo ""
+    echo -e "${COLOR_INFO}━━━ Installing $category ━━━${COLOR_RESET}"
+}
+
+log_category_success() {
+    local category="$1"
+    local duration="${2:-}"
+    if [ -n "$duration" ]; then
+        echo -e "${COLOR_INFO}✓ $category installed successfully (${duration}s)${COLOR_RESET}"
+    else
+        echo -e "${COLOR_INFO}✓ $category installed successfully${COLOR_RESET}"
+    fi
+}
+
+log_category_failure() {
+    local category="$1"
+    local error="$2"
+    echo -e "${COLOR_ERROR}✗ $category failed: $error${COLOR_RESET}"
+}
+
+log_category_skip() {
+    local category="$1"
+    local reason="$2"
+    echo -e "${COLOR_WARN}⊘ Skipping $category: $reason${COLOR_RESET}"
+}
+
+# Log file management
+init_log_file() {
+    local phase="$1"
+    local log_dir="{{ .chezmoi.homeDir }}/.cache/dotfiles-install"
+    local timestamp=$(date +%Y%m%d-%H%M%S)
+
+    mkdir -p "$log_dir"
+
+    LOG_FILE="$log_dir/${phase}-${timestamp}.log"
+
+    # Create log file
+    touch "$LOG_FILE"
+
+    # Setup tee for dual output (stdout + file)
+    exec > >(tee -a "$LOG_FILE")
+    exec 2>&1
+
+    log_info "Logging to: $LOG_FILE"
+}
+
+get_log_file() {
+    echo "$LOG_FILE"
+}
+
+list_recent_logs() {
+    local count="${1:-10}"
+    local log_dir="{{ .chezmoi.homeDir }}/.cache/dotfiles-install"
+
+    if [ -d "$log_dir" ]; then
+        find "$log_dir" -name "*.log" -type f -printf '%T@ %p\n' | \
+            sort -rn | \
+            head -n "$count" | \
+            cut -d' ' -f2-
+    fi
+}
+
+# Cleanup old logs (keep last N)
+cleanup_old_logs() {
+    local keep="${1:-30}"
+    local log_dir="{{ .chezmoi.homeDir }}/.cache/dotfiles-install"
+
+    if [ -d "$log_dir" ]; then
+        local log_count=$(find "$log_dir" -name "*.log" -type f | wc -l)
+
+        if [ "$log_count" -gt "$keep" ]; then
+            log_debug "Cleaning up old logs (keeping last $keep)"
+            find "$log_dir" -name "*.log" -type f -printf '%T@ %p\n' | \
+                sort -rn | \
+                tail -n +$((keep + 1)) | \
+                cut -d' ' -f2- | \
+                xargs -r rm -f
+        fi
+    fi
+}

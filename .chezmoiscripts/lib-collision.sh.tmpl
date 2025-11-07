@@ -1,0 +1,300 @@
+#!/bin/bash
+# Collision detection library for chezmoi installation scripts
+# Detects multi-source package installations and known conflicts
+
+COLLISION_DB="{{ .chezmoi.sourceDir }}/.chezmoiscripts/collisions.db.json"
+
+# Check if package is already installed by different manager
+check_package_collision() {
+    local package="$1"
+    local intended_source="$2"  # dnf, pacman, cargo, aur, flatpak
+    local distro=$(get_distro)
+
+    log_debug "Checking collision for $package (intended: $intended_source)"
+
+    # Check all possible sources
+    local found_sources=()
+
+    case $distro in
+        "fedora")
+            if rpm -q "$package" &>/dev/null; then
+                found_sources+=("dnf")
+            fi
+            ;;
+        "arch")
+            if pacman -Q "$package" &>/dev/null; then
+                found_sources+=("pacman")
+            fi
+            ;;
+    esac
+
+    if command -v flatpak &>/dev/null && flatpak list --app 2>/dev/null | grep -q "^$package"; then
+        found_sources+=("flatpak")
+    fi
+
+    if command -v cargo &>/dev/null && cargo install --list 2>/dev/null | grep -q "^$package "; then
+        found_sources+=("cargo")
+    fi
+
+    # Check state DB for registered source
+    local registered_source=$(get_package_source "$package")
+    if [ "$registered_source" != "unknown" ] && [ "$registered_source" != "$intended_source" ]; then
+        log_warn "Package $package registered as $registered_source in state DB"
+        found_sources+=("$registered_source")
+    fi
+
+    # If found in different source, that's a collision
+    if [ ${#found_sources[@]} -gt 0 ]; then
+        for source in "${found_sources[@]}"; do
+            if [ "$source" != "$intended_source" ]; then
+                log_error "COLLISION: $package already installed via $source, attempting $intended_source"
+                return 1
+            fi
+        done
+    fi
+
+    return 0
+}
+
+# Get all sources where package is installed
+get_installed_sources() {
+    local package="$1"
+    local distro=$(get_distro)
+    local sources=()
+
+    case $distro in
+        "fedora")
+            if rpm -q "$package" &>/dev/null; then
+                sources+=("dnf")
+            fi
+            ;;
+        "arch")
+            if pacman -Q "$package" &>/dev/null; then
+                sources+=("pacman")
+            fi
+            ;;
+    esac
+
+    if command -v flatpak &>/dev/null && flatpak list --app 2>/dev/null | grep -q "^$package"; then
+        sources+=("flatpak")
+    fi
+
+    if command -v cargo &>/dev/null && cargo install --list 2>/dev/null | grep -q "^$package "; then
+        sources+=("cargo")
+    fi
+
+    echo "${sources[@]}"
+}
+
+# Check if package is installed by specific source
+is_package_installed() {
+    local package="$1"
+    local source="$2"
+    local distro=$(get_distro)
+
+    case $source in
+        "dnf")
+            [ "$distro" = "fedora" ] && rpm -q "$package" &>/dev/null
+            ;;
+        "pacman")
+            [ "$distro" = "arch" ] && pacman -Q "$package" &>/dev/null
+            ;;
+        "cargo")
+            command -v cargo &>/dev/null && cargo install --list 2>/dev/null | grep -q "^$package "
+            ;;
+        "aur")
+            # AUR packages show up in pacman -Q
+            [ "$distro" = "arch" ] && pacman -Q "$package" &>/dev/null
+            ;;
+        "flatpak")
+            command -v flatpak &>/dev/null && flatpak list --app 2>/dev/null | grep -q "^$package"
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+# Check if package conflicts with another
+check_known_conflict() {
+    local package="$1"
+
+    # Load collisions DB if exists
+    if [ ! -f "$COLLISION_DB" ]; then
+        log_debug "No collisions database found"
+        return 0
+    fi
+
+    local conflicts=$(jq -r ".conflicts.\"$package\".conflicts_with[]? // empty" "$COLLISION_DB" 2>/dev/null)
+
+    if [ -z "$conflicts" ]; then
+        return 0  # No known conflicts
+    fi
+
+    local distro=$(get_distro)
+    for conflict_pkg in $conflicts; do
+        local is_installed=false
+
+        case $distro in
+            "fedora")
+                if rpm -q "$conflict_pkg" &>/dev/null; then
+                    is_installed=true
+                fi
+                ;;
+            "arch")
+                if pacman -Q "$conflict_pkg" &>/dev/null; then
+                    is_installed=true
+                fi
+                ;;
+        esac
+
+        if [ "$is_installed" = true ]; then
+            local reason=$(jq -r ".conflicts.\"$package\".reason" "$COLLISION_DB" 2>/dev/null)
+            local resolution=$(jq -r ".conflicts.\"$package\".resolution" "$COLLISION_DB" 2>/dev/null)
+            local auto_resolve=$(jq -r ".conflicts.\"$package\".auto_resolve" "$COLLISION_DB" 2>/dev/null)
+
+            log_warn "CONFLICT: $package conflicts with $conflict_pkg ($reason)"
+
+            if [ "$auto_resolve" = "true" ] && [ "$resolution" = "remove_old" ]; then
+                log_info "Auto-resolving: removing $conflict_pkg"
+                case $distro in
+                    "fedora")
+                        sudo dnf remove -y "$conflict_pkg" || {
+                            log_error "Failed to remove conflicting package $conflict_pkg"
+                            return 1
+                        }
+                        ;;
+                    "arch")
+                        sudo pacman -R --noconfirm "$conflict_pkg" || {
+                            log_error "Failed to remove conflicting package $conflict_pkg"
+                            return 1
+                        }
+                        ;;
+                esac
+                return 0
+            else
+                log_error "Manual resolution required for conflict with $conflict_pkg"
+                return 1
+            fi
+        fi
+    done
+
+    return 0
+}
+
+# Check if repo is already enabled (to avoid duplicates)
+check_repo_collision() {
+    local repo="$1"
+    local distro=$(get_distro)
+
+    case $distro in
+        "fedora")
+            if [[ "$repo" =~ ^copr: ]]; then
+                local copr_name="${repo#copr:}"
+                if dnf copr list --enabled 2>/dev/null | grep -q "$copr_name"; then
+                    log_debug "COPR already enabled: $copr_name"
+                    return 2  # Special: already enabled (not error)
+                fi
+            fi
+            ;;
+    esac
+
+    return 0
+}
+
+# Check for file collisions with user-compiled binaries
+check_file_collision() {
+    local package="$1"
+
+    # Check common user install locations
+    local user_bins=(
+        "$HOME/.local/bin/$package"
+        "/usr/local/bin/$package"
+    )
+
+    for bin_path in "${user_bins[@]}"; do
+        if [ -f "$bin_path" ]; then
+            log_warn "File collision: User-compiled $package found at $bin_path"
+            log_warn "System package may not be used by default (PATH priority)"
+            return 2  # Warning, not error
+        fi
+    done
+
+    return 0
+}
+
+# Pre-install collision check for category
+check_category_collisions() {
+    local category="$1"
+    local install_level="$2"
+
+    log_debug "Running collision checks for $category ($install_level level)"
+
+    local packages=$(get_packages "$category")
+    local has_collision=false
+    local pkg_mgr=$(get_package_manager)
+
+    for pkg in $packages; do
+        # Check multi-source collision
+        if ! check_package_collision "$pkg" "$pkg_mgr"; then
+            has_collision=true
+        fi
+
+        # Check known conflicts
+        if ! check_known_conflict "$pkg"; then
+            has_collision=true
+        fi
+
+        # Check file collisions (just warns)
+        check_file_collision "$pkg"
+    done
+
+    if [ "$has_collision" = true ]; then
+        log_error "Collision detected for $category, aborting install"
+        return 1
+    fi
+
+    return 0
+}
+
+# Load collisions database
+load_conflicts_db() {
+    if [ ! -f "$COLLISION_DB" ]; then
+        log_debug "Creating default collisions database"
+        cat > "$COLLISION_DB" <<'EOF'
+{
+  "schema_version": "1.0",
+  "conflicts": {
+    "aylurs-gtk-shell2": {
+      "conflicts_with": ["ags"],
+      "reason": "AGS v2 incompatible with v3",
+      "resolution": "remove_old",
+      "auto_resolve": true
+    },
+    "docker": {
+      "conflicts_with": ["podman"],
+      "reason": "Both provide container runtime",
+      "resolution": "manual",
+      "auto_resolve": false
+    },
+    "podman": {
+      "conflicts_with": ["docker"],
+      "reason": "Both provide container runtime",
+      "resolution": "manual",
+      "auto_resolve": false
+    }
+  },
+  "multi_source_packages": {
+    "vim": ["dnf", "flatpak", "snap", "source"],
+    "neovim": ["dnf", "flatpak", "snap", "source", "cargo"],
+    "spotify": ["flatpak", "aur", "snap"]
+  }
+}
+EOF
+    fi
+}
+
+# Initialize collision detection
+init_collision_detection() {
+    load_conflicts_db
+}
