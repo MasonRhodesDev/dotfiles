@@ -1,17 +1,13 @@
 # Arch Linux test container for chezmoi dotfiles
 FROM archlinux:latest
 
-# Update system and install base dependencies
+# Update system and install minimal dependencies (yq auto-installed by ensure_yq())
 RUN pacman -Syu --noconfirm && \
     pacman -S --noconfirm \
     git \
     curl \
-    wget \
     sudo \
     base-devel \
-    yq \
-    which \
-    procps-ng \
     && pacman -Scc --noconfirm
 
 # Create test user (mason)

@@ -45,10 +45,35 @@ ensure_yq() {
     if ! command -v yq &>/dev/null; then
         log_info "Installing yq for package registry parsing..."
         local distro=$(get_distro)
-        if [ "$distro" = "fedora" ]; then
-            sudo dnf install -y yq
-        elif [ "$distro" = "arch" ]; then
-            sudo pacman -S --needed --noconfirm yq
+
+        # Try package manager first
+        if [ "$distro" = "arch" ]; then
+            # Arch has yq in official repos
+            if sudo pacman -S --needed --noconfirm yq 2>/dev/null; then
+                return 0
+            fi
+        fi
+
+        # Fallback to GitHub releases (works for Fedora and if Arch fails)
+        log_info "Installing yq from GitHub releases..."
+        local arch=$(uname -m)
+        if [ "$arch" = "x86_64" ]; then
+            arch="amd64"
+        elif [ "$arch" = "aarch64" ]; then
+            arch="arm64"
+        fi
+
+        local yq_url="https://github.com/mikefarah/yq/releases/latest/download/yq_linux_${arch}"
+        local install_dir="$HOME/.local/bin"
+
+        mkdir -p "$install_dir"
+        if curl -fsSL "$yq_url" -o "$install_dir/yq"; then
+            chmod +x "$install_dir/yq"
+            export PATH="$install_dir:$PATH"
+            log_info "yq installed to $install_dir/yq"
+        else
+            log_error "Failed to install yq"
+            return 1
         fi
     fi
 }

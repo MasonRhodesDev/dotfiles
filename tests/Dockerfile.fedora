@@ -1,20 +1,12 @@
 # Fedora 41 test container for chezmoi dotfiles
 FROM fedora:41
 
-# Install base dependencies
+# Install minimal dependencies (yq will be auto-installed by ensure_yq())
 RUN dnf install -y \
     git \
     curl \
-    wget \
     sudo \
-    hostname \
-    procps-ng \
-    findutils \
     && dnf clean all
-
-# Install yq from GitHub releases
-RUN curl -L https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -o /usr/local/bin/yq && \
-    chmod +x /usr/local/bin/yq
 
 # Create test user (mason)
 RUN useradd -m -s /bin/bash mason && \
