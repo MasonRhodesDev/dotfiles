@@ -10,53 +10,67 @@
 
 [common.core_utils]
 description = "Essential system utilities"
+install_level = "system"
+priority = 1
   [common.core_utils.fedora]
   packages = ["vim", "curl", "git", "jq", "thunar", "solaar", "wireplumber", "NetworkManager", "go", "gcc-go", "keychain", "powerline-fonts", "fira-code-fonts", "piper", "headsetcontrol"]
   repos = ["copr:solopasha/hyprland"]
   min_version = "40"
-  
+
   [common.core_utils.arch]
   packages = ["vim", "curl", "git", "jq", "thunar", "wireplumber", "networkmanager", "go", "keychain"]
   aur_packages = ["solaar", "ttf-fira-code", "piper", "headsetcontrol"]
 
 [common.terminal]
 description = "Terminal emulators and shell tools"
+install_level = "system"
+priority = 2
   [common.terminal.fedora]
   packages = ["foot", "tmux"]
-  
+
   [common.terminal.arch]
   packages = ["foot", "tmux"]
 
 [common.shell_tools]
 description = "Shell prompt and environment tools"
+install_level = "user"
+priority = 3
   [common.shell_tools.fedora]
   packages = []
-  
+
   [common.shell_tools.arch]
   aur_packages = ["oh-my-posh-bin"]
 
 [common.node_tooling]
 description = "Node.js and JavaScript development"
+install_level = "user"
+priority = 4
+depends_on = ["core_utils"]
   [common.node_tooling.fedora]
   packages = ["cargo"]
   cargo_packages = ["fnm"]
-  
+
   [common.node_tooling.arch]
   aur_packages = ["fnm-bin", "bun-bin"]
 
 [common.hyprland]
 description = "Hyprland compositor ecosystem"
+install_level = "system"
+priority = 5
+depends_on = ["core_utils"]
   [common.hyprland.fedora]
   packages = ["hyprcursor", "hyprcursor-devel", "hypridle", "hyprland", "hyprland-devel", "hyprland-protocols-devel", "hyprlang", "hyprlang-devel", "hyprlock", "hyprpicker", "hyprutils", "hyprutils-devel", "hyprwayland-scanner-devel", "xdg-desktop-portal-hyprland", "wofi", "waybar", "dunst", "pavucontrol", "swaybg"]
   repos = ["copr:solopasha/hyprland", "copr:heus-sueh/packages"]
   repo_priorities = { "copr:heus-sueh/packages" = 200 }
   min_version = "40"
-  
+
   [common.hyprland.arch]
   packages = ["wl-clipboard", "grim", "slurp", "pavucontrol", "dunst"]
   aur_packages = ["hyprland-git", "hyprlock-git", "hypridle-git", "hyprpicker-git", "hyprcursor-git", "hyprutils-git", "hyprlang-git", "hyprwayland-scanner-git", "xdg-desktop-portal-hyprland-git", "waybar-git", "wofi-git", "swaybg-git", "matugen-git", "swaync-git", "swayosd-git"]
 
 [common.browsers]
+install_level = "system"
+priority = 6
 description = "Web browsers"
   [common.browsers.fedora]
   packages = ["vivaldi-stable", "chromium"]
@@ -68,6 +82,8 @@ description = "Web browsers"
   default_browser = "vivaldi-stable.desktop"
 
 [common.ide]
+install_level = "system"
+priority = 7
 description = "Integrated development environments"
   [common.ide.fedora]
   packages = []
@@ -79,6 +95,8 @@ description = "Integrated development environments"
   aur_packages = ["visual-studio-code-bin"]
 
 [common.git_tools]
+install_level = "user"
+priority = 8
 description = "Git-based installations"
   [common.git_tools.fedora]
   packages = []
@@ -88,6 +106,8 @@ description = "Git-based installations"
 
 [common.python_dev]
 description = "Python development environment"
+install_level = "system"
+priority = 9
 optional = true
   [common.python_dev.fedora]
   packages = ["python3", "python3-pip", "python3-virtualenv", "pipx"]
@@ -97,6 +117,8 @@ optional = true
 
 [common.rust_dev]
 description = "Rust development toolchain"
+install_level = "system"
+priority = 10
 optional = true
   [common.rust_dev.fedora]
   packages = []
@@ -109,6 +131,9 @@ optional = true
 # ============================================================================
 
 [work.docker]
+install_level = "system"
+priority = 11
+conflicts = ["podman"]
 description = "Container runtime and orchestration"
   [work.docker.fedora]
   packages = ["docker-ce", "docker-ce-cli", "containerd.io", "docker-buildx-plugin", "docker-compose-plugin"]
@@ -122,6 +147,8 @@ description = "Container runtime and orchestration"
   user_groups = ["docker"]
 
 [work.mongodb]
+install_level = "system"
+priority = 12
 description = "MongoDB database and tools"
 version = "8.0"
   [work.mongodb.fedora]
@@ -138,6 +165,8 @@ version = "8.0"
 
 [work.aws_tools]
 description = "AWS development and deployment tools"
+install_level = "user"
+priority = 13
 optional = true
   [work.aws_tools.fedora]
   packages = ["awscli2"]
@@ -148,6 +177,8 @@ optional = true
 
 [work.vpn_tools]
 description = "VPN and secure connectivity"
+install_level = "user"
+priority = 14
 optional = true
   [work.vpn_tools.fedora]
   packages = []
@@ -157,6 +188,8 @@ optional = true
 
 [work.kubernetes]
 description = "Kubernetes tools and management"
+install_level = "system"
+priority = 15
 optional = true
   [work.kubernetes.fedora]
   packages = ["kubernetes-client"]
@@ -167,6 +200,8 @@ optional = true
 
 [work.java_dev]
 description = "Java development kit and tools"
+install_level = "system"
+priority = 16
 optional = true
   [work.java_dev.fedora]
   packages = ["java-21-openjdk", "java-21-openjdk-devel", "maven", "gradle"]
@@ -176,6 +211,8 @@ optional = true
 
 [work.pycharm]
 description = "PyCharm IDE"
+install_level = "system"
+priority = 17
 optional = true
   [work.pycharm.fedora]
   repos = ["copr:phracek/PyCharm"]
@@ -186,6 +223,8 @@ optional = true
 
 [work.slack]
 description = "Team communication"
+install_level = "system"
+priority = 18
 optional = true
   [work.slack.fedora]
   packages = ["slack"]
@@ -195,6 +234,8 @@ optional = true
 
 [work.zoom]
 description = "Video conferencing"
+install_level = "system"
+priority = 19
 optional = true
   [work.zoom.fedora]
   packages = []
@@ -204,6 +245,8 @@ optional = true
 
 [work.postman]
 description = "API development and testing"
+install_level = "user"
+priority = 20
 optional = true
   [work.postman.fedora]
   flatpak = ["com.getpostman.Postman"]
@@ -216,6 +259,8 @@ optional = true
 # ============================================================================
 
 [personal.gaming]
+install_level = "system"
+priority = 21
 description = "Gaming platforms and tools"
   [personal.gaming.fedora]
   packages = ["steam", "lutris", "gamemode"]
@@ -225,6 +270,8 @@ description = "Gaming platforms and tools"
   multilib = true
 
 [personal.media_creation]
+install_level = "system"
+priority = 22
 description = "Audio/video editing and creation"
   [personal.media_creation.fedora]
   packages = ["kdenlive", "audacity", "gimp", "inkscape", "blender", "obs-studio"]
@@ -233,6 +280,8 @@ description = "Audio/video editing and creation"
   packages = ["kdenlive", "audacity", "gimp", "inkscape", "blender", "obs-studio"]
 
 [personal.music]
+install_level = "user"
+priority = 23
 description = "Music players and streaming"
   [personal.music.fedora]
   packages = []
@@ -242,6 +291,8 @@ description = "Music players and streaming"
   aur_packages = ["spotify", "spicetify-cli"]
 
 [personal.social]
+install_level = "user"
+priority = 24
 description = "Communication and social apps"
   [personal.social.fedora]
   packages = []
@@ -252,6 +303,8 @@ description = "Communication and social apps"
   aur_packages = ["discord"]
 
 [personal.password_manager]
+install_level = "user"
+priority = 25
 description = "Personal password management"
   [personal.password_manager.fedora]
   flatpak = ["org.keepassxc.KeePassXC"]
@@ -261,6 +314,8 @@ description = "Personal password management"
 
 [personal.torrents]
 description = "Torrent client"
+install_level = "system"
+priority = 26
 optional = true
   [personal.torrents.fedora]
   packages = ["transmission"]
@@ -270,6 +325,8 @@ optional = true
 
 [personal.emulators]
 description = "Game console emulators"
+install_level = "user"
+priority = 27
 optional = true
   [personal.emulators.fedora]
   flatpak = ["org.DolphinEmu.dolphin-emu", "net.rpcs3.RPCS3"]
