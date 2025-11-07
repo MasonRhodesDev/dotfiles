@@ -29,28 +29,28 @@ jobs:
       - name: Run basic installation test
         run: |
           docker run --rm \
-            -v $(pwd)/tests/scenarios:/tests:ro \
+            -v $(pwd)/tests/scenarios:/tests:ro,Z \
             chezmoi-test-fedora \
             bash /tests/basic-install.sh
 
       - name: Run state tracking test
         run: |
           docker run --rm \
-            -v $(pwd)/tests/scenarios:/tests:ro \
+            -v $(pwd)/tests/scenarios:/tests:ro,Z \
             chezmoi-test-fedora \
             bash /tests/state-tracking.sh
 
       - name: Run profile detection test
         run: |
           docker run --rm \
-            -v $(pwd)/tests/scenarios:/tests:ro \
+            -v $(pwd)/tests/scenarios:/tests:ro,Z \
             chezmoi-test-fedora \
             bash /tests/profile-detection.sh
 
       - name: Run service validation test
         run: |
           docker run --rm \
-            -v $(pwd)/tests/scenarios:/tests:ro \
+            -v $(pwd)/tests/scenarios:/tests:ro,Z \
             chezmoi-test-fedora \
             bash /tests/service-validation.sh
 
@@ -79,28 +79,28 @@ jobs:
       - name: Run basic installation test
         run: |
           docker run --rm \
-            -v $(pwd)/tests/scenarios:/tests:ro \
+            -v $(pwd)/tests/scenarios:/tests:ro,Z \
             chezmoi-test-arch \
             bash /tests/basic-install.sh
 
       - name: Run state tracking test
         run: |
           docker run --rm \
-            -v $(pwd)/tests/scenarios:/tests:ro \
+            -v $(pwd)/tests/scenarios:/tests:ro,Z \
             chezmoi-test-arch \
             bash /tests/state-tracking.sh
 
       - name: Run profile detection test
         run: |
           docker run --rm \
-            -v $(pwd)/tests/scenarios:/tests:ro \
+            -v $(pwd)/tests/scenarios:/tests:ro,Z \
             chezmoi-test-arch \
             bash /tests/profile-detection.sh
 
       - name: Run service validation test
         run: |
           docker run --rm \
-            -v $(pwd)/tests/scenarios:/tests:ro \
+            -v $(pwd)/tests/scenarios:/tests:ro,Z \
             chezmoi-test-arch \
             bash /tests/service-validation.sh
 

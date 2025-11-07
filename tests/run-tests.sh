@@ -128,7 +128,7 @@ run_test() {
     fi
 
     if $CONTAINER_CMD run $run_opts \
-        -v "$SCRIPT_DIR/scenarios:/tests:ro" \
+        -v "$SCRIPT_DIR/scenarios:/tests:ro,Z" \
         "chezmoi-test-$distro" \
         bash /tests/${scenario}.sh 2>&1 | tee "$result_file"; then
 

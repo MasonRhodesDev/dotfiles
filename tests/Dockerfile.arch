@@ -10,22 +10,22 @@ RUN pacman -Syu --noconfirm && \
     base-devel \
     && pacman -Scc --noconfirm
 
-# Create test user (mason)
-RUN useradd -m -s /bin/bash mason && \
-    echo "mason ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+# Create test user
+RUN useradd -m -s /bin/bash test_user && \
+    echo "test_user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
 # Set hostname for personal profile
 RUN echo "mason-personal-test" > /etc/hostname
 
 # Switch to test user
-USER mason
-WORKDIR /home/mason
+USER test_user
+WORKDIR /home/test_user
 
 # Install chezmoi
-RUN sh -c "$(curl -fsLS get.chezmoi.io)" -- -b /home/mason/.local/bin
+RUN sh -c "$(curl -fsLS get.chezmoi.io)" -- -b /home/test_user/.local/bin
 
 # Add chezmoi to PATH
-ENV PATH="/home/mason/.local/bin:${PATH}"
+ENV PATH="/home/test_user/.local/bin:${PATH}"
 
 # Set up git config (required by chezmoi)
 RUN git config --global user.email "test@example.com" && \
@@ -41,12 +41,12 @@ RUN cd /tmp && \
     rm -rf /tmp/yay
 
 # Copy dotfiles repo into container
-COPY --chown=mason:mason . /home/mason/.local/share/chezmoi/
+COPY --chown=test_user:test_user . /home/test_user/.local/share/chezmoi/
 
 # Set chezmoi source directory
-ENV CHEZMOI_SOURCE_DIR=/home/mason/.local/share/chezmoi
+ENV CHEZMOI_SOURCE_DIR=/home/test_user/.local/share/chezmoi
 
-WORKDIR /home/mason
+WORKDIR /home/test_user
 
 # Default command runs a shell
 CMD ["/bin/bash"]
