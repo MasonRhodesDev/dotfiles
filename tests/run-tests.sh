@@ -42,6 +42,7 @@ SCENARIO:
     basic-install       Basic installation test
     state-tracking      State persistence test
     profile-detection   Profile detection test
+    service-validation  Service unit file validation test
     all                 All scenarios (default)
 
 EXAMPLES:
@@ -205,7 +206,7 @@ main() {
                 fi
                 shift
                 ;;
-            basic-install|state-tracking|profile-detection)
+            basic-install|state-tracking|profile-detection|service-validation)
                 scenarios+=("$1")
                 shift
                 ;;
@@ -222,7 +223,7 @@ main() {
     fi
 
     if [ ${#scenarios[@]} -eq 0 ]; then
-        scenarios=("basic-install" "state-tracking" "profile-detection")
+        scenarios=("basic-install" "state-tracking" "profile-detection" "service-validation")
     fi
 
     # Check container runtime

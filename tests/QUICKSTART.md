@@ -29,6 +29,7 @@
 | basic-install | ~5-10 min | Package installation, state DB, logs |
 | state-tracking | ~10-15 min | Re-run skip logic, checksums |
 | profile-detection | ~5-10 min | Hostname detection, profile filtering |
+| service-validation | ~5-10 min | Service unit files, binaries (Docker, MongoDB) |
 
 ## Expected Output
 

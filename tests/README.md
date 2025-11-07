@@ -36,9 +36,8 @@ Docker containers have some limitations compared to full VMs:
 
 1. **basic-install**: Verify packages install without errors
 2. **state-tracking**: Verify re-runs skip already installed packages
-3. **collision-detection**: Verify conflicts are detected
-4. **error-recovery**: Verify failures don't block other categories
-5. **profile-switching**: Verify profile-based installation
+3. **profile-detection**: Verify profile-based installation filtering
+4. **service-validation**: Verify systemd service unit files and binaries (Docker, MongoDB)
 
 ## CI/CD Integration
 

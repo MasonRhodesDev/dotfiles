@@ -47,6 +47,13 @@ jobs:
             chezmoi-test-fedora \
             bash /tests/profile-detection.sh
 
+      - name: Run service validation test
+        run: |
+          docker run --rm \
+            -v $(pwd)/tests/scenarios:/tests:ro \
+            chezmoi-test-fedora \
+            bash /tests/service-validation.sh
+
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
@@ -89,6 +96,13 @@ jobs:
             -v $(pwd)/tests/scenarios:/tests:ro \
             chezmoi-test-arch \
             bash /tests/profile-detection.sh
+
+      - name: Run service validation test
+        run: |
+          docker run --rm \
+            -v $(pwd)/tests/scenarios:/tests:ro \
+            chezmoi-test-arch \
+            bash /tests/service-validation.sh
 
       - name: Upload test results
         if: always()
