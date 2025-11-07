@@ -5,7 +5,7 @@ set +e
 set -u
 set -o pipefail
 
-SCRIPT_DIR="{{ .chezmoi.sourceDir }}/.chezmoiscripts"
+SCRIPT_DIR="{{ .chezmoi.sourceDir }}/.chezmoitemplates/lib"
 source "$SCRIPT_DIR/lib-logging.sh"
 source "$SCRIPT_DIR/lib-state.sh"
 source "$SCRIPT_DIR/lib-helpers.sh"

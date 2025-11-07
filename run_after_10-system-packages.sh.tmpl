@@ -6,7 +6,7 @@ set +e          # Don't exit on error - continue to next phase
 set -u          # Error on undefined variables
 set -o pipefail # Pipe failures propagate
 
-SCRIPT_DIR="{{ .chezmoi.sourceDir }}/.chezmoiscripts"
+SCRIPT_DIR="{{ .chezmoi.sourceDir }}/.chezmoitemplates/lib"
 source "$SCRIPT_DIR/lib-logging.sh"
 source "$SCRIPT_DIR/lib-state.sh"
 source "$SCRIPT_DIR/lib-collision.sh"
