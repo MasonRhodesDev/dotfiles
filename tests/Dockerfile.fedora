@@ -10,8 +10,11 @@ RUN dnf install -y \
     hostname \
     procps-ng \
     findutils \
-    golang-github-mikefarah-yq \
     && dnf clean all
+
+# Install yq from GitHub releases
+RUN curl -L https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -o /usr/local/bin/yq && \
+    chmod +x /usr/local/bin/yq
 
 # Create test user (mason)
 RUN useradd -m -s /bin/bash mason && \
