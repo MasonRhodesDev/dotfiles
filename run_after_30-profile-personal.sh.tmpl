@@ -34,10 +34,14 @@ if ! acquire_lock; then
 fi
 
 # Build category list (personal profile only)
+PACKAGE_REGISTRY="{{ .chezmoi.sourceDir }}/software_installers/packages.toml"
+
 CATEGORIES=()
-{{- range $category, $config := .packages.personal }}
-CATEGORIES+=("personal.{{ $category }}")
-{{- end }}
+
+cats=$(yq eval ".personal | keys | .[]" "$PACKAGE_REGISTRY" 2>/dev/null)
+for category in $cats; do
+    CATEGORIES+=("personal.${category}")
+done
 
 if [ ${#CATEGORIES[@]} -eq 0 ]; then
     log_info "No personal packages defined"

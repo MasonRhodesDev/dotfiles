@@ -34,10 +34,14 @@ if ! acquire_lock; then
 fi
 
 # Build category list (work profile only)
+PACKAGE_REGISTRY="{{ .chezmoi.sourceDir }}/software_installers/packages.toml"
+
 CATEGORIES=()
-{{- range $category, $config := .packages.work }}
-CATEGORIES+=("work.{{ $category }}")
-{{- end }}
+
+cats=$(yq eval ".work | keys | .[]" "$PACKAGE_REGISTRY" 2>/dev/null)
+for category in $cats; do
+    CATEGORIES+=("work.${category}")
+done
 
 if [ ${#CATEGORIES[@]} -eq 0 ]; then
     log_info "No work packages defined"

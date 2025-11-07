@@ -49,17 +49,29 @@ if ! validate_prerequisites "$PHASE"; then
 fi
 
 # Build category list for this phase (system-level only)
+PACKAGE_REGISTRY="{{ .chezmoi.sourceDir }}/software_installers/packages.toml"
+PROFILE_TYPE="{{ .profile.type }}"
+
 CATEGORIES=()
-{{- range $section, $packages := .packages }}
-  {{- range $category, $config := $packages }}
-    {{- $install_level := index $config "install_level" | default "system" }}
-    {{- if eq $install_level "system" }}
-      {{- if or (eq $section "common") (eq $section $.profile.type) }}
-CATEGORIES+=("{{ $section }}.{{ $category }}")
-      {{- end }}
-    {{- end }}
-  {{- end }}
-{{- end }}
+
+for section in common work personal; do
+    # Skip sections that don't match profile
+    if [ "$section" = "work" ] && [ "$PROFILE_TYPE" != "work" ]; then
+        continue
+    fi
+    if [ "$section" = "personal" ] && [ "$PROFILE_TYPE" != "personal" ]; then
+        continue
+    fi
+
+    # Get all categories in this section
+    cats=$(yq eval ".${section} | keys | .[]" "$PACKAGE_REGISTRY" 2>/dev/null)
+    for category in $cats; do
+        install_level=$(yq eval ".${section}.${category}.install_level // \"system\"" "$PACKAGE_REGISTRY" 2>/dev/null)
+        if [ "$install_level" = "system" ]; then
+            CATEGORIES+=("${section}.${category}")
+        fi
+    done
+done
 
 if [ ${#CATEGORIES[@]} -eq 0 ]; then
     log_info "No system packages to install for this profile"
