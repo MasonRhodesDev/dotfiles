@@ -62,6 +62,12 @@ windowrulev2=size 1000 600,class:^(org.pulseaudio.pavucontrol)$
 windowrulev2=stayfocused,class:^(org.pulseaudio.pavucontrol)$
 windowrulev2=pin,class:^(org.pulseaudio.pavucontrol)$
 
+# Steam rules
+# Window sizing handled by steam-window-manager.sh script
+# Prevent 5x5 spawn bug for empty title steam windows
+windowrulev2=stayfocused,title:^()$,class:^(steam)$
+windowrulev2=minsize 1 1,title:^()$,class:^(steam)$
+
 #gamescope
 # always on workspace 7
 workspace=7, border:false, rounding:false
