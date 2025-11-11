@@ -33,3 +33,6 @@ fi
 # TARS - ClickUp Configuration (from Secret Service)
 export CLICKUP_API_TOKEN=$(secret-tool lookup application tars service clickup type token 2>/dev/null || echo "")
 export CLICKUP_TEAM_ID=$(secret-tool lookup application tars service clickup type teamid 2>/dev/null || echo "")
+
+# direnv hook for automatic nix-shell loading
+eval "$(direnv hook bash)"
