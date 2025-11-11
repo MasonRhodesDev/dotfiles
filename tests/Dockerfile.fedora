@@ -1,0 +1,51 @@
+# Fedora 41 test container for chezmoi dotfiles
+FROM fedora:41
+
+# Install minimal dependencies (yq will be auto-installed by ensure_yq())
+RUN dnf install -y \
+    git \
+    curl \
+    sudo \
+    fontconfig \
+    jq \
+    procps-ng \
+    && dnf clean all
+
+# Create test user
+RUN useradd -m -s /bin/bash test_user && \
+    echo "test_user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+# Set hostname for work profile
+RUN echo "mason-work-test" > /etc/hostname
+
+# Set up Wayland environment for headless Hyprland testing (as root)
+RUN mkdir -p /run/user/1000 && chown test_user:test_user /run/user/1000
+
+# Switch to test user
+USER test_user
+WORKDIR /home/test_user
+
+# Install chezmoi
+RUN sh -c "$(curl -fsLS get.chezmoi.io)" -- -b /home/test_user/.local/bin
+
+# Add chezmoi to PATH
+ENV PATH="/home/test_user/.local/bin:${PATH}"
+
+# Set up git config (required by chezmoi)
+RUN git config --global user.email "test@example.com" && \
+    git config --global user.name "Test User" && \
+    git config --global init.defaultBranch main
+
+# Copy dotfiles repo into container
+COPY --chown=test_user:test_user . /home/test_user/.local/share/chezmoi/
+
+# Set chezmoi source directory
+ENV CHEZMOI_SOURCE_DIR=/home/test_user/.local/share/chezmoi
+
+# Set up Wayland environment for headless Hyprland testing
+ENV XDG_RUNTIME_DIR=/run/user/1000
+
+WORKDIR /home/test_user
+
+# Default command runs a shell
+CMD ["/bin/bash"]

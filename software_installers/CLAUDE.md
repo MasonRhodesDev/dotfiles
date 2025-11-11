@@ -1,100 +1,248 @@
 # Software Installer System
 
-Automated software installation and configuration using a centralized package registry with profile-based separation.
+Registry-based package installation with collision detection, state tracking, and profile support for Fedora 41 and Arch Linux.
 
-## Architecture
+## Architecture Overview
 
-### Package Registry (`packages.toml`)
+**Key Features:**
+- Collision-free installation (prevents dnf/pacman/cargo/flatpak/AUR conflicts)
+- State tracking with JSON database (idempotent, resumable)
+- Profile-based separation (work vs personal)
+- Error isolation (failures don't block dotfile application)
+- Multi-phase execution (system → user → profile)
 
-Centralized TOML file defining all software packages organized into three sections:
-
-- **common**: Packages installed on all machines (personal and work)
-- **work**: Packages only for work machines
-- **personal**: Packages only for personal machines
-
-Each package category supports:
-- Multi-platform definitions (Fedora, Arch Linux)
-- Package manager integration (dnf, pacman, yay, cargo, flatpak)
-- Repository management (COPR, custom repos)
-- Service configuration
-- User group management
-- Post-install scripts
-- Optional packages (per-system enablement)
-
-### Profile Detection
-
-Profiles are automatically determined by hostname:
-- `mason-work` → work profile
-- Other hostnames → personal profile
-
-Configuration in `.chezmoi.toml.tmpl`:
-```toml
-[data.profile]
-    type = "work" | "personal"
-    optional_packages = ["python_dev", "java_dev", ...]
+**Execution via chezmoi:**
+```
+chezmoi apply
+  ↓ Dotfiles applied first (always succeeds)
+  ↓
+run_after_10-system-packages.sh.tmpl (system-level, sudo)
+  ↓
+run_after_20-user-packages.sh.tmpl (user-level, no sudo)
+  ↓
+run_after_30-profile-{work|personal}.sh.tmpl (conditional)
+  ↓
+run_after_90-post-install.sh.tmpl (hooks)
+  ↓
+run_after_99-report.sh.tmpl (summary)
 ```
 
-### Execution Order
+## Package Registry (`packages.toml`)
 
-Scripts run in numbered order:
+Centralized TOML defining all packages in three sections:
 
-#### Common (All Machines)
-1. `executable_00_common_core.sh` - Core system utilities
-2. `executable_01_common_terminal.sh` - Terminal tools and Node.js
-3. `executable_02_common_desktop.sh` - Hyprland ecosystem and browsers  
-4. `executable_03_common_dev.sh` - IDEs and development tools
+**Sections:**
+- `[common.*]` - All machines
+- `[work.*]` - Work machines only
+- `[personal.*]` - Personal machines only
 
-#### Work Machines Only
-5. `executable_04_work_tools.sh` - Docker, MongoDB, AWS, VPN, Kubernetes
-6. `executable_05_work_apps.sh` - Slack, Zoom, Postman
+**Example:**
+```toml
+[common.hyprland]
+description = "Hyprland compositor"
+install_level = "system"  # or "user"
+optional = false
 
-#### Personal Machines Only
-7. `executable_06_personal_apps.sh` - Gaming, media creation, music
-8. `executable_07_personal_social.sh` - Social apps, password manager
+  [common.hyprland.fedora]
+  packages = ["hyprland", "waybar"]
+  repos = ["copr:solopasha/hyprland"]
+  services = ["greetd"]
+
+  [common.hyprland.arch]
+  packages = ["hyprland", "waybar"]
+  aur_packages = ["hyprlock-git"]
+```
+
+**Supported Fields:**
+- `packages` - Native package manager (dnf/pacman)
+- `aur_packages` - AUR packages (Arch only)
+- `cargo_packages` - Rust crates
+- `flatpak` - Flatpak apps
+- `repos` - COPR repos or URLs
+- `repo_keys` - GPG keys for custom repos
+- `services` - systemd services to enable
+- `user_groups` - Groups to add user to
+- `post_install` - Hooks after installation
+- `min_version` - Minimum OS version
+- `depends_on` - Category dependencies
+- `conflicts` - Conflicting packages
+
+## Library System
+
+Located in `~/.local/share/chezmoi-libs/`:
+
+### lib-helpers.sh.tmpl (~795 lines)
+
+**Main Functions:**
+- `install_packages_from_registry(category)` - Main orchestrator
+- `validate_prerequisites()` - Check yq, network, disk, sudo
+- `retry_with_backoff(cmd)` - Network retry with exponential backoff
+- `parse_packages(category, distro, field)` - Extract from TOML
+- `install_packages(packages)` - Native package manager
+- `install_aur_packages(packages)` - AUR via yay
+- `install_flatpak_packages(packages)` - Flatpak
+- `install_cargo_packages(packages)` - Cargo
+- `enable_repos_from_registry(category)` - Enable COPR/repos
+- `enable_services(services)` - Enable systemd services
+- `add_user_to_groups(groups)` - Add user to groups
+- `get_distro()` - Returns "fedora" or "arch"
+- `should_install_category(category)` - Profile-aware check
+
+### lib-state.sh.tmpl (~250 lines)
+
+**State Tracking:**
+- JSON database at `~/.local/state/chezmoi-installs/state.db.json`
+- PID-based locking (`install.lock`)
+- Checksum-based change detection
+- Phase and category status tracking
+- Package registry with source metadata
+
+**Functions:**
+- `init_state_db()` - Initialize database
+- `acquire_lock()` / `release_lock()` - Mutual exclusion
+- `needs_reinstall(category)` - Check if reinstall needed
+- `record_category_*()` - Track status
+- `register_package(name, source)` - Add to registry
+- `get_package_source(name)` - Query installation source
+
+### lib-collision.sh.tmpl (~250 lines)
+
+**Collision Detection:**
+- Multi-source package detection (dnf, pacman, cargo, flatpak, AUR)
+- Known conflict checking (docker/podman)
+- File collision warnings (~/bin, ~/.local/bin)
+
+**Functions:**
+- `check_package_collision(package)` - Detect conflicts
+- `is_package_installed(package, source)` - Check specific source
+- `check_known_conflict(package)` - Known conflicts database
+- `check_category_collisions(category)` - Run all checks
+
+**Conflicts Database:** `~/.local/state/chezmoi-installs/collisions.db.json`
+
+### lib-logging.sh.tmpl (~143 lines)
+
+**Structured Logging:**
+- Color-coded levels (DEBUG, INFO, WARN, ERROR)
+- Phase and category tracking
+- Log file with rotation (keeps last 10)
+
+**Functions:**
+- `log_debug()`, `log_info()`, `log_warn()`, `log_error()`
+- `log_phase_start()` / `log_phase_end()`
+- `log_category_*()` - Category-level logging
+
+**Log Location:** `~/.local/state/chezmoi-installs/install.log`
+
+## Profile Detection
+
+**Auto-detected by hostname:**
+- `mason-work` → work profile
+- All others → personal profile
+
+**Configure in `.chezmoi.toml.tmpl`:**
+```toml
+[data.profile]
+    type = "work"
+    optional_packages = ["python_dev", "java_dev"]
+```
+
+**Profile-aware installation:**
+- Work profile: Installs `[common.*]` + `[work.*]`
+- Personal profile: Installs `[common.*]` + `[personal.*]`
+
+## State Database Schema
+
+```json
+{
+  "schema_version": "1.0",
+  "metadata": {
+    "os": "linux",
+    "distro": "fedora",
+    "version": "41",
+    "profile": "work"
+  },
+  "phases": {
+    "system": {
+      "categories": {
+        "hyprland": {
+          "status": "success|failed|in_progress",
+          "completed": "2025-11-10T10:30:00Z",
+          "packages_installed": ["hyprland", "waybar"],
+          "checksum": "sha256..."
+        }
+      }
+    },
+    "user": { ... },
+    "profile": { ... }
+  },
+  "package_registry": {
+    "hyprland": {
+      "source": "dnf",
+      "installed": "2025-11-10T10:30:00Z"
+    }
+  },
+  "migration_applied": true
+}
+```
 
 ## Platform Support
 
 ### Fedora (Primary)
-- Minimum version: 40
+- Version: 40+ (tested on 41)
 - Package manager: dnf
-- COPR repository support
-- Currently tested on: Fedora 41
+- COPR repositories supported
+- Custom repos with GPG keys
 
 ### Arch Linux (Full Parity)
 - Package manager: pacman
 - AUR helper: yay (auto-installed)
-- Hyprland ecosystem uses `-git` variants
-- Multilib repo support for gaming
+- Multilib repo (auto-enabled for gaming)
+- Official repos preferred over AUR
 
-## Helper Functions (`__helpers.sh.tmpl`)
+## Adding New Packages
 
-### Core Functions
-- `get_distro()` - Detect Fedora or Arch
-- `get_category_section()` - Determine common/work/personal
-- `should_install_category()` - Profile-aware installation check
-- `is_optional_enabled()` - Check optional package enablement
+1. **Edit `packages.toml`:**
+```toml
+[common.newtool]
+description = "New tool"
+install_level = "user"
 
-### Installation Functions
-- `install_packages_from_registry()` - Main installer with full registry support
-- `install_packages()` - Native package manager
-- `install_aur_packages()` - AUR packages (Arch only)
-- `install_flatpak_packages()` - Flatpak apps
-- `install_cargo_packages()` - Rust crates
-- `enable_repos_from_registry()` - Repository management
-- `enable_services()` - Systemd service management
-- `add_user_to_groups()` - User group configuration
+  [common.newtool.fedora]
+  packages = ["newtool"]
 
-### Registry Parsing
-- `parse_packages()` - Extract package lists from TOML
-- `check_min_version()` - Validate OS version requirements
-- `list_section_categories()` - List all categories in section
+  [common.newtool.arch]
+  aur_packages = ["newtool-bin"]
+```
+
+2. **Run `chezmoi apply`** - Installation happens automatically
+
+## Manual Execution
+
+**Run all phases:**
+```bash
+cd ~/.local/share/chezmoi
+./run_after_10-system-packages.sh
+./run_after_20-user-packages.sh
+./run_after_30-profile-work.sh  # if work profile
+```
+
+**View state:**
+```bash
+cat ~/.local/state/chezmoi-installs/state.db.json | jq '.phases'
+```
+
+**Reset state:**
+```bash
+rm ~/.local/state/chezmoi-installs/state.db.json
+chezmoi apply
+```
 
 ## System Tracking
 
-### Manifest File (`.system_manifest.json`)
+**Manifest:** `.system_manifest.json` (root of repo)
 
-Automatically generated on each `chezmoi apply`:
-
+Tracks all systems using this dotfiles repo:
 ```json
 {
   "systems": {
@@ -102,141 +250,53 @@ Automatically generated on each `chezmoi apply`:
       "os": "linux",
       "distro": "fedora",
       "version": "41",
-      "arch": "amd64",
       "profile": "work",
-      "optional_packages": ["python_dev", "java_dev"],
-      "last_seen": "2025-10-22T15:45:00Z",
-      "first_seen": "2025-08-01T10:00:00Z"
+      "optional_packages": ["python_dev"],
+      "last_seen": "2025-11-10T15:45:00Z"
     }
-  },
-  "last_updated": "2025-10-22T15:45:00Z"
+  }
 }
 ```
 
-### Tracking Script
-
-`run_once_after_99-track-system.sh` automatically:
-- Records system details (OS, distro, version, arch)
-- Tracks profile type (work/personal)
-- Logs optional packages enabled
-- Maintains first/last seen timestamps
-
-## Adding New Packages
-
-### 1. Add to `packages.toml`
-
-```toml
-[common.my_tool]
-description = "My awesome tool"
-  [common.my_tool.fedora]
-  packages = ["my-tool"]
-  
-  [common.my_tool.arch]
-  packages = ["my-tool"]
-```
-
-### 2. Optional: Make it Optional
-
-```toml
-[common.my_tool]
-description = "My awesome tool"
-optional = true
-  # ... package definitions
-```
-
-Then enable in `.chezmoi.toml.tmpl`:
-```toml
-[data.profile]
-    optional_packages = ["my_tool", ...]
-```
-
-### 3. Install in Script
-
-Add to appropriate installer script:
-```bash
-install_packages_from_registry "my_tool"
-```
-
-## Manual Execution
-
-### Run All Installers
-```bash
-cd ~/.local/share/chezmoi/software_installers
-for script in executable_*.sh*; do
-    [ -x "$script" ] && "$script"
-done
-```
-
-### Run Specific Category
-```bash
-./executable_02_common_desktop.sh
-```
-
-### Test Without Installing
-```bash
-source __helpers.sh
-get_category_section "docker"  # Returns: work
-should_install_category "docker"  # Returns: 0 (yes) or 1 (no)
-```
-
-## Platform-Specific Notes
-
-### Fedora
-- COPR repos enabled automatically
-- Repository priorities supported
-- Custom repo keys handled
-- DNF config-manager used for external repos
-
-### Arch Linux
-- yay AUR helper installed on first AUR package request
-- Hyprland packages use `-git` suffix for bleeding-edge
-- Multilib repo required for gaming packages
-- Official repos prioritized over AUR when available
-
-## Git-Based Installers
-
-Located in `~/git_installers/`:
-
-- **Astal**: Libraries for AGS v3 (Fedora & Arch)
-- **HyprPanel**: Custom panel for Hyprland (Fedora & Arch)
-
-Both support cross-platform installation with automatic dependency resolution.
-
-## Migration from Old System
-
-Old installer scripts backed up as `*.old`:
-- `executable_00_utils.sh.old`
-- `executable_01_terminal.sh.old`
-- `executable_02_node.sh.old`
-- `executable_03_hyprland.sh.old`
-- `executable_04_git_based.sh.old`
-- `05_ide.sh.tmpl.old`
-- `executable_06_browser.sh.old`
-- `08_mongo.sh.tmpl.old`
-- `10_docker.sh.tmpl.old`
+Updated by `run_once_after_99-track-system.sh`.
 
 ## Troubleshooting
 
-### Package Not Installing
-1. Check profile type: `echo $PROFILE_TYPE`
-2. Verify category section: `get_category_section "package_name"`
-3. Check if optional and enabled in `.chezmoi.toml.tmpl`
-4. Verify OS version meets minimum requirements
+**Check state:**
+```bash
+cat ~/.local/state/chezmoi-installs/state.db.json | jq '.phases.system.categories'
+```
 
-### Repository Issues
-- Fedora: Check `/etc/yum.repos.d/` for repo files
-- Arch: Verify AUR helper (yay) is installed
-- Check repo priorities in package registry
+**View logs:**
+```bash
+tail -f ~/.local/state/chezmoi-installs/install.log
+```
 
-### yq Not Found
-The helper will automatically install yq on first run.
+**Remove lock:**
+```bash
+rm ~/.local/state/chezmoi-installs/install.lock
+```
 
-## Future Enhancements
+**Check collisions:**
+```bash
+cat ~/.local/state/chezmoi-installs/collisions.db.json
+```
 
-- [ ] Add macOS support (Homebrew)
-- [ ] NixOS package definitions
-- [ ] Automated testing framework
-- [ ] Package version pinning
-- [ ] Rollback mechanism
-- [ ] Installation time tracking
-- [ ] Dependency graph visualization
+**Package source:**
+```bash
+rpm -q package-name        # Fedora
+pacman -Q package-name     # Arch
+cargo install --list | grep package
+flatpak list | grep package
+```
+
+## Testing
+
+Docker-based tests for both platforms:
+```bash
+./tests/run-tests.sh         # All
+./tests/run-tests.sh fedora  # Fedora only
+./tests/run-tests.sh arch    # Arch only
+```
+
+See [tests/README.md](../tests/README.md) for details.
