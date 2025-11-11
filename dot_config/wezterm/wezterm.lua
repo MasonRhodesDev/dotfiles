@@ -4,6 +4,12 @@ local config = {}
 -- Force config reload when theme files change
 config.automatically_reload_config = true
 
+-- Improve Wayland stability during TTY switching
+config.enable_wayland = true
+config.front_end = "OpenGL"
+config.exit_behavior = "CloseOnCleanExit"
+config.skip_close_confirmation_for_processes_named = {}
+
 -- Hide tab bar when only one tab is open
 config.hide_tab_bar_if_only_one_tab = true
 
