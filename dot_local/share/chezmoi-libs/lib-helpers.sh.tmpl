@@ -42,39 +42,40 @@ get_package_manager() {
 # ============================================================================
 
 ensure_yq() {
-    if ! command -v yq &>/dev/null; then
-        log_info "Installing yq for package registry parsing..."
-        local distro=$(get_distro)
+    # Check if we have the correct yq (mikefarah's v4+, not Python yq v3)
+    local yq_version_output=""
+    if command -v yq &>/dev/null; then
+        yq_version_output=$(yq --version 2>&1)
+    fi
 
-        # Try package manager first
-        if [ "$distro" = "arch" ]; then
-            # Arch has yq in official repos
-            if sudo pacman -S --needed --noconfirm yq 2>/dev/null; then
-                return 0
-            fi
-        fi
+    # Check if it's the correct version (contains "github.com/mikefarah/yq" and version v4+)
+    if echo "$yq_version_output" | grep -q "github.com/mikefarah/yq" && echo "$yq_version_output" | grep -qE "version v[4-9]"; then
+        return 0
+    fi
 
-        # Fallback to GitHub releases (works for Fedora and if Arch fails)
-        log_info "Installing yq from GitHub releases..."
-        local arch=$(uname -m)
-        if [ "$arch" = "x86_64" ]; then
-            arch="amd64"
-        elif [ "$arch" = "aarch64" ]; then
-            arch="arm64"
-        fi
+    log_info "Installing correct yq version (mikefarah's yq v4+) for package registry parsing..."
 
-        local yq_url="https://github.com/mikefarah/yq/releases/latest/download/yq_linux_${arch}"
-        local install_dir="$HOME/.local/bin"
+    # Install to ~/.local/bin to avoid conflicts with system yq
+    local arch=$(uname -m)
+    if [ "$arch" = "x86_64" ]; then
+        arch="amd64"
+    elif [ "$arch" = "aarch64" ]; then
+        arch="arm64"
+    fi
 
-        mkdir -p "$install_dir"
-        if curl -fsSL "$yq_url" -o "$install_dir/yq"; then
-            chmod +x "$install_dir/yq"
-            export PATH="$install_dir:$PATH"
-            log_info "yq installed to $install_dir/yq"
-        else
-            log_error "Failed to install yq"
-            return 1
-        fi
+    local yq_url="https://github.com/mikefarah/yq/releases/latest/download/yq_linux_${arch}"
+    local install_dir="$HOME/.local/bin"
+
+    mkdir -p "$install_dir"
+    if curl -fsSL "$yq_url" -o "$install_dir/yq"; then
+        chmod +x "$install_dir/yq"
+        # Prepend to PATH for this session
+        export PATH="$install_dir:$PATH"
+        log_info "yq v4 installed to $install_dir/yq"
+        return 0
+    else
+        log_error "Failed to install yq from GitHub"
+        return 1
     fi
 }
 
@@ -150,6 +151,13 @@ get_category_section() {
     fi
 }
 
+get_category_name() {
+    local category="$1"
+
+    # Strip section prefix if present (e.g., "common.build_tools" -> "build_tools")
+    echo "${category#*.}"
+}
+
 should_install_category() {
     local category="$1"
     local section=$(get_category_section "$category")
@@ -178,10 +186,11 @@ parse_packages() {
     local distro="$2"
     local package_type="${3:-packages}"
     local section=$(get_category_section "$category")
+    local category_name=$(get_category_name "$category")
 
     ensure_yq
 
-    yq eval ".${section}.${category}.${distro}.${package_type} | .[]" "$PACKAGE_REGISTRY" 2>/dev/null
+    yq eval ".${section}.${category_name}.${distro}.${package_type} | .[]" "$PACKAGE_REGISTRY" 2>/dev/null
 }
 
 get_packages() {
@@ -194,10 +203,11 @@ get_packages() {
 is_optional() {
     local category="$1"
     local section=$(get_category_section "$category")
+    local category_name=$(get_category_name "$category")
 
     ensure_yq
 
-    local optional=$(yq eval ".${section}.${category}.optional" "$PACKAGE_REGISTRY" 2>/dev/null)
+    local optional=$(yq eval ".${section}.${category_name}.optional" "$PACKAGE_REGISTRY" 2>/dev/null)
     [ "$optional" = "true" ]
 }
 
@@ -214,12 +224,13 @@ is_optional_enabled() {
 check_min_version() {
     local category="$1"
     local section=$(get_category_section "$category")
+    local category_name=$(get_category_name "$category")
     local distro=$(get_distro)
     local current_version=$(get_distro_version)
 
     ensure_yq
 
-    local min_version=$(yq eval ".${section}.${category}.${distro}.min_version" "$PACKAGE_REGISTRY" 2>/dev/null)
+    local min_version=$(yq eval ".${section}.${category_name}.${distro}.min_version" "$PACKAGE_REGISTRY" 2>/dev/null)
 
     if [ "$min_version" != "null" ] && [ -n "$min_version" ]; then
         if [ "$current_version" -lt "$min_version" ]; then
@@ -233,12 +244,13 @@ check_min_version() {
 get_category_checksum() {
     local category="$1"
     local section=$(get_category_section "$category")
+    local category_name=$(get_category_name "$category")
     local distro=$(get_distro)
 
     ensure_yq
 
-    # Hash the category definition from packages.toml
-    yq eval ".${section}.${category}.${distro}" "$PACKAGE_REGISTRY" 2>/dev/null | sha256sum | cut -d' ' -f1
+    # Hash the category definition from packages.toml (output as JSON to handle arrays)
+    yq eval -o=json ".${section}.${category_name}.${distro}" "$PACKAGE_REGISTRY" 2>/dev/null | sha256sum | cut -d' ' -f1
 }
 
 # ============================================================================
@@ -318,7 +330,8 @@ install_packages() {
             ;;
         "arch")
             if [ -n "$arch_packages" ]; then
-                log_info "Installing with pacman (uses --needed flag for change detection)"
+                log_info "Installing packages: $arch_packages"
+                log_info "Running: pacman -S --needed --noconfirm $arch_packages"
                 retry_with_backoff sudo pacman -S --needed --noconfirm $arch_packages || return 1
             fi
             ;;
@@ -455,7 +468,8 @@ install_cargo_packages() {
 
     ensure_yq
 
-    local cargo_packages=$(yq eval ".${section}.${category}.${distro}.cargo_packages | .[]" "$PACKAGE_REGISTRY" 2>/dev/null)
+    local category_name=$(get_category_name "$category")
+    local cargo_packages=$(yq eval ".${section}.${category_name}.${distro}.cargo_packages | .[]" "$PACKAGE_REGISTRY" 2>/dev/null)
 
     if [ -n "$cargo_packages" ] && [ "$cargo_packages" != "null" ]; then
         if ! command -v cargo &>/dev/null; then
@@ -487,6 +501,86 @@ install_cargo_packages() {
         fi
     fi
 
+    return 0
+}
+
+install_git_repos() {
+    local category="$1"
+    local section=$(get_category_section "$category")
+    local distro=$(get_distro)
+
+    ensure_yq
+
+    # Count git_repos entries
+    local repo_count=$(yq eval ".${section}.${category}.${distro}.git_repos | length" "$PACKAGE_REGISTRY" 2>/dev/null)
+
+    if [ -z "$repo_count" ] || [ "$repo_count" = "null" ] || [ "$repo_count" -eq 0 ]; then
+        return 0
+    fi
+
+    log_info "Processing $repo_count git repository/repositories"
+
+    local index=0
+    while [ $index -lt $repo_count ]; do
+        local url=$(yq eval ".${section}.${category}.${distro}.git_repos[$index].url" "$PACKAGE_REGISTRY" 2>/dev/null)
+        local install_dir=$(yq eval ".${section}.${category}.${distro}.git_repos[$index].install_dir" "$PACKAGE_REGISTRY" 2>/dev/null)
+        local update_strategy=$(yq eval ".${section}.${category}.${distro}.git_repos[$index].update_strategy // \"pull\"" "$PACKAGE_REGISTRY" 2>/dev/null)
+        local requires_sponsors=$(yq eval ".${section}.${category}.${distro}.git_repos[$index].requires_sponsors_access // false" "$PACKAGE_REGISTRY" 2>/dev/null)
+
+        # Expand tilde in install_dir
+        install_dir="${install_dir/#\~/$HOME}"
+
+        log_info "Git repo: $url -> $install_dir"
+
+        # Clone or update repository
+        if [ -d "$install_dir/.git" ]; then
+            log_info "Repository exists, updating..."
+            if [ "$update_strategy" = "pull" ]; then
+                (cd "$install_dir" && git pull --ff-only) || {
+                    log_warn "Git pull failed for $url, continuing anyway"
+                }
+            else
+                log_info "Skipping update (strategy: $update_strategy)"
+            fi
+        else
+            log_info "Cloning repository..."
+            mkdir -p "$(dirname "$install_dir")"
+            if ! git clone "$url" "$install_dir"; then
+                if [ "$requires_sponsors" = "true" ]; then
+                    log_error "Failed to clone $url (may require GitHub Sponsors access)"
+                else
+                    log_error "Failed to clone $url"
+                fi
+                return 1
+            fi
+        fi
+
+        # Execute build steps
+        local step_count=$(yq eval ".${section}.${category}.${distro}.git_repos[$index].build_steps | length" "$PACKAGE_REGISTRY" 2>/dev/null)
+
+        if [ -n "$step_count" ] && [ "$step_count" != "null" ] && [ "$step_count" -gt 0 ]; then
+            log_info "Executing $step_count build step(s)"
+
+            local step_index=0
+            while [ $step_index -lt $step_count ]; do
+                local build_step=$(yq eval ".${section}.${category}.${distro}.git_repos[$index].build_steps[$step_index]" "$PACKAGE_REGISTRY" 2>/dev/null)
+
+                log_info "Build step $((step_index + 1)): $build_step"
+
+                # Execute in subshell to avoid directory changes affecting main script
+                if ! (cd "$install_dir" && eval "$build_step"); then
+                    log_error "Build step failed: $build_step"
+                    return 1
+                fi
+
+                step_index=$((step_index + 1))
+            done
+        fi
+
+        index=$((index + 1))
+    done
+
+    log_info "Git repository installations completed"
     return 0
 }
 
@@ -768,12 +862,15 @@ install_packages_from_registry() {
 
     # Install packages
     local packages=$(get_packages "$category")
+    log_info "Packages from registry: $packages"
     if [ -n "$packages" ] && [ "$packages" != "null" ]; then
         if ! install_packages "$packages" "$packages"; then
             log_category_failure "$category" "package install failed"
             record_category_failure "$install_level" "$category" "package install failed" 0
             return 1
         fi
+    else
+        log_info "No packages defined for this category"
     fi
 
     # Install custom packages
@@ -810,6 +907,13 @@ install_packages_from_registry() {
             record_category_failure "$install_level" "$category" "flatpak install failed" 0
             return 1
         fi
+    fi
+
+    # Install git repositories
+    if ! install_git_repos "$category"; then
+        log_category_failure "$category" "git repository install failed"
+        record_category_failure "$install_level" "$category" "git repo install failed" 0
+        return 1
     fi
 
     # Enable services (but don't fail if service start fails)

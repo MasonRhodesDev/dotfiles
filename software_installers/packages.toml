@@ -23,12 +23,12 @@ description = "Essential system utilities"
 install_level = "system"
 priority = 2
   [common.core_utils.fedora]
-  packages = ["vim", "curl", "git", "jq", "thunar", "solaar", "wireplumber", "NetworkManager", "go", "gcc-go", "keychain", "powerline-fonts", "fira-code-fonts", "piper", "headsetcontrol"]
+  packages = ["vim", "curl", "git", "jq", "thunar", "solaar", "wireplumber", "NetworkManager", "go", "gcc-go", "keychain", "powerline-fonts", "fira-code-fonts", "piper", "headsetcontrol", "direnv"]
   repos = ["copr:solopasha/hyprland"]
   min_version = "40"
 
   [common.core_utils.arch]
-  packages = ["vim", "curl", "git", "jq", "thunar", "wireplumber", "networkmanager", "go", "keychain"]
+  packages = ["vim", "curl", "git", "jq", "thunar", "wireplumber", "networkmanager", "go", "keychain", "direnv"]
   aur_packages = ["solaar", "ttf-fira-code", "piper", "headsetcontrol"]
 
 [common.terminal]
@@ -39,7 +39,8 @@ priority = 2
   packages = ["wezterm", "tmux", "fish"]
 
   [common.terminal.arch]
-  packages = ["wezterm", "tmux", "fish"]
+  packages = ["tmux", "fish"]
+  aur_packages = ["wezterm-git"]
 
 [common.shell_tools]
 description = "Shell prompt and environment tools"
@@ -74,12 +75,11 @@ depends_on = ["core_utils"]
   repos = ["copr:solopasha/hyprland", "copr:heus-sueh/packages"]
   repo_priorities = { "copr:heus-sueh/packages" = 200 }
   cargo_packages = ["matugen"]
-  aur_packages = ["swaync", "swayosd"]
   min_version = "40"
 
   [common.hyprland.arch]
-  packages = ["wl-clipboard", "grim", "slurp", "pavucontrol", "dunst"]
-  aur_packages = ["hyprland-git", "hyprlock-git", "hypridle-git", "hyprpicker-git", "hyprcursor-git", "hyprutils-git", "hyprlang-git", "hyprwayland-scanner-git", "xdg-desktop-portal-hyprland-git", "waybar-git", "wofi-git", "swaybg-git", "matugen-git", "swaync-git", "swayosd-git"]
+  packages = ["wl-clipboard", "grim", "slurp", "pavucontrol", "dunst", "waybar"]
+  aur_packages = ["hyprland-git", "hyprlock-git", "hypridle-git", "hyprpicker-git", "hyprcursor-git", "hyprutils-git", "hyprlang-git", "hyprwayland-scanner-git", "xdg-desktop-portal-hyprland-git", "wofi-git", "swaybg-git", "matugen-git", "swaync-git", "swayosd-git"]
 
 [common.browsers]
 install_level = "system"
@@ -107,15 +107,57 @@ description = "Integrated development environments"
   [common.ide.arch]
   packages = ["neovim"]
 
-[common.git_tools]
-install_level = "user"
+[common.astal]
+install_level = "system"
 priority = 8
-description = "Git-based installations"
-  [common.git_tools.fedora]
-  packages = []
+description = "Astal library for widget toolkits"
+  [common.astal.fedora]
+  packages = ["meson", "vala", "valadoc", "gobject-introspection-devel", "wayland-protocols-devel", "gtk3-devel", "gtk-layer-shell-devel", "gtk4-devel", "gtk4-layer-shell-devel"]
 
-  [common.git_tools.arch]
-  packages = []
+  [[common.astal.fedora.git_repos]]
+  url = "https://github.com/aylur/astal.git"
+  install_dir = "~/git_installers/astal/astal"
+  update_strategy = "pull"
+  build_steps = [
+    "cd lib/astal/io && rm -rf build && meson setup build && sudo meson install -C build",
+    "cd ../../gtk3 && rm -rf build && meson setup build && sudo meson install -C build",
+    "cd ../gtk4 && rm -rf build && meson setup build && sudo meson install -C build"
+  ]
+
+  [common.astal.arch]
+  aur_packages = ["libastal-meta"]
+
+[common.marble_shell]
+install_level = "system"
+priority = 9
+description = "Marble Shell desktop environment"
+depends_on = ["astal", "node_tooling"]
+optional = true
+  [common.marble_shell.fedora]
+  packages = ["git", "gjs", "gtk4", "libadwaita", "gtk4-devel", "gtk4-layer-shell-devel", "libadwaita-devel", "meson", "ninja-build", "gobject-introspection-devel", "esbuild"]
+
+  [[common.marble_shell.fedora.git_repos]]
+  url = "https://github.com/marble-shell/shell.git"
+  install_dir = "~/git_installers/marble-shell/shell"
+  update_strategy = "pull"
+  requires_sponsors_access = true
+  build_steps = [
+    "pnpm install",
+    "rm -rf build && meson setup build && sudo meson install -C build"
+  ]
+
+  [common.marble_shell.arch]
+  aur_packages = ["gjs", "gtk4", "gtk4-layer-shell", "libadwaita", "pnpm", "esbuild"]
+
+  [[common.marble_shell.arch.git_repos]]
+  url = "https://github.com/marble-shell/shell.git"
+  install_dir = "~/git_installers/marble-shell/shell"
+  update_strategy = "pull"
+  requires_sponsors_access = true
+  build_steps = [
+    "pnpm install",
+    "rm -rf build && meson setup build && sudo meson install -C build"
+  ]
 
 [common.gimp]
 description = "Image editing and manipulation"

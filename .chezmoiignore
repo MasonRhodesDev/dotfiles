@@ -20,3 +20,4 @@ tests/
 # Python cache
 **/__pycache__/
 **/*.pyc
+.config/fish/fish_variables
