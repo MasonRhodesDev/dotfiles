@@ -30,6 +30,7 @@ spec "user.session"
 spec "user.dap"
 spec "user.indentline"
 spec "user.toggleterm"
+spec "user.tmux-navigator"
 -- spec "user.wezterm-config"  -- Disabled: conflicts with bg.nvim
 spec "user.bg"
 spec "user.claudecode"

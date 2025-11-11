@@ -9,11 +9,7 @@ vim.g.maplocalleader = " "
 -- Preserve Ctrl+i functionality
 keymap("n", "<C-i>", "<C-i>", opts)
 
--- Better window navigation
-keymap("n", "<m-h>", "<C-w>h", opts) -- Alt+h: Move to left window
-keymap("n", "<m-j>", "<C-w>j", opts) -- Alt+j: Move to window below
-keymap("n", "<m-k>", "<C-w>k", opts) -- Alt+k: Move to window above
-keymap("n", "<m-l>", "<C-w>l", opts) -- Alt+l: Move to right window
+-- Window navigation handled by vim-tmux-navigator plugin (Alt+h/j/k/l)
 keymap("n", "<m-tab>", "<c-6>", opts) -- Alt+Tab: Switch to alternate buffer
 
 -- Center screen after search navigation
