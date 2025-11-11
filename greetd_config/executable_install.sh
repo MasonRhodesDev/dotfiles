@@ -373,10 +373,11 @@ if [ -d /usr/share/wayland-sessions ]; then
     for desktop_file in /usr/share/wayland-sessions/*.desktop; do
         if [ -f "$desktop_file" ]; then
             name=$(grep "^Name=" "$desktop_file" 2>/dev/null | cut -d= -f2 || true)
-            exec_cmd=$(grep "^Exec=" "$desktop_file" 2>/dev/null | cut -d= -f2 || true)
-            if [ -n "$name" ] && [ -n "$exec_cmd" ]; then
+            # Extract desktop file ID (basename without .desktop extension)
+            desktop_id=$(basename "$desktop_file" .desktop)
+            if [ -n "$name" ] && [ -n "$desktop_id" ]; then
                 SESSION_NAMES+=("$name")
-                SESSION_COMMANDS+=("$exec_cmd")
+                SESSION_COMMANDS+=("$desktop_id")
                 SESSION_COUNT=$((SESSION_COUNT + 1))
             fi
         fi
@@ -388,10 +389,11 @@ if [ -d /usr/share/xsessions ]; then
     for desktop_file in /usr/share/xsessions/*.desktop; do
         if [ -f "$desktop_file" ]; then
             name=$(grep "^Name=" "$desktop_file" 2>/dev/null | cut -d= -f2 || true)
-            exec_cmd=$(grep "^Exec=" "$desktop_file" 2>/dev/null | cut -d= -f2 || true)
-            if [ -n "$name" ] && [ -n "$exec_cmd" ]; then
+            # Extract desktop file ID (basename without .desktop extension)
+            desktop_id=$(basename "$desktop_file" .desktop)
+            if [ -n "$name" ] && [ -n "$desktop_id" ]; then
                 SESSION_NAMES+=("$name (X11)")
-                SESSION_COMMANDS+=("$exec_cmd")
+                SESSION_COMMANDS+=("$desktop_id")
                 SESSION_COUNT=$((SESSION_COUNT + 1))
             fi
         fi
@@ -769,10 +771,16 @@ mkdir -p /etc/greetd/css
 mkdir -p /etc/greetd/scripts
 mkdir -p /etc/greetd/logs
 mkdir -p /var/lib/greetd
+mkdir -p /var/log/regreet
+mkdir -p /var/lib/regreet
 
 chown greeter:greeter /etc/greetd/logs
 chown greeter:greeter /var/lib/greetd
+chown greeter:greeter /var/log/regreet
+chown greeter:greeter /var/lib/regreet
 chmod 750 /etc/greetd/logs
+chmod 0755 /var/log/regreet
+chmod 0755 /var/lib/regreet
 
 success "Directories created"
 
