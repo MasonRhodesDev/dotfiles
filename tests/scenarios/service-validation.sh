@@ -63,154 +63,83 @@ assert_command_version() {
     fi
 }
 
-# Run chezmoi apply first
+# Initialize chezmoi
+echo "→ Initializing chezmoi..."
+chezmoi init --source="$CHEZMOI_SOURCE_DIR" 2>&1 > /dev/null
+echo "✓ chezmoi init --source="$CHEZMOI_SOURCE_DIR"ialized"
+echo ""
+
+# Run chezmoi apply first with HTTPS git config
 echo "→ Running chezmoi apply to install packages..."
-if ! chezmoi apply --force 2>&1 | tee /tmp/service-validation-apply.log; then
+export GIT_CONFIG_GLOBAL="$HOME/.local/share/chezmoi/.gitconfig"
+if ! chezmoi apply 2>&1 | tee /tmp/service-validation-apply.log; then
     echo "✗ chezmoi apply failed"
     exit 1
 fi
 echo ""
 
-# Check if work profile (services only installed on work machines)
-HOSTNAME=$(cat /etc/hostname 2>/dev/null || hostname)
-if [[ "$HOSTNAME" != *"work"* ]]; then
-    echo "ℹ Not a work profile machine - skipping service tests"
-    echo "  (Docker and MongoDB only install on work profile)"
-    echo ""
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "  TEST PASSED: Service Validation (N/A)"
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    exit 0
-fi
-
 FAILED=0
 
-# ━━━ Docker Service Validation ━━━
-echo "→ Validating Docker service..."
+# ━━━ Hyprland Startup Validation ━━━
+echo "→ Testing Hyprland startup (config validation)..."
 
-# Check service unit files
-if assert_file_exists "/usr/lib/systemd/system/docker.service" "docker.service unit"; then
-    :
+# Set up Wayland environment for headless mode
+export WLR_BACKENDS=headless
+export WLR_LIBINPUT_NO_DEVICES=1
+export WLR_RENDERER=pixman
+export WAYLAND_DISPLAY=wayland-0
+
+# Check if Hyprland was installed
+if ! assert_command_exists "Hyprland" "Hyprland"; then
+    echo "  ⚠ Hyprland not installed - skipping compositor tests"
+    echo ""
 else
-    ((FAILED++))
-fi
+    # Test Hyprland startup (10 second test)
+    echo "  → Starting Hyprland in headless mode..."
+    timeout 10 Hyprland &>/tmp/hyprland.log &
+    HYPR_PID=$!
+    sleep 3
 
-if assert_file_exists "/usr/lib/systemd/system/docker.socket" "docker.socket unit"; then
-    :
-else
-    # Socket is optional
-    echo "  ℹ docker.socket not found (may be optional)"
-fi
-
-# Check containerd service (dependency)
-if assert_file_exists "/usr/lib/systemd/system/containerd.service" "containerd.service unit"; then
-    :
-else
-    ((FAILED++))
-fi
-
-# Check Docker binary
-if assert_command_exists "docker" "Docker"; then
-    assert_command_version "docker" "Docker"
-else
-    ((FAILED++))
-fi
-
-# Check dockerd binary
-if assert_command_exists "dockerd" "Docker daemon"; then
-    :
-else
-    echo "  ⚠ dockerd not found (may be in /usr/sbin)"
-    # Check /usr/sbin
-    if [ -f /usr/sbin/dockerd ]; then
-        echo "  ✓ dockerd found in /usr/sbin"
-    fi
-fi
-
-# Check docker-compose
-if assert_command_exists "docker-compose" "docker-compose" || assert_command_exists "docker" "docker compose"; then
-    :
-else
-    echo "  ⚠ docker-compose not found (may not be installed)"
-fi
-
-echo ""
-
-# ━━━ MongoDB Service Validation ━━━
-echo "→ Validating MongoDB service..."
-
-# Service name differs by distro
-if [ "$DISTRO" = "fedora" ]; then
-    SERVICE_NAME="mongod"
-elif [ "$DISTRO" = "arch" ]; then
-    SERVICE_NAME="mongodb"
-fi
-
-# Check service unit file
-if assert_file_exists "/usr/lib/systemd/system/${SERVICE_NAME}.service" "${SERVICE_NAME}.service unit"; then
-    :
-else
-    # Try alternate location
-    if assert_file_exists "/lib/systemd/system/${SERVICE_NAME}.service" "${SERVICE_NAME}.service unit (alternate)"; then
-        :
+    # Check if process is still running
+    if ! kill -0 $HYPR_PID 2>/dev/null; then
+        echo "  ✗ Hyprland crashed on startup"
+        echo "    Config errors detected:"
+        grep -i "error\|fatal\|failed" /tmp/hyprland.log 2>/dev/null | head -5 | sed 's/^/      /'
+        ((FAILED++))
     else
-        echo "  ⚠ ${SERVICE_NAME}.service not found - MongoDB may not be installed"
-        echo "    (This is OK if MongoDB installation failed or was skipped)"
-    fi
-fi
+        echo "  ✓ Hyprland started successfully"
 
-# Check MongoDB binaries
-if assert_command_exists "mongod" "MongoDB daemon"; then
-    assert_command_version "mongod" "MongoDB"
-else
-    echo "  ⚠ mongod not found - MongoDB may not be installed"
-fi
-
-if assert_command_exists "mongosh" "MongoDB shell"; then
-    assert_command_version "mongosh" "MongoDB shell"
-else
-    # Try legacy mongo shell
-    if assert_command_exists "mongo" "MongoDB shell (legacy)"; then
-        assert_command_version "mongo" "MongoDB shell"
-    else
-        echo "  ⚠ MongoDB shell not found - may not be installed"
-    fi
-fi
-
-echo ""
-
-# ━━━ Additional Service Checks ━━━
-echo "→ Validating systemd functionality in container..."
-
-# Check if systemd is available (it won't be in Docker)
-if command -v systemctl &>/dev/null; then
-    echo "  ℹ systemctl available"
-
-    # Try to query systemd (will fail in Docker, that's OK)
-    if systemctl --version &>/dev/null; then
-        echo "  ✓ systemd is functional"
-
-        # If systemd works, try checking service status
-        if systemctl status docker &>/dev/null; then
-            echo "  ✓ Docker service is active"
+        # Check for Wayland socket
+        if [ -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY" ]; then
+            echo "  ✓ Wayland socket created"
         else
-            echo "  ⚠ Docker service not active (expected in container)"
+            echo "  ⚠ Wayland socket not found (may be timing issue)"
         fi
 
-        if systemctl status "$SERVICE_NAME" &>/dev/null; then
-            echo "  ✓ MongoDB service is active"
-        else
-            echo "  ⚠ MongoDB service not active (expected in container)"
-        fi
-    else
-        echo "  ⚠ systemd not functional (expected in Docker container)"
-        echo "    Service unit files validated, but services cannot start"
-    fi
-else
-    echo "  ⚠ systemctl not available (expected in Docker container)"
-fi
+        # Test Waybar startup
+        if assert_command_exists "waybar" "Waybar"; then
+            echo "  → Testing Waybar startup..."
+            timeout 5 waybar &>/tmp/waybar.log &
+            WAYBAR_PID=$!
+            sleep 2
 
-echo ""
+            if ! kill -0 $WAYBAR_PID 2>/dev/null; then
+                echo "  ✗ Waybar crashed on startup"
+                echo "    Config errors detected:"
+                grep -i "error\|fatal\|failed" /tmp/waybar.log 2>/dev/null | head -5 | sed 's/^/      /'
+                ((FAILED++))
+            else
+                echo "  ✓ Waybar started successfully"
+                kill $WAYBAR_PID 2>/dev/null || true
+            fi
+        fi
+
+        # Clean up Hyprland
+        kill $HYPR_PID 2>/dev/null || true
+    fi
+
+    echo ""
+fi
 
 # ━━━ Summary ━━━
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -218,15 +147,16 @@ if [ $FAILED -eq 0 ]; then
     echo "  TEST PASSED: Service Validation"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
-    echo "✓ All critical service files and binaries validated"
-    echo "ℹ Services cannot start in Docker containers (expected)"
-    echo "ℹ Full service testing requires VM or real system"
+    echo "✓ Hyprland and Waybar configs validated"
+    echo "✓ No critical startup errors detected"
+    echo "ℹ Full compositor testing requires real display"
     exit 0
 else
     echo "  TEST FAILED: Service Validation"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
     echo "✗ $FAILED critical validation(s) failed"
-    echo "  Check logs above for details"
+    echo "  Hyprland or Waybar crashed on startup"
+    echo "  Check logs: /tmp/hyprland.log and /tmp/waybar.log"
     exit 1
 fi

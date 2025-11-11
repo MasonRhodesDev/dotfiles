@@ -2,7 +2,7 @@
 # Collision detection library for chezmoi installation scripts
 # Detects multi-source package installations and known conflicts
 
-COLLISION_DB="{{ .chezmoi.sourceDir }}/.chezmoiscripts/collisions.db.json"
+COLLISION_DB="{{ .chezmoi.homeDir }}/.local/state/chezmoi-installs/collisions.db.json"
 
 # Check if package is already installed by different manager
 check_package_collision() {
@@ -54,36 +54,6 @@ check_package_collision() {
     fi
 
     return 0
-}
-
-# Get all sources where package is installed
-get_installed_sources() {
-    local package="$1"
-    local distro=$(get_distro)
-    local sources=()
-
-    case $distro in
-        "fedora")
-            if rpm -q "$package" &>/dev/null; then
-                sources+=("dnf")
-            fi
-            ;;
-        "arch")
-            if pacman -Q "$package" &>/dev/null; then
-                sources+=("pacman")
-            fi
-            ;;
-    esac
-
-    if command -v flatpak &>/dev/null && flatpak list --app 2>/dev/null | grep -q "^$package"; then
-        sources+=("flatpak")
-    fi
-
-    if command -v cargo &>/dev/null && cargo install --list 2>/dev/null | grep -q "^$package "; then
-        sources+=("cargo")
-    fi
-
-    echo "${sources[@]}"
 }
 
 # Check if package is installed by specific source

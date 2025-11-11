@@ -21,13 +21,21 @@ else
 fi
 echo "  Expected profile: $EXPECTED_PROFILE"
 
+# Initialize chezmoi
+echo ""
+echo "→ Initializing chezmoi..."
+chezmoi init --source="$CHEZMOI_SOURCE_DIR" 2>&1 > /dev/null
+echo "✓ chezmoi init --source="$CHEZMOI_SOURCE_DIR"ialized"
 # Check chezmoi data
 echo ""
 echo "→ Checking chezmoi profile data..."
-CHEZMOI_PROFILE=$(chezmoi data | grep -A1 'profile' | grep 'type' | awk '{print $2}' | tr -d '",')
+# Use jq to parse JSON output from chezmoi data
+CHEZMOI_PROFILE=$(chezmoi data --format=json 2>/dev/null | jq -r '.profile.type // empty' || echo "")
 
 if [ -z "$CHEZMOI_PROFILE" ]; then
     echo "✗ Could not determine profile from chezmoi data"
+    echo "  Debug: Attempting to extract profile manually..."
+    chezmoi data 2>&1 | head -50
     exit 1
 fi
 
@@ -40,10 +48,11 @@ else
     exit 1
 fi
 
-# Run installation
+# Run installation with HTTPS git config
 echo ""
 echo "→ Running installation with profile: $CHEZMOI_PROFILE..."
-chezmoi apply --force 2>&1 | tee /tmp/profile-test.log
+export GIT_CONFIG_GLOBAL="$HOME/.local/share/chezmoi/.gitconfig"
+chezmoi apply 2>&1 | tee /tmp/profile-test.log
 
 # Check which profile scripts ran
 echo ""

@@ -128,7 +128,7 @@ run_test() {
     fi
 
     if $CONTAINER_CMD run $run_opts \
-        -v "$SCRIPT_DIR/scenarios:/tests:ro,Z" \
+        -v "$SCRIPT_DIR/scenarios:/tests:Z" \
         "chezmoi-test-$distro" \
         bash /tests/${scenario}.sh 2>&1 | tee "$result_file"; then
 
@@ -145,8 +145,8 @@ run_test() {
 # Run all scenarios for a distro
 run_distro_tests() {
     local distro="$1"
+    shift  # Remove distro from arguments
     local scenarios=("$@")
-    shift  # Remove distro from array
 
     local failed=0
     local passed=0

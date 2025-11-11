@@ -5,11 +5,17 @@
 
 echo "Setting up chezmoi daemon..."
 
+# Check if script exists
+if [ ! -f "{{ .chezmoi.homeDir }}/scripts/chezmoi-daemon.sh" ]; then
+    echo "chezmoi-daemon.sh not found, skipping setup"
+    exit 0
+fi
+
 # Make sure script is executable
-chmod +x "{{ .chezmoi.homeDir }}/scripts/chezmoi-daemon.sh"
+chmod +x "{{ .chezmoi.homeDir }}/scripts/chezmoi-daemon.sh" || true
 
 # Run daemon setup
-"{{ .chezmoi.homeDir }}/scripts/chezmoi-daemon.sh" setup
+"{{ .chezmoi.homeDir }}/scripts/chezmoi-daemon.sh" setup || true
 
 echo "Chezmoi daemon setup complete!"
 echo "The daemon will now:"

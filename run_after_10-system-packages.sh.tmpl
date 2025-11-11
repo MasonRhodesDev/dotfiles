@@ -6,7 +6,7 @@ set +e          # Don't exit on error - continue to next phase
 set -u          # Error on undefined variables
 set -o pipefail # Pipe failures propagate
 
-SCRIPT_DIR="{{ .chezmoi.sourceDir }}/.chezmoitemplates/lib"
+SCRIPT_DIR="{{ .chezmoi.homeDir }}/.local/share/chezmoi-libs"
 source "$SCRIPT_DIR/lib-logging.sh"
 source "$SCRIPT_DIR/lib-state.sh"
 source "$SCRIPT_DIR/lib-collision.sh"
@@ -90,7 +90,7 @@ for category in "${CATEGORIES[@]}"; do
         SUCCEEDED+=("$category")
     else
         # Check if it was skipped vs failed
-        local status=$(get_category_status "$PHASE" "$category")
+        status=$(get_category_status "$PHASE" "$category")
         if [ "$status" = "skipped" ]; then
             SKIPPED+=("$category")
         else

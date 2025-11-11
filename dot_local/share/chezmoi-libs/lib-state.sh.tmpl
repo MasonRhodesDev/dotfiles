@@ -117,27 +117,6 @@ get_category_status() {
     jq -r ".phases.\"$phase\".categories.\"$category\".status // \"none\"" "$STATE_DB" 2>/dev/null
 }
 
-get_phase_status() {
-    local phase="$1"
-
-    if [ ! -f "$STATE_DB" ]; then
-        echo "none"
-        return
-    fi
-
-    jq -r ".phases.\"$phase\".status // \"none\"" "$STATE_DB" 2>/dev/null
-}
-
-list_failed_categories() {
-    local phase="$1"
-
-    if [ ! -f "$STATE_DB" ]; then
-        return
-    fi
-
-    jq -r ".phases.\"$phase\".categories | to_entries[] | select(.value.status == \"failed\") | .key" "$STATE_DB" 2>/dev/null
-}
-
 # State updates
 record_category_start() {
     local phase="$1"
@@ -268,16 +247,6 @@ get_package_source() {
     fi
 
     jq -r ".package_registry.\"$name\".source // \"unknown\"" "$STATE_DB" 2>/dev/null
-}
-
-list_packages_by_source() {
-    local source="$1"
-
-    if [ ! -f "$STATE_DB" ]; then
-        return
-    fi
-
-    jq -r ".package_registry | to_entries[] | select(.value.source == \"$source\") | .key" "$STATE_DB" 2>/dev/null
 }
 
 # Migration support

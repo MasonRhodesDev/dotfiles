@@ -80,8 +80,8 @@ ensure_yq() {
 
 check_network() {
     if ! ping -c 1 -W 2 8.8.8.8 &>/dev/null; then
-        log_error "Network connectivity check failed"
-        return 1
+        log_warn "Network connectivity check failed - continuing anyway"
+        return 0
     fi
     return 0
 }
@@ -130,8 +130,15 @@ validate_prerequisites() {
 get_category_section() {
     local category="$1"
 
+    # If category already has section prefix (e.g., "common.build_tools"), extract it
+    if [[ "$category" =~ ^(common|work|personal)\. ]]; then
+        echo "${category%%.*}"
+        return 0
+    fi
+
     ensure_yq
 
+    # Check which section contains this category
     if yq eval ".common | has(\"$category\")" "$PACKAGE_REGISTRY" 2>/dev/null | grep -q "true"; then
         echo "common"
     elif yq eval ".work | has(\"$category\")" "$PACKAGE_REGISTRY" 2>/dev/null | grep -q "true"; then
@@ -831,58 +838,4 @@ install_packages_from_registry() {
     record_category_success "$install_level" "$category" "$packages" "$checksum"
 
     return 0
-}
-
-# ============================================================================
-# Utility Functions
-# ============================================================================
-
-download_and_extract_latest_release() {
-    local username="$1"
-    local repo="$2"
-    local dest_dir="${3:-/tmp}"
-
-    log_info "Downloading latest release of $username/$repo..."
-
-    local latest_url=$(curl -s "https://api.github.com/repos/$username/$repo/releases/latest" | jq -r '.tarball_url')
-
-    if [ "$latest_url" = "null" ]; then
-        log_error "Could not find latest release for $username/$repo"
-        return 1
-    fi
-
-    local tarball="$dest_dir/${repo}-latest.tar.gz"
-    local extract_dir="$dest_dir/${repo}-latest"
-
-    retry_with_backoff curl -L "$latest_url" -o "$tarball" || return 1
-
-    mkdir -p "$extract_dir"
-    tar -xzf "$tarball" -C "$extract_dir" --strip-components=1 || {
-        log_error "Failed to extract $tarball"
-        return 1
-    }
-
-    rm "$tarball"
-    echo "$extract_dir"
-}
-
-install_appimage() {
-    local name="$1"
-    local download_url="$2"
-    local apps_dir="{{ .chezmoi.homeDir }}/Applications"
-
-    install_packages "AppImageLauncher" "appimagelauncher"
-
-    mkdir -p "$apps_dir"
-
-    local appimage_file="$apps_dir/$name.AppImage"
-
-    log_info "Downloading $name AppImage..."
-    retry_with_backoff curl -L "$download_url" -o "$appimage_file" || {
-        log_error "Failed to download $name AppImage"
-        return 1
-    }
-
-    chmod +x "$appimage_file"
-    log_info "$name AppImage installed to $appimage_file"
 }

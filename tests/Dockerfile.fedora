@@ -6,6 +6,9 @@ RUN dnf install -y \
     git \
     curl \
     sudo \
+    fontconfig \
+    jq \
+    procps-ng \
     && dnf clean all
 
 # Create test user
@@ -14,6 +17,9 @@ RUN useradd -m -s /bin/bash test_user && \
 
 # Set hostname for work profile
 RUN echo "mason-work-test" > /etc/hostname
+
+# Set up Wayland environment for headless Hyprland testing (as root)
+RUN mkdir -p /run/user/1000 && chown test_user:test_user /run/user/1000
 
 # Switch to test user
 USER test_user
@@ -35,6 +41,9 @@ COPY --chown=test_user:test_user . /home/test_user/.local/share/chezmoi/
 
 # Set chezmoi source directory
 ENV CHEZMOI_SOURCE_DIR=/home/test_user/.local/share/chezmoi
+
+# Set up Wayland environment for headless Hyprland testing
+ENV XDG_RUNTIME_DIR=/run/user/1000
 
 WORKDIR /home/test_user
 

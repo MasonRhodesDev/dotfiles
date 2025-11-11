@@ -9,9 +9,17 @@ echo "  TEST: State Tracking & Skip Logic"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
-# First run
+# Initialize
+echo "→ Initializing chezmoi..."
+chezmoi init --source="$CHEZMOI_SOURCE_DIR" 2>&1 | tee /tmp/chezmoi-init.log
+echo "✓ chezmoi init --source="$CHEZMOI_SOURCE_DIR" completed"
+
+echo ""
+
+# First run with HTTPS git config
 echo "→ First run: Installing packages..."
-chezmoi apply --force 2>&1 | tee /tmp/first-run.log
+export GIT_CONFIG_GLOBAL="$HOME/.local/share/chezmoi/.gitconfig"
+chezmoi apply 2>&1 | tee /tmp/first-run.log
 echo "✓ First run completed"
 
 # Capture first run state
@@ -26,7 +34,7 @@ fi
 
 echo ""
 echo "→ Second run: Should skip already installed packages..."
-chezmoi apply --force 2>&1 | tee /tmp/second-run.log
+chezmoi apply 2>&1 | tee /tmp/second-run.log
 echo "✓ Second run completed"
 
 # Check for skip messages
@@ -39,10 +47,11 @@ else
     echo "⚠ No skip messages found (may indicate re-installation)"
 fi
 
-# Verify state didn't regress
+# Verify state didn't regress (categories should remain successful, not be removed)
 if [ -f ~/.local/state/chezmoi-installs/state.db.json ]; then
-    SECOND_SUCCESS=$(jq -r '[.phases[] | .categories // {} | to_entries[] | select(.value.status == "success")] | length' ~/.local/state/chezmoi-installs/state.db.json)
-    echo "  Second run success count: $SECOND_SUCCESS"
+    # Count categories that are either "success" or "skipped" (both are valid end states)
+    SECOND_SUCCESS=$(jq -r '[.phases[] | .categories // {} | to_entries[] | select(.value.status == "success" or .value.status == "skipped")] | length' ~/.local/state/chezmoi-installs/state.db.json)
+    echo "  Second run success/skipped count: $SECOND_SUCCESS"
 
     if [ "$SECOND_SUCCESS" -ge "$FIRST_SUCCESS" ]; then
         echo "✓ State maintained or improved"

@@ -9,9 +9,21 @@ echo "  TEST: Basic Installation"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
-# Run chezmoi apply
+# Initialize chezmoi (source is already copied in Docker)
+echo "→ Initializing chezmoi..."
+if chezmoi init --source="$CHEZMOI_SOURCE_DIR" 2>&1 | tee /tmp/chezmoi-init.log; then
+    echo "✓ chezmoi init --source="$CHEZMOI_SOURCE_DIR" completed"
+else
+    echo "✗ chezmoi init --source="$CHEZMOI_SOURCE_DIR" failed"
+    exit 1
+fi
+
+echo ""
+
+# Run chezmoi apply with HTTPS git config
 echo "→ Running chezmoi apply..."
-if chezmoi apply --force 2>&1 | tee /tmp/chezmoi-apply.log; then
+export GIT_CONFIG_GLOBAL="$HOME/.local/share/chezmoi/.gitconfig"
+if chezmoi apply 2>&1 | tee /tmp/chezmoi-apply.log; then
     echo "✓ chezmoi apply completed (exit 0)"
 else
     EXIT_CODE=$?
@@ -24,17 +36,27 @@ echo "→ Checking state database..."
 if [ -f ~/.local/state/chezmoi-installs/state.db.json ]; then
     echo "✓ State database exists"
 
-    # Check if any categories succeeded
+    # Check if any categories succeeded or failed
     SUCCESS_COUNT=$(jq -r '[.phases[] | .categories // {} | to_entries[] | select(.value.status == "success")] | length' ~/.local/state/chezmoi-installs/state.db.json)
     FAILED_COUNT=$(jq -r '[.phases[] | .categories // {} | to_entries[] | select(.value.status == "failed")] | length' ~/.local/state/chezmoi-installs/state.db.json)
+    TOTAL_COUNT=$(jq -r '[.phases[] | .categories // {} | to_entries[]] | length' ~/.local/state/chezmoi-installs/state.db.json)
 
     echo "  Success: $SUCCESS_COUNT categories"
     echo "  Failed: $FAILED_COUNT categories"
+    echo "  Total: $TOTAL_COUNT categories"
 
-    if [ "$SUCCESS_COUNT" -gt 0 ]; then
+    # Test passes if:
+    # 1. At least one category succeeded (normal case), OR
+    # 2. No categories defined at all (valid empty installation)
+    if [ "$FAILED_COUNT" -gt 0 ]; then
+        echo "✗ Some categories failed"
+        exit 1
+    elif [ "$TOTAL_COUNT" -eq 0 ]; then
+        echo "✓ No categories defined (valid empty installation)"
+    elif [ "$SUCCESS_COUNT" -gt 0 ]; then
         echo "✓ At least one category installed successfully"
     else
-        echo "✗ No categories installed successfully"
+        echo "✗ Categories exist but none succeeded"
         exit 1
     fi
 else

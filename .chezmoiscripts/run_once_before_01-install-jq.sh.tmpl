@@ -1,0 +1,24 @@
+#!/bin/bash
+# Install jq first - required by state tracking and library scripts
+
+set -e
+
+echo "Checking for jq..."
+
+if command -v jq &>/dev/null; then
+    echo "✓ jq already installed"
+    exit 0
+fi
+
+echo "Installing jq..."
+
+{{- if eq .chezmoi.osRelease.id "fedora" }}
+sudo dnf install -y jq
+{{- else if eq .chezmoi.osRelease.id "arch" }}
+sudo pacman -S --noconfirm jq
+{{- else }}
+echo "Unsupported distribution: {{ .chezmoi.osRelease.id }}"
+exit 1
+{{- end }}
+
+echo "✓ jq installed successfully"

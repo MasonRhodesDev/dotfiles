@@ -10,7 +10,7 @@ set +e
 set -u
 set -o pipefail
 
-SCRIPT_DIR="{{ .chezmoi.sourceDir }}/.chezmoitemplates/lib"
+SCRIPT_DIR="{{ .chezmoi.homeDir }}/.local/share/chezmoi-libs"
 source "$SCRIPT_DIR/lib-logging.sh"
 source "$SCRIPT_DIR/lib-state.sh"
 source "$SCRIPT_DIR/lib-collision.sh"
@@ -57,13 +57,13 @@ SKIPPED=()
 
 for category in "${CATEGORIES[@]}"; do
     # Determine install level for this category
-    local cat_name="${category#personal.}"
-    local install_level=$(yq eval ".personal.\"$cat_name\".install_level // \"system\"" "$PACKAGE_REGISTRY" 2>/dev/null)
+    cat_name="${category#personal.}"
+    install_level=$(yq eval ".personal.\"$cat_name\".install_level // \"system\"" "$PACKAGE_REGISTRY" 2>/dev/null)
 
     if install_packages_from_registry "$category" "$PHASE"; then
         SUCCEEDED+=("$category")
     else
-        local status=$(get_category_status "$PHASE" "$category")
+        status=$(get_category_status "$PHASE" "$category")
         if [ "$status" = "skipped" ]; then
             SKIPPED+=("$category")
         else
