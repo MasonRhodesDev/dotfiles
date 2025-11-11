@@ -81,6 +81,83 @@ if [ ${#GROUPS_ADDED[@]} -gt 0 ]; then
     echo ""
 fi
 
+# Reload Hyprland configuration if running
+if command -v hyprctl &>/dev/null && pgrep -x Hyprland &>/dev/null; then
+    log_info "Reloading Hyprland configuration..."
+    if hyprctl reload &>/dev/null; then
+        log_info "✓ Hyprland configuration reloaded"
+    else
+        log_warn "⚠ Failed to reload Hyprland configuration"
+    fi
+fi
+
+# Check waybar service status
+if systemctl --user is-active waybar &>/dev/null; then
+    log_info "✓ waybar service is running"
+elif systemctl --user is-enabled waybar &>/dev/null; then
+    log_warn "⚠ waybar is enabled but not running"
+    log_info "Restarting waybar..."
+    if systemctl --user restart waybar; then
+        log_info "✓ waybar service restarted"
+    else
+        log_error "✗ Failed to restart waybar service"
+    fi
+else
+    log_debug "waybar service not enabled"
+fi
+
+# Enable waybar watchdog timer
+if systemctl --user list-unit-files waybar-watchdog.timer &>/dev/null; then
+    if ! systemctl --user is-enabled waybar-watchdog.timer &>/dev/null; then
+        log_info "Enabling waybar watchdog timer..."
+        systemctl --user enable waybar-watchdog.timer &>/dev/null || log_warn "Failed to enable waybar-watchdog.timer"
+    fi
+    if ! systemctl --user is-active waybar-watchdog.timer &>/dev/null; then
+        log_info "Starting waybar watchdog timer..."
+        systemctl --user start waybar-watchdog.timer &>/dev/null || log_warn "Failed to start waybar-watchdog.timer"
+    fi
+    log_info "✓ waybar watchdog timer is active"
+fi
+
+# Enable waybar config reload watcher
+if systemctl --user list-unit-files waybar-reload.path &>/dev/null; then
+    if ! systemctl --user is-enabled waybar-reload.path &>/dev/null; then
+        log_info "Enabling waybar config reload watcher..."
+        systemctl --user enable waybar-reload.path &>/dev/null || log_warn "Failed to enable waybar-reload.path"
+    fi
+    if ! systemctl --user is-active waybar-reload.path &>/dev/null; then
+        log_info "Starting waybar config reload watcher..."
+        systemctl --user start waybar-reload.path &>/dev/null || log_warn "Failed to start waybar-reload.path"
+    fi
+    log_debug "waybar config reload watcher is active"
+fi
+
+# Enable chezmoi daemon timer (auto-update dotfiles)
+if systemctl --user list-unit-files chezmoi-daemon.timer &>/dev/null; then
+    if ! systemctl --user is-enabled chezmoi-daemon.timer &>/dev/null; then
+        log_info "Enabling chezmoi daemon timer..."
+        systemctl --user enable chezmoi-daemon.timer &>/dev/null || log_warn "Failed to enable chezmoi-daemon.timer"
+    fi
+    if ! systemctl --user is-active chezmoi-daemon.timer &>/dev/null; then
+        log_info "Starting chezmoi daemon timer..."
+        systemctl --user start chezmoi-daemon.timer &>/dev/null || log_warn "Failed to start chezmoi-daemon.timer"
+    fi
+    log_debug "chezmoi daemon timer is active"
+fi
+
+# Enable lid handler on laptops
+if [ -e /proc/acpi/button/lid ] && systemctl --user list-unit-files lid-handler.service &>/dev/null; then
+    if ! systemctl --user is-enabled lid-handler.service &>/dev/null; then
+        log_info "Enabling laptop lid handler..."
+        systemctl --user enable lid-handler.service &>/dev/null || log_warn "Failed to enable lid-handler.service"
+    fi
+    if ! systemctl --user is-active lid-handler.service &>/dev/null; then
+        log_info "Starting laptop lid handler..."
+        systemctl --user start lid-handler.service &>/dev/null || log_warn "Failed to start lid-handler.service"
+    fi
+    log_debug "laptop lid handler is active"
+fi
+
 # Environment setup reminders
 NEEDS_SHELL_RESTART=false
 

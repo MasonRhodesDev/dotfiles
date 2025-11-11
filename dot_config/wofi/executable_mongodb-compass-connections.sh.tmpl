@@ -1,3 +1,4 @@
+{{ if .is_work -}}
 #!/bin/bash
 
 MONGODB_COMPASS_CONNECTIONS_FOLDER_ID=REDACTED_FOLDER_ID
@@ -13,3 +14,4 @@ if [ -n "$selected_conn_str" ]; then
 else
   notify-send "No connection string found" --urgency=critical
 fi
+{{- end }}

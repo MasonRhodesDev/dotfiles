@@ -1,0 +1,12 @@
+[Unit]
+Description=Waybar zombie process watchdog
+After=waybar.service
+
+[Service]
+Type=oneshot
+ExecStart=%h/scripts/waybar-watchdog.sh
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target

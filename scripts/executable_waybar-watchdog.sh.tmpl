@@ -1,0 +1,81 @@
+#!/bin/bash
+# Waybar zombie process watchdog
+# Monitors waybar for zombie processes and restarts if detected
+
+set -euo pipefail
+
+# Check if waybar service is active
+if ! systemctl --user is-active waybar &>/dev/null; then
+    echo "waybar service not active, skipping check"
+    exit 0
+fi
+
+# Get all waybar PIDs
+mapfile -t waybar_pids < <(pgrep -x waybar 2>/dev/null || true)
+
+if [ ${#waybar_pids[@]} -eq 0 ]; then
+    echo "No waybar processes found"
+    exit 0
+fi
+
+# Check each PID for zombie state
+has_zombie=false
+for pid in "${waybar_pids[@]}"; do
+    if [ -z "$pid" ]; then
+        continue
+    fi
+
+    state=$(ps -p "$pid" -o state= 2>/dev/null | tr -d ' ' || echo "")
+    stat=$(ps -p "$pid" -o stat= 2>/dev/null | tr -d ' ' || echo "")
+
+    echo "waybar PID $pid: state=$state stat=$stat"
+
+    # Check for zombie (Z) or dead (X) states
+    if [[ "$state" =~ ^[ZXx] ]]; then
+        echo "WARNING: waybar PID $pid is in bad state: $state (stat: $stat)"
+        has_zombie=true
+
+        # Log additional diagnostic info
+        if [ "$state" = "Z" ]; then
+            parent_pid=$(ps -p "$pid" -o ppid= 2>/dev/null | tr -d ' ' || echo "unknown")
+            cmd=$(ps -p "$pid" -o cmd= 2>/dev/null || echo "unknown")
+            etime=$(ps -p "$pid" -o etime= 2>/dev/null | tr -d ' ' || echo "unknown")
+            echo "  Zombie process details:"
+            echo "    Parent PID: $parent_pid"
+            echo "    Command: $cmd"
+            echo "    Elapsed time: $etime"
+
+            # Try to get info about what the process was
+            if [ -r "/proc/$pid/cmdline" ]; then
+                cmdline=$(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null || echo "")
+                [ -n "$cmdline" ] && echo "    Cmdline: $cmdline"
+            fi
+        fi
+    fi
+done
+
+if [ "$has_zombie" = true ]; then
+    echo "Restarting waybar due to zombie/dead processes..."
+    systemctl --user restart waybar
+    echo "waybar restarted successfully"
+    exit 0
+fi
+
+# Check if waybar has visible windows
+if command -v hyprctl &>/dev/null; then
+    if timeout 3 hyprctl clients -j 2>&1 | jq -e '.[] | select(.class == "waybar")' &>/dev/null; then
+        echo "waybar health check passed (process healthy, windows visible)"
+    else
+        echo "WARNING: waybar process running but no windows detected"
+        echo "Restarting waybar..."
+        systemctl --user restart waybar
+        sleep 2
+        if timeout 3 hyprctl clients -j 2>&1 | jq -e '.[] | select(.class == "waybar")' &>/dev/null; then
+            echo "waybar restarted successfully, windows now visible"
+        else
+            echo "WARNING: waybar restarted but still no windows"
+        fi
+    fi
+else
+    echo "waybar health check passed (hyprctl not available, skipping window check)"
+fi

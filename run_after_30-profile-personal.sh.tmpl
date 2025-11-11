@@ -60,6 +60,13 @@ for category in "${CATEGORIES[@]}"; do
     cat_name="${category#personal.}"
     install_level=$(yq eval ".personal.\"$cat_name\".install_level // \"system\"" "$PACKAGE_REGISTRY" 2>/dev/null)
 
+    # Skip system-level packages (already installed in system phase)
+    if [ "$install_level" = "system" ]; then
+        log_info "Skipping $category (system-level, already handled in system phase)"
+        SKIPPED+=("$category")
+        continue
+    fi
+
     if install_packages_from_registry "$category" "$PHASE"; then
         SUCCEEDED+=("$category")
     else
