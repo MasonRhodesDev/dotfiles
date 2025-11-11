@@ -114,12 +114,36 @@ tooltip {
     color: @accent;
 }
 
+/* Width constraints for dynamic content modules */
+#clock {
+    min-width: 130px;
+}
+
+#battery {
+    min-width: 70px;
+}
+
+#pulseaudio {
+    min-width: 65px;
+}
+
+/* Individual module margins for balanced spacing */
+#bluetooth {
+    margin-right: 2px;
+}
+
+#network {
+    margin-right: 2px;
+}
+
+#tray {
+    margin-right: 4px;
+    margin-left: 2px;
+}
+
 /* Notification module - matches workspace styling */
 #custom-notification {
-    padding-top: 4px;
-    padding-bottom: 4px;
-    padding-left: 8px;
-    padding-right: 6px;
+    padding: 2px 4px;
     border-radius: 8px;
     color: alpha(@accent, 0.4);
     background: transparent;
@@ -153,8 +177,7 @@ tooltip {
 #pulseaudio,
 #custom-idle-inhibitor,
 #tray {
-    padding-left: 4px;
-    padding-right: 4px;
+    padding: 2px 4px;
     color: @foreground;
 }
 
@@ -172,6 +195,7 @@ tooltip {
     padding-right: 8px;
     border-radius: 6px;
     color: alpha(@accent, 0.4);
+    min-width: 24px;
 }
 
 #workspaces button:hover, 

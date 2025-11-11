@@ -16,3 +16,7 @@ CURRENT_PLAN.md
 # Test infrastructure
 tests/
 .github/
+
+# Python cache
+**/__pycache__/
+**/*.pyc
