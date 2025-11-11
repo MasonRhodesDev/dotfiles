@@ -224,21 +224,6 @@ main() {
         "setup")
             log "Setting up chezmoi daemon"
             
-            # Run git installers first
-            log "Running git installers..."
-            local git_installers_dir="{{ .chezmoi.homeDir }}/.local/share/chezmoi/git_installers"
-            if [ -d "$git_installers_dir" ]; then
-                for installer_dir in "$git_installers_dir"/*; do
-                    if [ -d "$installer_dir" ] && [ -f "$installer_dir/install.sh" ]; then
-                        local installer_name=$(basename "$installer_dir")
-                        log "Running installer: $installer_name"
-                        cd "$installer_dir"
-                        chmod +x install.sh
-                        ./install.sh 2>&1 | while read line; do log "[$installer_name] $line"; done
-                    fi
-                done
-            fi
-            
             setup_triggers
             # Enable systemd services
             systemctl --user enable chezmoi-daemon.timer

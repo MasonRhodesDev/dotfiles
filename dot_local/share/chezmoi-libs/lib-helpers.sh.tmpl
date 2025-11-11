@@ -1,0 +1,841 @@
+#!/bin/bash
+# Core helper functions for chezmoi installation scripts
+# Migrated and enhanced from old __helpers.sh.tmpl
+
+PACKAGE_REGISTRY="{{ .chezmoi.sourceDir }}/packages.toml"
+PROFILE_TYPE="{{ .profile.type }}"
+
+# ============================================================================
+# Distribution Detection
+# ============================================================================
+
+get_distro() {
+    if command -v dnf &>/dev/null; then
+        echo "fedora"
+    elif command -v pacman &>/dev/null; then
+        echo "arch"
+    else
+        log_error "Unsupported distribution"
+        return 1
+    fi
+}
+
+get_distro_version() {
+    if [ -f /etc/fedora-release ]; then
+        grep -oP '(?<=release )[0-9]+' /etc/fedora-release
+    elif [ -f /etc/os-release ]; then
+        grep -oP '(?<=VERSION_ID=")[^"]+' /etc/os-release
+    fi
+}
+
+get_package_manager() {
+    local distro=$(get_distro)
+    case $distro in
+        "fedora") echo "dnf" ;;
+        "arch") echo "pacman" ;;
+        *) return 1 ;;
+    esac
+}
+
+# ============================================================================
+# Prerequisite Validation
+# ============================================================================
+
+ensure_yq() {
+    if ! command -v yq &>/dev/null; then
+        log_info "Installing yq for package registry parsing..."
+        local distro=$(get_distro)
+
+        # Try package manager first
+        if [ "$distro" = "arch" ]; then
+            # Arch has yq in official repos
+            if sudo pacman -S --needed --noconfirm yq 2>/dev/null; then
+                return 0
+            fi
+        fi
+
+        # Fallback to GitHub releases (works for Fedora and if Arch fails)
+        log_info "Installing yq from GitHub releases..."
+        local arch=$(uname -m)
+        if [ "$arch" = "x86_64" ]; then
+            arch="amd64"
+        elif [ "$arch" = "aarch64" ]; then
+            arch="arm64"
+        fi
+
+        local yq_url="https://github.com/mikefarah/yq/releases/latest/download/yq_linux_${arch}"
+        local install_dir="$HOME/.local/bin"
+
+        mkdir -p "$install_dir"
+        if curl -fsSL "$yq_url" -o "$install_dir/yq"; then
+            chmod +x "$install_dir/yq"
+            export PATH="$install_dir:$PATH"
+            log_info "yq installed to $install_dir/yq"
+        else
+            log_error "Failed to install yq"
+            return 1
+        fi
+    fi
+}
+
+check_network() {
+    if ! ping -c 1 -W 2 8.8.8.8 &>/dev/null; then
+        log_warn "Network connectivity check failed - continuing anyway"
+        return 0
+    fi
+    return 0
+}
+
+check_disk_space() {
+    local required_kb=${1:-5000000}  # Default 5GB
+    local available_kb=$(df "{{ .chezmoi.homeDir }}" | tail -1 | awk '{print $4}')
+
+    if [ "$available_kb" -lt "$required_kb" ]; then
+        log_error "Insufficient disk space: ${available_kb}KB available, ${required_kb}KB required"
+        return 1
+    fi
+    return 0
+}
+
+check_sudo_available() {
+    if ! sudo -n true 2>/dev/null; then
+        log_warn "sudo requires password. You may be prompted."
+    fi
+    return 0
+}
+
+validate_prerequisites() {
+    local level="$1"
+
+    case $level in
+        "system")
+            check_sudo_available || return 1
+            check_network || return 1
+            check_disk_space 5000000 || return 1
+            ensure_yq || return 1
+            ;;
+        "user")
+            check_network || return 1
+            check_disk_space 2000000 || return 1
+            ;;
+    esac
+
+    return 0
+}
+
+# ============================================================================
+# Package Registry Operations
+# ============================================================================
+
+get_category_section() {
+    local category="$1"
+
+    # If category already has section prefix (e.g., "common.build_tools"), extract it
+    if [[ "$category" =~ ^(common|work|personal)\. ]]; then
+        echo "${category%%.*}"
+        return 0
+    fi
+
+    ensure_yq
+
+    # Check which section contains this category
+    if yq eval ".common | has(\"$category\")" "$PACKAGE_REGISTRY" 2>/dev/null | grep -q "true"; then
+        echo "common"
+    elif yq eval ".work | has(\"$category\")" "$PACKAGE_REGISTRY" 2>/dev/null | grep -q "true"; then
+        echo "work"
+    elif yq eval ".personal | has(\"$category\")" "$PACKAGE_REGISTRY" 2>/dev/null | grep -q "true"; then
+        echo "personal"
+    else
+        echo "unknown"
+    fi
+}
+
+should_install_category() {
+    local category="$1"
+    local section=$(get_category_section "$category")
+
+    case $section in
+        "common")
+            return 0
+            ;;
+        "work")
+            [ "$PROFILE_TYPE" = "work" ]
+            return $?
+            ;;
+        "personal")
+            [ "$PROFILE_TYPE" = "personal" ]
+            return $?
+            ;;
+        *)
+            log_warn "Unknown section for category $category"
+            return 1
+            ;;
+    esac
+}
+
+parse_packages() {
+    local category="$1"
+    local distro="$2"
+    local package_type="${3:-packages}"
+    local section=$(get_category_section "$category")
+
+    ensure_yq
+
+    yq eval ".${section}.${category}.${distro}.${package_type} | .[]" "$PACKAGE_REGISTRY" 2>/dev/null
+}
+
+get_packages() {
+    local category="$1"
+    local distro=$(get_distro)
+
+    parse_packages "$category" "$distro" "packages"
+}
+
+is_optional() {
+    local category="$1"
+    local section=$(get_category_section "$category")
+
+    ensure_yq
+
+    local optional=$(yq eval ".${section}.${category}.optional" "$PACKAGE_REGISTRY" 2>/dev/null)
+    [ "$optional" = "true" ]
+}
+
+is_optional_enabled() {
+    local category="$1"
+    {{ range .profile.optional_packages }}
+    if [ "$category" = "{{ . }}" ]; then
+        return 0
+    fi
+    {{ end }}
+    return 1
+}
+
+check_min_version() {
+    local category="$1"
+    local section=$(get_category_section "$category")
+    local distro=$(get_distro)
+    local current_version=$(get_distro_version)
+
+    ensure_yq
+
+    local min_version=$(yq eval ".${section}.${category}.${distro}.min_version" "$PACKAGE_REGISTRY" 2>/dev/null)
+
+    if [ "$min_version" != "null" ] && [ -n "$min_version" ]; then
+        if [ "$current_version" -lt "$min_version" ]; then
+            log_warn "$category requires $distro $min_version+, you have $current_version"
+            return 1
+        fi
+    fi
+    return 0
+}
+
+get_category_checksum() {
+    local category="$1"
+    local section=$(get_category_section "$category")
+    local distro=$(get_distro)
+
+    ensure_yq
+
+    # Hash the category definition from packages.toml
+    yq eval ".${section}.${category}.${distro}" "$PACKAGE_REGISTRY" 2>/dev/null | sha256sum | cut -d' ' -f1
+}
+
+# ============================================================================
+# Package Installation (with collision detection)
+# ============================================================================
+
+check_package_installed() {
+    local package="$1"
+    local distro=$(get_distro)
+
+    case $distro in
+        "fedora")
+            rpm -q "$package" &>/dev/null
+            ;;
+        "arch")
+            pacman -Q "$package" &>/dev/null
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+filter_installed_packages() {
+    local packages="$1"
+    local to_install=""
+
+    for pkg in $packages; do
+        if ! check_package_installed "$pkg"; then
+            to_install="$to_install $pkg"
+        fi
+    done
+
+    echo "$to_install" | xargs
+}
+
+retry_with_backoff() {
+    local max_attempts=3
+    local attempt=1
+    local delay=2
+
+    while [ $attempt -le $max_attempts ]; do
+        if "$@"; then
+            return 0
+        fi
+
+        log_warn "Attempt $attempt/$max_attempts failed: $*"
+
+        if [ $attempt -lt $max_attempts ]; then
+            log_info "Retrying in ${delay}s..."
+            sleep $delay
+            delay=$((delay * 2))  # Exponential backoff
+        fi
+
+        attempt=$((attempt + 1))
+    done
+
+    return 1
+}
+
+install_packages() {
+    local distro=$(get_distro)
+    local fedora_packages="$1"
+    local arch_packages="$2"
+
+    case $distro in
+        "fedora")
+            if [ -n "$fedora_packages" ]; then
+                local to_install=$(filter_installed_packages "$fedora_packages")
+                if [ -n "$to_install" ]; then
+                    log_info "Installing: $to_install"
+                    retry_with_backoff sudo dnf install -y $to_install || return 1
+                else
+                    log_info "All packages already installed"
+                fi
+            fi
+            ;;
+        "arch")
+            if [ -n "$arch_packages" ]; then
+                log_info "Installing with pacman (uses --needed flag for change detection)"
+                retry_with_backoff sudo pacman -S --needed --noconfirm $arch_packages || return 1
+            fi
+            ;;
+        *)
+            log_error "Unsupported distribution"
+            return 1
+            ;;
+    esac
+
+    # Register packages in state DB
+    for pkg in $fedora_packages $arch_packages; do
+        register_package "$pkg" "$(get_package_manager)" "$category" "unknown"
+    done
+
+    return 0
+}
+
+# ============================================================================
+# AUR Packages (Arch Linux)
+# ============================================================================
+
+check_aur_package_installed() {
+    local package="$1"
+    yay -Q "$package" &>/dev/null || pacman -Q "$package" &>/dev/null
+}
+
+install_aur_packages() {
+    local packages="$1"
+
+    if [ "$(get_distro)" != "arch" ]; then
+        log_error "AUR packages only available on Arch Linux"
+        return 1
+    fi
+
+    if ! command -v yay &>/dev/null; then
+        log_info "Installing yay AUR helper..."
+        if ! retry_with_backoff git clone https://aur.archlinux.org/yay.git /tmp/yay; then
+            log_error "Failed to clone yay repository"
+            return 1
+        fi
+        cd /tmp/yay
+        makepkg -si --noconfirm || {
+            log_error "Failed to build yay"
+            cd -
+            rm -rf /tmp/yay
+            return 1
+        }
+        cd -
+        rm -rf /tmp/yay
+    fi
+
+    if [ -n "$packages" ]; then
+        local to_install=""
+        for pkg in $packages; do
+            if ! check_aur_package_installed "$pkg"; then
+                to_install="$to_install $pkg"
+            fi
+        done
+
+        if [ -n "$to_install" ]; then
+            log_info "Installing AUR packages: $to_install"
+            retry_with_backoff yay -S --needed --noconfirm $to_install || return 1
+
+            # Register AUR packages
+            for pkg in $to_install; do
+                register_package "$pkg" "aur" "$category" "unknown"
+            done
+        else
+            log_info "All AUR packages already installed"
+        fi
+    fi
+
+    return 0
+}
+
+# ============================================================================
+# Flatpak Packages
+# ============================================================================
+
+check_flatpak_installed() {
+    local package="$1"
+    flatpak list --app 2>/dev/null | grep -q "^$package"
+}
+
+install_flatpak_packages() {
+    local packages="$1"
+
+    if ! command -v flatpak &>/dev/null; then
+        log_info "Installing flatpak..."
+        if command -v dnf &>/dev/null; then
+            sudo dnf install -y flatpak
+        elif command -v pacman &>/dev/null; then
+            sudo pacman -S --needed --noconfirm flatpak
+        fi
+
+        flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+    fi
+
+    local to_install=""
+    for pkg in $packages; do
+        if ! check_flatpak_installed "$pkg"; then
+            to_install="$to_install $pkg"
+        fi
+    done
+
+    if [ -n "$to_install" ]; then
+        log_info "Installing flatpak packages: $to_install"
+        echo "$to_install" | xargs -n1 flatpak install -y flathub || return 1
+
+        # Register flatpak packages
+        for pkg in $to_install; do
+            register_package "$pkg" "flatpak" "$category" "unknown"
+        done
+    else
+        log_info "All flatpak packages already installed"
+    fi
+
+    return 0
+}
+
+# ============================================================================
+# Cargo Packages
+# ============================================================================
+
+check_cargo_package_installed() {
+    local package="$1"
+    cargo install --list 2>/dev/null | grep -q "^$package "
+}
+
+install_cargo_packages() {
+    local category="$1"
+    local section=$(get_category_section "$category")
+    local distro=$(get_distro)
+
+    ensure_yq
+
+    local cargo_packages=$(yq eval ".${section}.${category}.${distro}.cargo_packages | .[]" "$PACKAGE_REGISTRY" 2>/dev/null)
+
+    if [ -n "$cargo_packages" ] && [ "$cargo_packages" != "null" ]; then
+        if ! command -v cargo &>/dev/null; then
+            log_info "Cargo not found, installing..."
+            if [ "$distro" = "fedora" ]; then
+                sudo dnf install -y cargo
+            elif [ "$distro" = "arch" ]; then
+                sudo pacman -S --needed --noconfirm rust
+            fi
+        fi
+
+        local to_install=""
+        for pkg in $cargo_packages; do
+            if ! check_cargo_package_installed "$pkg"; then
+                to_install="$to_install $pkg"
+            fi
+        done
+
+        if [ -n "$to_install" ]; then
+            log_info "Installing cargo packages: $to_install"
+            retry_with_backoff cargo install $to_install || return 1
+
+            # Register cargo packages
+            for pkg in $to_install; do
+                register_package "$pkg" "cargo" "$category" "unknown"
+            done
+        else
+            log_info "All cargo packages already installed"
+        fi
+    fi
+
+    return 0
+}
+
+# ============================================================================
+# Repository Management
+# ============================================================================
+
+enable_repos_from_registry() {
+    local category="$1"
+    local section=$(get_category_section "$category")
+    local distro=$(get_distro)
+
+    ensure_yq
+
+    local repos=$(yq eval ".${section}.${category}.${distro}.repos | .[]" "$PACKAGE_REGISTRY" 2>/dev/null)
+
+    if [ -z "$repos" ] || [ "$repos" = "null" ]; then
+        return 0
+    fi
+
+    if [ "$distro" = "fedora" ]; then
+        while IFS= read -r repo; do
+            if [ -z "$repo" ] || [ "$repo" = "null" ]; then
+                continue
+            fi
+
+            # Check for repo collision
+            check_repo_collision "$repo"
+            local collision_status=$?
+            if [ $collision_status -eq 2 ]; then
+                log_info "Repository already enabled, skipping: $repo"
+                continue
+            fi
+
+            if [[ "$repo" =~ ^copr: ]]; then
+                local copr_repo="${repo#copr:}"
+                log_info "Enabling COPR repository: $copr_repo"
+                retry_with_backoff sudo dnf copr enable -y "$copr_repo" || log_warn "Failed to enable COPR: $copr_repo"
+            elif [[ "$repo" =~ ^https?:// ]]; then
+                log_info "Adding repository: $repo"
+                if [[ "$repo" =~ \.repo$ ]]; then
+                    retry_with_backoff sudo dnf config-manager --add-repo "$repo" || log_warn "Failed to add repo: $repo"
+                else
+                    local repo_keys=$(yq eval ".${section}.${category}.${distro}.repo_keys | .[]" "$PACKAGE_REGISTRY" 2>/dev/null)
+
+                    if [ -n "$repo_keys" ] && [ "$repo_keys" != "null" ]; then
+                        while IFS= read -r key; do
+                            if [ -n "$key" ] && [ "$key" != "null" ]; then
+                                log_info "Importing GPG key: $key"
+                                retry_with_backoff sudo rpm --import "$key" || log_warn "Failed to import key: $key"
+                            fi
+                        done <<< "$repo_keys"
+                    fi
+
+                    if [[ "$repo" == *"mongodb"* ]]; then
+                        sudo tee "/etc/yum.repos.d/mongodb-org.repo" > /dev/null <<EOF
+[mongodb-org-8.0]
+name=MongoDB Repository
+baseurl=$repo
+gpgcheck=1
+enabled=1
+gpgkey=https://pgp.mongodb.com/server-8.0.asc
+EOF
+                    else
+                        retry_with_backoff sudo dnf config-manager --add-repo "$repo" || log_warn "Failed to add repo: $repo"
+                    fi
+                fi
+            fi
+        done <<< "$repos"
+
+        # Handle repo priorities
+        local priorities=$(yq eval ".${section}.${category}.${distro}.repo_priorities" "$PACKAGE_REGISTRY" 2>/dev/null)
+        if [ -n "$priorities" ] && [ "$priorities" != "null" ]; then
+            local repo_names=$(yq eval ".${section}.${category}.${distro}.repo_priorities | keys | .[]" "$PACKAGE_REGISTRY" 2>/dev/null)
+            while IFS= read -r repo_name; do
+                if [ -z "$repo_name" ] || [ "$repo_name" = "null" ]; then
+                    continue
+                fi
+                local priority=$(yq eval ".${section}.${category}.${distro}.repo_priorities.\"${repo_name}\"" "$PACKAGE_REGISTRY" 2>/dev/null)
+                local repo_file="/etc/yum.repos.d/_copr:copr.fedorainfracloud.org:$(echo "$repo_name" | sed 's/copr://').repo"
+                if [ -f "$repo_file" ]; then
+                    if ! grep -q "priority=" "$repo_file"; then
+                        log_info "Setting priority $priority for $repo_name"
+                        sudo sh -c "echo \"priority=$priority\" >> \"$repo_file\""
+                    fi
+                fi
+            done <<< "$repo_names"
+        fi
+    fi
+
+    return 0
+}
+
+install_custom_packages() {
+    local category="$1"
+    local section=$(get_category_section "$category")
+    local distro=$(get_distro)
+
+    ensure_yq
+
+    local custom_packages=$(yq eval ".${section}.${category}.${distro}.custom_packages | .[]" "$PACKAGE_REGISTRY" 2>/dev/null)
+
+    if [ -n "$custom_packages" ] && [ "$custom_packages" != "null" ]; then
+        log_info "Installing custom packages: $custom_packages"
+        if [ "$distro" = "fedora" ]; then
+            retry_with_backoff sudo dnf install -y $custom_packages || return 1
+        elif [ "$distro" = "arch" ]; then
+            retry_with_backoff sudo pacman -S --needed --noconfirm $custom_packages || return 1
+        fi
+    fi
+
+    return 0
+}
+
+# ============================================================================
+# Service Management
+# ============================================================================
+
+check_service_enabled() {
+    local service="$1"
+    systemctl is-enabled "$service" &>/dev/null
+}
+
+check_service_active() {
+    local service="$1"
+    systemctl is-active "$service" &>/dev/null
+}
+
+check_service_ready() {
+    local service="$1"
+    local timeout="${2:-30}"
+
+    log_info "Waiting for $service to be ready (timeout: ${timeout}s)..."
+
+    for i in $(seq 1 $timeout); do
+        if systemctl is-active "$service" &>/dev/null; then
+            log_info "$service is ready"
+            return 0
+        fi
+        sleep 1
+    done
+
+    log_error "$service failed to start within ${timeout}s"
+    return 1
+}
+
+enable_services() {
+    local services="$1"
+
+    for service in $services; do
+        if ! check_service_enabled "$service"; then
+            log_info "Enabling service: $service"
+            sudo systemctl enable "$service"
+        else
+            log_debug "Service already enabled: $service"
+        fi
+
+        if ! check_service_active "$service"; then
+            log_info "Starting service: $service"
+            sudo systemctl start "$service" || log_warn "Failed to start $service"
+        else
+            log_debug "Service already running: $service"
+        fi
+    done
+}
+
+# ============================================================================
+# User Group Management
+# ============================================================================
+
+check_user_in_group() {
+    local group="$1"
+    groups "$USER" | grep -q "\b$group\b"
+}
+
+add_user_to_groups() {
+    local groups="$1"
+
+    for group in $groups; do
+        sudo groupadd -f "$group"
+
+        if ! check_user_in_group "$group"; then
+            log_info "Adding $USER to group: $group"
+            sudo usermod -aG "$group" "$USER"
+        else
+            log_debug "User already in group: $group"
+        fi
+    done
+}
+
+# ============================================================================
+# Post-Install Scripts
+# ============================================================================
+
+run_post_install() {
+    local category="$1"
+    local scripts="$2"
+
+    for script in $scripts; do
+        case $script in
+            "init_replica_set")
+                if command -v mongosh &>/dev/null; then
+                    if ! mongosh --quiet --eval "rs.status()" &>/dev/null; then
+                        log_info "Initializing MongoDB replica set..."
+                        mongosh --eval "rs.initiate({_id: 'rs0', members: [{_id: 0, host: 'localhost:27017'}]})" || \
+                            log_warn "Failed to initialize replica set"
+                    else
+                        log_info "MongoDB replica set already initialized"
+                    fi
+                fi
+                ;;
+            *)
+                log_warn "Unknown post-install script: $script"
+                ;;
+        esac
+    done
+}
+
+# ============================================================================
+# Main Installation Function (with collision & state tracking)
+# ============================================================================
+
+install_packages_from_registry() {
+    local category="$1"
+    local install_level="$2"
+    local start_time=$(date +%s)
+
+    # Check if already installed (state tracking)
+    init_state_db
+    local checksum=$(get_category_checksum "$category")
+    if ! needs_reinstall "$install_level" "$category" "$checksum"; then
+        log_category_skip "$category" "already installed (unchanged)"
+        record_category_skip "$install_level" "$category" "unchanged"
+        return 0
+    fi
+
+    # Profile check
+    if ! should_install_category "$category"; then
+        local section=$(get_category_section "$category")
+        log_category_skip "$category" "profile mismatch (in $section, profile is $PROFILE_TYPE)"
+        record_category_skip "$install_level" "$category" "profile mismatch"
+        return 0
+    fi
+
+    # Optional check
+    if is_optional "$category" && ! is_optional_enabled "$category"; then
+        log_category_skip "$category" "optional and not enabled"
+        record_category_skip "$install_level" "$category" "optional disabled"
+        return 0
+    fi
+
+    # Version check
+    if ! check_min_version "$category"; then
+        log_category_skip "$category" "version requirements not met"
+        record_category_skip "$install_level" "$category" "version too old"
+        return 1
+    fi
+
+    # Collision detection
+    if ! check_category_collisions "$category" "$install_level"; then
+        log_category_failure "$category" "collision detected"
+        record_category_failure "$install_level" "$category" "collision detected" 0
+        return 1
+    fi
+
+    # Record start
+    record_category_start "$install_level" "$category"
+    log_category_start "$category"
+
+    local section=$(get_category_section "$category")
+    local distro=$(get_distro)
+
+    # Enable repos
+    if ! enable_repos_from_registry "$category"; then
+        log_category_failure "$category" "repo enable failed"
+        record_category_failure "$install_level" "$category" "repo enable failed" 0
+        return 1
+    fi
+
+    # Install packages
+    local packages=$(get_packages "$category")
+    if [ -n "$packages" ] && [ "$packages" != "null" ]; then
+        if ! install_packages "$packages" "$packages"; then
+            log_category_failure "$category" "package install failed"
+            record_category_failure "$install_level" "$category" "package install failed" 0
+            return 1
+        fi
+    fi
+
+    # Install custom packages
+    if ! install_custom_packages "$category"; then
+        log_category_failure "$category" "custom package install failed"
+        record_category_failure "$install_level" "$category" "custom package install failed" 0
+        return 1
+    fi
+
+    # Install cargo packages
+    if ! install_cargo_packages "$category"; then
+        log_category_failure "$category" "cargo package install failed"
+        record_category_failure "$install_level" "$category" "cargo package install failed" 0
+        return 1
+    fi
+
+    # Install AUR packages (Arch only)
+    if [ "$distro" = "arch" ]; then
+        local aur_packages=$(parse_packages "$category" "$distro" "aur_packages")
+        if [ -n "$aur_packages" ] && [ "$aur_packages" != "null" ]; then
+            if ! install_aur_packages "$aur_packages"; then
+                log_category_failure "$category" "AUR package install failed"
+                record_category_failure "$install_level" "$category" "AUR install failed" 0
+                return 1
+            fi
+        fi
+    fi
+
+    # Install flatpak packages
+    local flatpak_packages=$(parse_packages "$category" "$distro" "flatpak")
+    if [ -n "$flatpak_packages" ] && [ "$flatpak_packages" != "null" ]; then
+        if ! install_flatpak_packages "$flatpak_packages"; then
+            log_category_failure "$category" "flatpak install failed"
+            record_category_failure "$install_level" "$category" "flatpak install failed" 0
+            return 1
+        fi
+    fi
+
+    # Enable services (but don't fail if service start fails)
+    local services=$(parse_packages "$category" "$distro" "services")
+    if [ -n "$services" ] && [ "$services" != "null" ]; then
+        enable_services "$services"
+    fi
+
+    # Add user to groups
+    local groups=$(parse_packages "$category" "$distro" "user_groups")
+    if [ -n "$groups" ] && [ "$groups" != "null" ]; then
+        add_user_to_groups "$groups"
+    fi
+
+    # Run post-install scripts
+    local post_install=$(parse_packages "$category" "$distro" "post_install")
+    if [ -n "$post_install" ] && [ "$post_install" != "null" ]; then
+        run_post_install "$category" "$post_install"
+    fi
+
+    # Calculate duration and record success
+    local end_time=$(date +%s)
+    local duration=$((end_time - start_time))
+
+    log_category_success "$category" "$duration"
+    record_category_success "$install_level" "$category" "$packages" "$checksum"
+
+    return 0
+}

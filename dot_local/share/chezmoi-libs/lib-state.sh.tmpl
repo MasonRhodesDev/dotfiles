@@ -1,0 +1,268 @@
+#!/bin/bash
+# State management library for chezmoi installation scripts
+# Handles state database, locking, and package tracking
+
+STATE_DIR="{{ .chezmoi.homeDir }}/.local/state/chezmoi-installs"
+STATE_DB="$STATE_DIR/state.db.json"
+LOCK_FILE="$STATE_DIR/install.lock"
+
+# Initialize state database
+init_state_db() {
+    mkdir -p "$STATE_DIR"
+
+    if [ ! -f "$STATE_DB" ]; then
+        log_debug "Creating new state database"
+        cat > "$STATE_DB" <<EOF
+{
+  "schema_version": "1.0",
+  "metadata": {
+    "last_run": "$(date -Iseconds)",
+    "hostname": "{{ .chezmoi.hostname }}",
+    "profile": "{{ .profile.type }}",
+    "distro": {
+      "id": "{{ .chezmoi.osRelease.id }}",
+      "version": "{{ if hasKey .chezmoi.osRelease "versionID" }}{{ .chezmoi.osRelease.versionID }}{{ else }}rolling{{ end }}",
+      "arch": "{{ .chezmoi.arch }}"
+    }
+  },
+  "phases": {},
+  "package_registry": {},
+  "known_issues": [],
+  "migration_applied": false
+}
+EOF
+        log_info "State database initialized"
+    else
+        log_debug "State database exists"
+        # Update last_run
+        local tmp_file="${STATE_DB}.tmp"
+        jq --arg timestamp "$(date -Iseconds)" \
+           '.metadata.last_run = $timestamp' \
+           "$STATE_DB" > "$tmp_file" && mv "$tmp_file" "$STATE_DB"
+    fi
+}
+
+# Lock file management
+acquire_lock() {
+    local max_wait=300  # 5 minutes
+    local waited=0
+
+    while [ -f "$LOCK_FILE" ]; do
+        local lock_pid=$(cat "$LOCK_FILE" 2>/dev/null || echo "")
+
+        if [ -n "$lock_pid" ]; then
+            # Check if process still running
+            if ! ps -p "$lock_pid" &>/dev/null; then
+                log_warn "Stale lock file detected (PID $lock_pid not running), removing"
+                rm -f "$LOCK_FILE"
+                break
+            fi
+        fi
+
+        if [ $waited -ge $max_wait ]; then
+            log_error "Another installation is in progress (PID: $lock_pid)"
+            return 1
+        fi
+
+        log_info "Waiting for another installation to complete..."
+        sleep 5
+        waited=$((waited + 5))
+    done
+
+    echo $$ > "$LOCK_FILE"
+    log_debug "Lock acquired (PID $$)"
+
+    # Setup trap to remove lock on exit
+    trap "rm -f '$LOCK_FILE'" EXIT INT TERM
+
+    return 0
+}
+
+release_lock() {
+    if [ -f "$LOCK_FILE" ]; then
+        rm -f "$LOCK_FILE"
+        log_debug "Lock released"
+    fi
+}
+
+# State queries
+needs_reinstall() {
+    local phase="$1"
+    local category="$2"
+    local current_checksum="$3"
+
+    if [ ! -f "$STATE_DB" ]; then
+        return 0  # Needs install
+    fi
+
+    local last_status=$(jq -r ".phases.\"$phase\".categories.\"$category\".status // \"none\"" "$STATE_DB" 2>/dev/null)
+    local last_checksum=$(jq -r ".phases.\"$phase\".categories.\"$category\".checksum // \"\"" "$STATE_DB" 2>/dev/null)
+
+    if [ "$last_status" = "success" ] && [ "$last_checksum" = "$current_checksum" ]; then
+        return 1  # Already installed, same content
+    fi
+
+    return 0  # Needs install/update
+}
+
+get_category_status() {
+    local phase="$1"
+    local category="$2"
+
+    if [ ! -f "$STATE_DB" ]; then
+        echo "none"
+        return
+    fi
+
+    jq -r ".phases.\"$phase\".categories.\"$category\".status // \"none\"" "$STATE_DB" 2>/dev/null
+}
+
+# State updates
+record_category_start() {
+    local phase="$1"
+    local category="$2"
+    local tmp_file="${STATE_DB}.tmp"
+
+    jq --arg phase "$phase" \
+       --arg category "$category" \
+       --arg timestamp "$(date -Iseconds)" \
+       '.phases[$phase].categories[$category] = {
+           "status": "in_progress",
+           "started": $timestamp
+       }' "$STATE_DB" > "$tmp_file" && mv "$tmp_file" "$STATE_DB"
+
+    log_debug "Recorded start: $phase/$category"
+}
+
+record_category_success() {
+    local phase="$1"
+    local category="$2"
+    local packages="$3"
+    local checksum="$4"
+    local tmp_file="${STATE_DB}.tmp"
+
+    # Convert space-separated packages to JSON array
+    local pkg_array="[]"
+    if [ -n "$packages" ]; then
+        pkg_array=$(echo "$packages" | tr ' ' '\n' | jq -R . | jq -s .)
+    fi
+
+    jq --arg phase "$phase" \
+       --arg category "$category" \
+       --arg timestamp "$(date -Iseconds)" \
+       --argjson packages "$pkg_array" \
+       --arg checksum "$checksum" \
+       '.phases[$phase].categories[$category] = {
+           "status": "success",
+           "completed": $timestamp,
+           "packages_installed": $packages,
+           "checksum": $checksum
+       }' "$STATE_DB" > "$tmp_file" && mv "$tmp_file" "$STATE_DB"
+
+    log_debug "Recorded success: $phase/$category"
+}
+
+record_category_failure() {
+    local phase="$1"
+    local category="$2"
+    local error="$3"
+    local retry_count="${4:-0}"
+    local tmp_file="${STATE_DB}.tmp"
+
+    jq --arg phase "$phase" \
+       --arg category "$category" \
+       --arg timestamp "$(date -Iseconds)" \
+       --arg error "$error" \
+       --argjson retry "$retry_count" \
+       '.phases[$phase].categories[$category] = {
+           "status": "failed",
+           "attempted_at": $timestamp,
+           "error": $error,
+           "retry_count": $retry
+       }' "$STATE_DB" > "$tmp_file" && mv "$tmp_file" "$STATE_DB"
+
+    # Also add to known_issues
+    jq --arg category "$category" \
+       --arg error "$error" \
+       --arg timestamp "$(date -Iseconds)" \
+       --argjson retry "$retry_count" \
+       '.known_issues += [{
+           "category": $category,
+           "error": $error,
+           "timestamp": $timestamp,
+           "retry_count": $retry
+       }]' "$STATE_DB" > "$tmp_file" && mv "$tmp_file" "$STATE_DB"
+
+    log_debug "Recorded failure: $phase/$category"
+}
+
+record_category_skip() {
+    local phase="$1"
+    local category="$2"
+    local reason="$3"
+    local tmp_file="${STATE_DB}.tmp"
+
+    jq --arg phase "$phase" \
+       --arg category "$category" \
+       --arg timestamp "$(date -Iseconds)" \
+       --arg reason "$reason" \
+       '.phases[$phase].categories[$category] = {
+           "status": "skipped",
+           "skipped_at": $timestamp,
+           "reason": $reason
+       }' "$STATE_DB" > "$tmp_file" && mv "$tmp_file" "$STATE_DB"
+
+    log_debug "Recorded skip: $phase/$category - $reason"
+}
+
+# Package registry
+register_package() {
+    local name="$1"
+    local source="$2"
+    local category="$3"
+    local version="${4:-unknown}"
+    local tmp_file="${STATE_DB}.tmp"
+
+    jq --arg name "$name" \
+       --arg source "$source" \
+       --arg category "$category" \
+       --arg version "$version" \
+       --arg timestamp "$(date -Iseconds)" \
+       '.package_registry[$name] = {
+           "source": $source,
+           "category": $category,
+           "version": $version,
+           "installed_at": $timestamp
+       }' "$STATE_DB" > "$tmp_file" && mv "$tmp_file" "$STATE_DB"
+
+    log_debug "Registered package: $name ($source)"
+}
+
+get_package_source() {
+    local name="$1"
+
+    if [ ! -f "$STATE_DB" ]; then
+        echo "unknown"
+        return
+    fi
+
+    jq -r ".package_registry.\"$name\".source // \"unknown\"" "$STATE_DB" 2>/dev/null
+}
+
+# Migration support
+needs_migration() {
+    if [ ! -f "$STATE_DB" ]; then
+        return 0  # Needs migration
+    fi
+
+    local migrated=$(jq -r '.metadata.migration_applied // false' "$STATE_DB" 2>/dev/null)
+    [ "$migrated" = "false" ]
+}
+
+mark_migration_complete() {
+    local tmp_file="${STATE_DB}.tmp"
+
+    jq '.metadata.migration_applied = true' "$STATE_DB" > "$tmp_file" && mv "$tmp_file" "$STATE_DB"
+
+    log_info "Migration marked complete"
+}

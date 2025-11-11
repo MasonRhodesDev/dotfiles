@@ -1,0 +1,6 @@
+# Git config for chezmoi source directory
+# This overrides the global SSH->HTTPS rewrite to use HTTPS directly
+# Ensures git clones work in test environments without SSH keys
+
+[url "https://github.com/"]
+    insteadOf = git@github.com:
