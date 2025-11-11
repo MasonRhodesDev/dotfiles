@@ -19,12 +19,6 @@
 # Profile configuration
 [data.profile]
     type = {{ if eq .chezmoi.hostname "mason-work" }}"work"{{ else }}"personal"{{ end }}
-    
-    # Optional package groups to install (can be customized per system)
-    optional_packages = [
-        "python_dev",
-        {{ if eq .chezmoi.hostname "mason-work" }}"java_dev", "pycharm", "aws_tools"{{ end }}
-    ]
 
 # System tracking - updated on each chezmoi apply
 [data.system]

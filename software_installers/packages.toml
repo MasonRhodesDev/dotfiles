@@ -13,7 +13,7 @@ description = "Build tools and compilers"
 install_level = "system"
 priority = 1
   [common.build_tools.fedora]
-  packages = ["make", "gcc", "gcc-c++", "automake", "autoconf", "pkg-config"]
+  packages = ["make", "gcc", "gcc-c++", "automake", "autoconf", "pkg-config", "dnf-plugins-core"]
 
   [common.build_tools.arch]
   packages = ["base-devel"]
@@ -47,8 +47,9 @@ description = "Shell prompt and environment tools"
 install_level = "user"
 priority = 3
   [common.shell_tools.fedora]
-  packages = ["cargo"]
-  cargo_packages = ["oh-my-posh"]
+  packages = []
+  install_command = "curl -s https://ohmyposh.dev/install.sh | bash -s"
+  verify_command = "oh-my-posh --version"
 
   [common.shell_tools.arch]
   aur_packages = ["oh-my-posh-bin"]
@@ -60,7 +61,9 @@ priority = 4
 depends_on = ["core_utils"]
   [common.node_tooling.fedora]
   packages = ["cargo"]
-  cargo_packages = ["fnm", "bun"]
+  cargo_packages = ["fnm"]
+  install_command = "curl -fsSL https://bun.sh/install | BUN_INSTALL_SKIP_SHELL_UPDATE=1 bash"
+  verify_command = "bun --version"
 
   [common.node_tooling.arch]
   aur_packages = ["fnm-bin", "bun-bin"]
@@ -127,38 +130,6 @@ description = "Astal library for widget toolkits"
   [common.astal.arch]
   aur_packages = ["libastal-meta"]
 
-[common.marble_shell]
-install_level = "system"
-priority = 9
-description = "Marble Shell desktop environment"
-depends_on = ["astal", "node_tooling"]
-optional = true
-  [common.marble_shell.fedora]
-  packages = ["git", "gjs", "gtk4", "libadwaita", "gtk4-devel", "gtk4-layer-shell-devel", "libadwaita-devel", "meson", "ninja-build", "gobject-introspection-devel", "esbuild"]
-
-  [[common.marble_shell.fedora.git_repos]]
-  url = "https://github.com/marble-shell/shell.git"
-  install_dir = "~/git_installers/marble-shell/shell"
-  update_strategy = "pull"
-  requires_sponsors_access = true
-  build_steps = [
-    "pnpm install",
-    "rm -rf build && meson setup build && sudo meson install -C build"
-  ]
-
-  [common.marble_shell.arch]
-  aur_packages = ["gjs", "gtk4", "gtk4-layer-shell", "libadwaita", "pnpm", "esbuild"]
-
-  [[common.marble_shell.arch.git_repos]]
-  url = "https://github.com/marble-shell/shell.git"
-  install_dir = "~/git_installers/marble-shell/shell"
-  update_strategy = "pull"
-  requires_sponsors_access = true
-  build_steps = [
-    "pnpm install",
-    "rm -rf build && meson setup build && sudo meson install -C build"
-  ]
-
 [common.gimp]
 description = "Image editing and manipulation"
 install_level = "system"
@@ -173,7 +144,7 @@ priority = 9
 description = "Python development environment"
 install_level = "system"
 priority = 9
-optional = true
+disabled = true
   [common.python_dev.fedora]
   packages = ["python3", "python3-pip", "python3-virtualenv", "pipx"]
   
@@ -196,7 +167,9 @@ description = "Nix package manager"
 install_level = "system"
 priority = 11
   [common.nix.fedora]
-  packages = ["nix"]
+  packages = []
+  install_command = "sh <(curl -L https://nixos.org/nix/install) --daemon"
+  verify_command = "nix --version"
 
   [common.nix.arch]
   packages = ["nix"]
@@ -208,8 +181,10 @@ priority = 11
 [work.docker]
 install_level = "system"
 priority = 11
-conflicts = ["podman"]
+conflicts = ["podman", "moby-engine", "docker-cli"]
 description = "Container runtime and orchestration"
+depends_on = ["build_tools"]
+pre_install_command = "sudo dnf remove -y moby-engine docker-cli 2>/dev/null || true"
   [work.docker.fedora]
   packages = ["docker-ce", "docker-ce-cli", "containerd.io", "docker-buildx-plugin", "docker-compose-plugin"]
   repos = ["https://download.docker.com/linux/fedora/docker-ce.repo"]
@@ -229,20 +204,28 @@ version = "8.0"
   [work.mongodb.fedora]
   packages = ["mongodb-org", "mongodb-mongosh"]
   repos = ["https://repo.mongodb.org/yum/redhat/9/mongodb-org/8.0/x86_64/"]
-  repo_keys = ["https://pgp.mongodb.com/server-8.0.asc"]
+  repo_config = """
+[mongodb-org-8.0]
+name=MongoDB Repository
+baseurl=https://repo.mongodb.org/yum/redhat/9/mongodb-org/8.0/x86_64/
+gpgcheck=1
+enabled=1
+gpgkey=https://pgp.mongodb.com/server-8.0.asc
+"""
   services = ["mongod"]
-  post_install = ["init_replica_set"]
-  
+  post_install_command = "mongosh --eval \"rs.initiate({_id: 'rs0', members: [{_id: 0, host: 'localhost:27017'}]})\""
+  post_install_check = "mongosh --quiet --eval 'rs.status()'"
+
   [work.mongodb.arch]
   aur_packages = ["mongodb-bin", "mongodb-tools-bin", "mongodb-compass"]
   services = ["mongodb"]
-  post_install = ["init_replica_set"]
+  post_install_command = "mongosh --eval \"rs.initiate({_id: 'rs0', members: [{_id: 0, host: 'localhost:27017'}]})\""
+  post_install_check = "mongosh --quiet --eval 'rs.status()'"
 
 [work.aws_tools]
 description = "AWS development and deployment tools"
 install_level = "user"
 priority = 13
-optional = true
   [work.aws_tools.fedora]
   packages = ["awscli2"]
   
@@ -252,11 +235,19 @@ optional = true
 
 [work.vpn_tools]
 description = "VPN and secure connectivity"
-install_level = "user"
+install_level = "system"
 priority = 14
-optional = true
   [work.vpn_tools.fedora]
-  flatpak = ["com.pritunl.Pritunl"]
+  packages = ["pritunl-client-electron"]
+  repos = ["https://repo.pritunl.com/stable/yum/fedora/41/"]
+  repo_config = """
+[pritunl]
+name=Pritunl Stable Repository
+baseurl=https://repo.pritunl.com/stable/yum/fedora/41/
+gpgcheck=1
+enabled=1
+gpgkey=https://raw.githubusercontent.com/pritunl/pritunl-client-electron/master/release_signing.asc
+"""
 
   [work.vpn_tools.arch]
   aur_packages = ["pritunl-client-electron"]
@@ -265,7 +256,6 @@ optional = true
 description = "Team communication"
 install_level = "system"
 priority = 18
-optional = true
   [work.slack.fedora]
   packages = ["slack"]
   
@@ -276,7 +266,6 @@ optional = true
 description = "Video conferencing"
 install_level = "system"
 priority = 19
-optional = true
   [work.zoom.fedora]
   flatpak = ["us.zoom.Zoom"]
 
@@ -287,7 +276,6 @@ optional = true
 description = "API development and testing"
 install_level = "user"
 priority = 20
-optional = true
   [work.postman.fedora]
   flatpak = ["com.getpostman.Postman"]
 

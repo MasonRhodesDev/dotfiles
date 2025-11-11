@@ -39,7 +39,9 @@ exec-once = swaync
 exec-once = gtk-launch slack
 {{ end }}
 
+{{ if not .is_work }}
 # Steam window manager
 exec-once = /home/mason/.config/hypr/scripts/steam-window-manager.sh > /tmp/steam-window-manager.log 2>&1
+{{ end }}
 
 

@@ -26,7 +26,7 @@ else
     icon="󰻃"
     class="idle"
     tooltip="Screen recorder idle - click to start recording"
-    text=""
+    text="$icon"
 fi
 
 printf '{"text": "%s", "tooltip": "%s", "class": "%s"}\n' "$text" "$tooltip" "$class"

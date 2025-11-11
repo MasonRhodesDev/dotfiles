@@ -211,14 +211,15 @@ is_optional() {
     [ "$optional" = "true" ]
 }
 
-is_optional_enabled() {
+is_disabled() {
     local category="$1"
-    {{ range .profile.optional_packages }}
-    if [ "$category" = "{{ . }}" ]; then
-        return 0
-    fi
-    {{ end }}
-    return 1
+    local section=$(get_category_section "$category")
+    local category_name=$(get_category_name "$category")
+
+    ensure_yq
+
+    local disabled=$(yq eval ".${section}.${category_name}.disabled" "$PACKAGE_REGISTRY" 2>/dev/null)
+    [ "$disabled" = "true" ]
 }
 
 check_min_version() {
@@ -591,11 +592,12 @@ install_git_repos() {
 enable_repos_from_registry() {
     local category="$1"
     local section=$(get_category_section "$category")
+    local category_name=$(get_category_name "$category")
     local distro=$(get_distro)
 
     ensure_yq
 
-    local repos=$(yq eval ".${section}.${category}.${distro}.repos | .[]" "$PACKAGE_REGISTRY" 2>/dev/null)
+    local repos=$(yq eval ".${section}.${category_name}.${distro}.repos | .[]" "$PACKAGE_REGISTRY" 2>/dev/null)
 
     if [ -z "$repos" ] || [ "$repos" = "null" ]; then
         return 0
@@ -622,9 +624,11 @@ enable_repos_from_registry() {
             elif [[ "$repo" =~ ^https?:// ]]; then
                 log_info "Adding repository: $repo"
                 if [[ "$repo" =~ \.repo$ ]]; then
-                    retry_with_backoff sudo dnf config-manager --add-repo "$repo" || log_warn "Failed to add repo: $repo"
+                    local repo_filename=$(basename "$repo")
+                    log_info "Downloading repo file: $repo_filename"
+                    retry_with_backoff sudo curl -fsSL -o "/etc/yum.repos.d/$repo_filename" "$repo" || log_warn "Failed to download repo: $repo"
                 else
-                    local repo_keys=$(yq eval ".${section}.${category}.${distro}.repo_keys | .[]" "$PACKAGE_REGISTRY" 2>/dev/null)
+                    local repo_keys=$(yq eval ".${section}.${category_name}.${distro}.repo_keys | .[]" "$PACKAGE_REGISTRY" 2>/dev/null)
 
                     if [ -n "$repo_keys" ] && [ "$repo_keys" != "null" ]; then
                         while IFS= read -r key; do
@@ -635,31 +639,33 @@ enable_repos_from_registry() {
                         done <<< "$repo_keys"
                     fi
 
-                    if [[ "$repo" == *"mongodb"* ]]; then
-                        sudo tee "/etc/yum.repos.d/mongodb-org.repo" > /dev/null <<EOF
-[mongodb-org-8.0]
-name=MongoDB Repository
-baseurl=$repo
-gpgcheck=1
-enabled=1
-gpgkey=https://pgp.mongodb.com/server-8.0.asc
-EOF
+                    # Check for custom repo config
+                    local repo_config=$(yq eval ".${section}.${category_name}.${distro}.repo_config" "$PACKAGE_REGISTRY" 2>/dev/null)
+                    if [ -n "$repo_config" ] && [ "$repo_config" != "null" ]; then
+                        local repo_filename=$(basename "$repo" .repo)
+                        local repo_path="/etc/yum.repos.d/${repo_filename}.repo"
+                        log_info "Creating custom repo file: $repo_path"
+                        echo "$repo_config" | sudo tee "$repo_path" > /dev/null
                     else
-                        retry_with_backoff sudo dnf config-manager --add-repo "$repo" || log_warn "Failed to add repo: $repo"
+                        retry_with_backoff sudo dnf config-manager addrepo "$repo" || log_warn "Failed to add repo: $repo"
                     fi
                 fi
             fi
         done <<< "$repos"
 
+        # Refresh DNF cache after adding repositories
+        log_info "Refreshing DNF repository cache..."
+        sudo dnf makecache --refresh || log_warn "Failed to refresh DNF cache"
+
         # Handle repo priorities
-        local priorities=$(yq eval ".${section}.${category}.${distro}.repo_priorities" "$PACKAGE_REGISTRY" 2>/dev/null)
+        local priorities=$(yq eval ".${section}.${category_name}.${distro}.repo_priorities" "$PACKAGE_REGISTRY" 2>/dev/null)
         if [ -n "$priorities" ] && [ "$priorities" != "null" ]; then
-            local repo_names=$(yq eval ".${section}.${category}.${distro}.repo_priorities | keys | .[]" "$PACKAGE_REGISTRY" 2>/dev/null)
+            local repo_names=$(yq eval ".${section}.${category_name}.${distro}.repo_priorities | keys | .[]" "$PACKAGE_REGISTRY" 2>/dev/null)
             while IFS= read -r repo_name; do
                 if [ -z "$repo_name" ] || [ "$repo_name" = "null" ]; then
                     continue
                 fi
-                local priority=$(yq eval ".${section}.${category}.${distro}.repo_priorities.\"${repo_name}\"" "$PACKAGE_REGISTRY" 2>/dev/null)
+                local priority=$(yq eval ".${section}.${category_name}.${distro}.repo_priorities.\"${repo_name}\"" "$PACKAGE_REGISTRY" 2>/dev/null)
                 local repo_file="/etc/yum.repos.d/_copr:copr.fedorainfracloud.org:$(echo "$repo_name" | sed 's/copr://').repo"
                 if [ -f "$repo_file" ]; then
                     if ! grep -q "priority=" "$repo_file"; then
@@ -677,11 +683,12 @@ EOF
 install_custom_packages() {
     local category="$1"
     local section=$(get_category_section "$category")
+    local category_name=$(get_category_name "$category")
     local distro=$(get_distro)
 
     ensure_yq
 
-    local custom_packages=$(yq eval ".${section}.${category}.${distro}.custom_packages | .[]" "$PACKAGE_REGISTRY" 2>/dev/null)
+    local custom_packages=$(yq eval ".${section}.${category_name}.${distro}.custom_packages | .[]" "$PACKAGE_REGISTRY" 2>/dev/null)
 
     if [ -n "$custom_packages" ] && [ "$custom_packages" != "null" ]; then
         log_info "Installing custom packages: $custom_packages"
@@ -693,6 +700,51 @@ install_custom_packages() {
     fi
 
     return 0
+}
+
+run_custom_install_command() {
+    local category="$1"
+    local section=$(get_category_section "$category")
+    local category_name=$(get_category_name "$category")
+    local distro=$(get_distro)
+
+    ensure_yq
+
+    local install_command=$(yq eval ".${section}.${category_name}.${distro}.install_command" "$PACKAGE_REGISTRY" 2>/dev/null)
+    local verify_command=$(yq eval ".${section}.${category_name}.${distro}.verify_command" "$PACKAGE_REGISTRY" 2>/dev/null)
+
+    if [ -z "$install_command" ] || [ "$install_command" = "null" ]; then
+        return 0
+    fi
+
+    # Check if already installed via verify command
+    if [ -n "$verify_command" ] && [ "$verify_command" != "null" ]; then
+        if eval "$verify_command" &>/dev/null; then
+            log_info "Package already installed (verified with: $verify_command)"
+            return 0
+        fi
+    fi
+
+    log_info "Running custom install command"
+    log_debug "Command: $install_command"
+
+    if eval "$install_command"; then
+        log_info "Custom install command completed successfully"
+
+        # Verify installation if verify_command is provided
+        if [ -n "$verify_command" ] && [ "$verify_command" != "null" ]; then
+            if eval "$verify_command" &>/dev/null; then
+                log_info "Installation verified successfully"
+            else
+                log_warn "Installation verification failed: $verify_command"
+            fi
+        fi
+
+        return 0
+    else
+        log_error "Custom install command failed"
+        return 1
+    fi
 }
 
 # ============================================================================
@@ -777,26 +829,37 @@ add_user_to_groups() {
 
 run_post_install() {
     local category="$1"
-    local scripts="$2"
+    local section=$(get_category_section "$category")
+    local category_name=$(get_category_name "$category")
+    local distro=$(get_distro)
 
-    for script in $scripts; do
-        case $script in
-            "init_replica_set")
-                if command -v mongosh &>/dev/null; then
-                    if ! mongosh --quiet --eval "rs.status()" &>/dev/null; then
-                        log_info "Initializing MongoDB replica set..."
-                        mongosh --eval "rs.initiate({_id: 'rs0', members: [{_id: 0, host: 'localhost:27017'}]})" || \
-                            log_warn "Failed to initialize replica set"
-                    else
-                        log_info "MongoDB replica set already initialized"
-                    fi
-                fi
-                ;;
-            *)
-                log_warn "Unknown post-install script: $script"
-                ;;
-        esac
-    done
+    ensure_yq
+
+    local post_install_command=$(yq eval ".${section}.${category_name}.${distro}.post_install_command" "$PACKAGE_REGISTRY" 2>/dev/null)
+    local post_install_check=$(yq eval ".${section}.${category_name}.${distro}.post_install_check" "$PACKAGE_REGISTRY" 2>/dev/null)
+
+    if [ -z "$post_install_command" ] || [ "$post_install_command" = "null" ]; then
+        return 0
+    fi
+
+    # Check if post-install is needed
+    if [ -n "$post_install_check" ] && [ "$post_install_check" != "null" ]; then
+        if eval "$post_install_check" &>/dev/null; then
+            log_info "Post-install check passed, skipping: $post_install_check"
+            return 0
+        fi
+    fi
+
+    log_info "Running post-install command"
+    log_debug "Command: $post_install_command"
+
+    if eval "$post_install_command"; then
+        log_info "Post-install command completed successfully"
+        return 0
+    else
+        log_warn "Post-install command failed (non-fatal)"
+        return 0
+    fi
 }
 
 # ============================================================================
@@ -825,10 +888,10 @@ install_packages_from_registry() {
         return 0
     fi
 
-    # Optional check
-    if is_optional "$category" && ! is_optional_enabled "$category"; then
-        log_category_skip "$category" "optional and not enabled"
-        record_category_skip "$install_level" "$category" "optional disabled"
+    # Disabled check - skip if explicitly disabled
+    if is_disabled "$category"; then
+        log_category_skip "$category" "disabled in packages.toml"
+        record_category_skip "$install_level" "$category" "disabled"
         return 0
     fi
 
@@ -851,7 +914,16 @@ install_packages_from_registry() {
     log_category_start "$category"
 
     local section=$(get_category_section "$category")
+    local category_name=$(get_category_name "$category")
     local distro=$(get_distro)
+
+    # Run pre-install command (check distro-specific first, then category-level)
+    local pre_install_command=$(yq eval ".${section}.${category_name}.${distro}.pre_install_command // .${section}.${category_name}.pre_install_command" "$PACKAGE_REGISTRY" 2>/dev/null)
+    if [ -n "$pre_install_command" ] && [ "$pre_install_command" != "null" ]; then
+        log_info "Running pre-install command"
+        log_debug "Command: $pre_install_command"
+        eval "$pre_install_command" || log_warn "Pre-install command failed (continuing)"
+    fi
 
     # Enable repos
     if ! enable_repos_from_registry "$category"; then
@@ -860,14 +932,24 @@ install_packages_from_registry() {
         return 1
     fi
 
+    # Check if this is an optional package (failures are non-fatal)
+    local is_optional_package=false
+    if is_optional "$category"; then
+        is_optional_package=true
+    fi
+
     # Install packages
     local packages=$(get_packages "$category")
     log_info "Packages from registry: $packages"
     if [ -n "$packages" ] && [ "$packages" != "null" ]; then
         if ! install_packages "$packages" "$packages"; then
-            log_category_failure "$category" "package install failed"
-            record_category_failure "$install_level" "$category" "package install failed" 0
-            return 1
+            if [ "$is_optional_package" = true ]; then
+                log_warn "$category package install failed (optional, continuing)"
+            else
+                log_category_failure "$category" "package install failed"
+                record_category_failure "$install_level" "$category" "package install failed" 0
+                return 1
+            fi
         fi
     else
         log_info "No packages defined for this category"
@@ -875,16 +957,35 @@ install_packages_from_registry() {
 
     # Install custom packages
     if ! install_custom_packages "$category"; then
-        log_category_failure "$category" "custom package install failed"
-        record_category_failure "$install_level" "$category" "custom package install failed" 0
-        return 1
+        if [ "$is_optional_package" = true ]; then
+            log_warn "$category custom package install failed (optional, continuing)"
+        else
+            log_category_failure "$category" "custom package install failed"
+            record_category_failure "$install_level" "$category" "custom package install failed" 0
+            return 1
+        fi
+    fi
+
+    # Run custom install command
+    if ! run_custom_install_command "$category"; then
+        if [ "$is_optional_package" = true ]; then
+            log_warn "$category custom install command failed (optional, continuing)"
+        else
+            log_category_failure "$category" "custom install command failed"
+            record_category_failure "$install_level" "$category" "custom install command failed" 0
+            return 1
+        fi
     fi
 
     # Install cargo packages
     if ! install_cargo_packages "$category"; then
-        log_category_failure "$category" "cargo package install failed"
-        record_category_failure "$install_level" "$category" "cargo package install failed" 0
-        return 1
+        if [ "$is_optional_package" = true ]; then
+            log_warn "$category cargo package install failed (optional, continuing)"
+        else
+            log_category_failure "$category" "cargo package install failed"
+            record_category_failure "$install_level" "$category" "cargo package install failed" 0
+            return 1
+        fi
     fi
 
     # Install AUR packages (Arch only)
@@ -892,9 +993,13 @@ install_packages_from_registry() {
         local aur_packages=$(parse_packages "$category" "$distro" "aur_packages")
         if [ -n "$aur_packages" ] && [ "$aur_packages" != "null" ]; then
             if ! install_aur_packages "$aur_packages"; then
-                log_category_failure "$category" "AUR package install failed"
-                record_category_failure "$install_level" "$category" "AUR install failed" 0
-                return 1
+                if [ "$is_optional_package" = true ]; then
+                    log_warn "$category AUR package install failed (optional, continuing)"
+                else
+                    log_category_failure "$category" "AUR package install failed"
+                    record_category_failure "$install_level" "$category" "AUR install failed" 0
+                    return 1
+                fi
             fi
         fi
     fi
@@ -903,17 +1008,25 @@ install_packages_from_registry() {
     local flatpak_packages=$(parse_packages "$category" "$distro" "flatpak")
     if [ -n "$flatpak_packages" ] && [ "$flatpak_packages" != "null" ]; then
         if ! install_flatpak_packages "$flatpak_packages"; then
-            log_category_failure "$category" "flatpak install failed"
-            record_category_failure "$install_level" "$category" "flatpak install failed" 0
-            return 1
+            if [ "$is_optional_package" = true ]; then
+                log_warn "$category flatpak install failed (optional, continuing)"
+            else
+                log_category_failure "$category" "flatpak install failed"
+                record_category_failure "$install_level" "$category" "flatpak install failed" 0
+                return 1
+            fi
         fi
     fi
 
     # Install git repositories
     if ! install_git_repos "$category"; then
-        log_category_failure "$category" "git repository install failed"
-        record_category_failure "$install_level" "$category" "git repo install failed" 0
-        return 1
+        if [ "$is_optional_package" = true ]; then
+            log_warn "$category git repository install failed (optional, continuing)"
+        else
+            log_category_failure "$category" "git repository install failed"
+            record_category_failure "$install_level" "$category" "git repo install failed" 0
+            return 1
+        fi
     fi
 
     # Enable services (but don't fail if service start fails)
@@ -928,11 +1041,8 @@ install_packages_from_registry() {
         add_user_to_groups "$groups"
     fi
 
-    # Run post-install scripts
-    local post_install=$(parse_packages "$category" "$distro" "post_install")
-    if [ -n "$post_install" ] && [ "$post_install" != "null" ]; then
-        run_post_install "$category" "$post_install"
-    fi
+    # Run post-install command
+    run_post_install "$category"
 
     # Calculate duration and record success
     local end_time=$(date +%s)
