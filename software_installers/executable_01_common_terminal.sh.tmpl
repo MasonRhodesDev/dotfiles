@@ -5,21 +5,12 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/__helpers.sh"
 
 echo "=== Installing Terminal Tools ==="
-
 install_packages_from_registry "terminal"
 
-if ! command -v oh-my-posh > /dev/null 2>&1; then
-    echo "Installing Oh My Posh..."
-    
-    if [ "$(get_distro)" = "fedora" ]; then
-        curl -s https://ohmyposh.dev/install.sh | bash -s
-    elif [ "$(get_distro)" = "arch" ]; then
-        install_packages_from_registry "shell_tools"
-    fi
-fi
+echo "=== Installing Shell Tools ==="
+install_packages_from_registry "shell_tools"
 
 echo "=== Installing Node.js Development Tools ==="
-
 install_packages_from_registry "node_tooling"
 
 if command -v fnm > /dev/null 2>&1; then
@@ -28,13 +19,6 @@ if command -v fnm > /dev/null 2>&1; then
     fnm install --lts
     fnm use lts-latest
     fnm default lts-latest
-fi
-
-if ! command -v bun > /dev/null 2>&1; then
-    if [ "$(get_distro)" = "fedora" ]; then
-        echo "Installing Bun..."
-        curl -fsSL https://bun.sh/install | bash
-    fi
 fi
 
 echo "✓ Terminal and Node.js tools installation complete!"

@@ -29,14 +29,12 @@ jq --arg host "$HOSTNAME" \
    --arg arch "$ARCH" \
    --arg profile "$PROFILE" \
    --arg timestamp "$TIMESTAMP" \
-   --argjson optional_packages '{{ .profile.optional_packages | toJson }}' \
    '.systems[$host] = {
        "os": $os,
        "distro": $distro,
        "version": $version,
        "arch": $arch,
        "profile": $profile,
-       "optional_packages": $optional_packages,
        "last_seen": $timestamp,
        "first_seen": (.systems[$host].first_seen // $timestamp)
    } | .last_updated = $timestamp' "$MANIFEST_FILE" > "$MANIFEST_FILE.tmp"

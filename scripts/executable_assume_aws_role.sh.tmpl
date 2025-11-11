@@ -1,3 +1,4 @@
+{{ if .is_work -}}
 #!/bin/bash
 
 # Check that exports will be set in the current shell
@@ -37,3 +38,4 @@ echo "export AWS_DEFAULT_PROFILE=$PROFILE" > ~/.bashrc.d/aws.tmp.sh
 echo "export AWS_PROFILE=$PROFILE" >> ~/.bashrc.d/aws.tmp.sh
 
 aws sts get-caller-identity
+{{- end }}

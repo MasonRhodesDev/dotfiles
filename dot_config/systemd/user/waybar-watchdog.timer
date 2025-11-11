@@ -1,0 +1,11 @@
+[Unit]
+Description=Waybar zombie process watchdog timer
+Requires=waybar-watchdog.service
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec=30s
+AccuracySec=1s
+
+[Install]
+WantedBy=timers.target

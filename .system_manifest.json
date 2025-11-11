@@ -6,13 +6,7 @@
       "version": "41",
       "arch": "amd64",
       "profile": "work",
-      "optional_packages": [
-        "python_dev",
-        "java_dev",
-        "pycharm",
-        "aws_tools"
-      ],
-      "last_seen": "2025-11-08T00:38:12Z",
+      "last_seen": "2025-11-11T20:13:24Z",
       "first_seen": "2025-10-22T19:13:52Z"
     },
     "mason-desktop": {
@@ -28,5 +22,5 @@
       "first_seen": "2025-11-11T16:39:33Z"
     }
   },
-  "last_updated": "2025-11-11T16:39:33Z"
+  "last_updated": "2025-11-11T20:13:24Z"
 }

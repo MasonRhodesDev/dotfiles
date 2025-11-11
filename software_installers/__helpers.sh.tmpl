@@ -100,16 +100,6 @@ is_optional() {
     [ "$optional" = "true" ]
 }
 
-is_optional_enabled() {
-    local category="$1"
-    {{ range .profile.optional_packages }}
-    if [ "$category" = "{{ . }}" ]; then
-        return 0
-    fi
-    {{ end }}
-    return 1
-}
-
 check_min_version() {
     local category="$1"
     local section=$(get_category_section "$category")
@@ -323,23 +313,26 @@ add_user_to_groups() {
 
 run_post_install() {
     local category="$1"
-    local scripts="$2"
-    
-    for script in $scripts; do
-        case $script in
-            "init_replica_set")
-                if command -v mongosh &> /dev/null; then
-                    if ! mongosh --quiet --eval "rs.status()" &> /dev/null; then
-                        echo "Initializing MongoDB replica set..."
-                        mongosh --eval "rs.initiate({_id: 'rs0', members: [{_id: 0, host: 'localhost:27017'}]})"
-                    fi
-                fi
-                ;;
-            *)
-                echo "Unknown post-install script: $script"
-                ;;
-        esac
-    done
+    local section=$(get_category_section "$category")
+    local distro=$(get_distro)
+
+    local post_install_command=$(yq eval ".${section}.${category}.${distro}.post_install_command" "$PACKAGE_REGISTRY" 2>/dev/null)
+    local post_install_check=$(yq eval ".${section}.${category}.${distro}.post_install_check" "$PACKAGE_REGISTRY" 2>/dev/null)
+
+    if [ -z "$post_install_command" ] || [ "$post_install_command" = "null" ]; then
+        return 0
+    fi
+
+    # Check if post-install is needed
+    if [ -n "$post_install_check" ] && [ "$post_install_check" != "null" ]; then
+        if eval "$post_install_check" &>/dev/null; then
+            echo "Post-install check passed, skipping"
+            return 0
+        fi
+    fi
+
+    echo "Running post-install command"
+    eval "$post_install_command" || echo "Post-install command failed (non-fatal)"
 }
 
 enable_repos_from_registry() {
@@ -368,7 +361,9 @@ enable_repos_from_registry() {
             elif [[ "$repo" =~ ^https?:// ]]; then
                 echo "Adding repository: $repo"
                 if [[ "$repo" =~ \.repo$ ]]; then
-                    sudo dnf config-manager --add-repo "$repo"
+                    local repo_filename=$(basename "$repo")
+                    echo "Downloading repo file: $repo_filename"
+                    sudo curl -fsSL -o "/etc/yum.repos.d/$repo_filename" "$repo"
                 else
                     local repo_name=$(basename "$repo" .repo)
                     local repo_keys=$(yq eval ".${section}.${category}.${distro}.repo_keys | .[]" "$PACKAGE_REGISTRY" 2>/dev/null)
@@ -382,22 +377,24 @@ enable_repos_from_registry() {
                         done <<< "$repo_keys"
                     fi
                     
-                    if [[ "$repo" == *"mongodb"* ]]; then
-                        sudo tee "/etc/yum.repos.d/mongodb-org.repo" > /dev/null <<EOF
-[mongodb-org-8.0]
-name=MongoDB Repository
-baseurl=$repo
-gpgcheck=1
-enabled=1
-gpgkey=https://pgp.mongodb.com/server-8.0.asc
-EOF
+                    # Check for custom repo config
+                    local repo_config=$(yq eval ".${section}.${category}.${distro}.repo_config" "$PACKAGE_REGISTRY" 2>/dev/null)
+                    if [ -n "$repo_config" ] && [ "$repo_config" != "null" ]; then
+                        local repo_filename=$(basename "$repo" .repo)
+                        local repo_path="/etc/yum.repos.d/${repo_filename}.repo"
+                        echo "Creating custom repo file: $repo_path"
+                        echo "$repo_config" | sudo tee "$repo_path" > /dev/null
                     else
-                        sudo dnf config-manager --add-repo "$repo"
+                        sudo dnf config-manager addrepo "$repo"
                     fi
                 fi
             fi
         done <<< "$repos"
-        
+
+        # Refresh DNF cache after adding repositories
+        echo "Refreshing DNF repository cache..."
+        sudo dnf makecache --refresh || echo "Warning: Failed to refresh DNF cache"
+
         local priorities=$(yq eval ".${section}.${category}.${distro}.repo_priorities" "$PACKAGE_REGISTRY" 2>/dev/null)
         if [ -n "$priorities" ] && [ "$priorities" != "null" ]; then
             local repo_names=$(yq eval ".${section}.${category}.${distro}.repo_priorities | keys | .[]" "$PACKAGE_REGISTRY" 2>/dev/null)
@@ -522,14 +519,21 @@ install_packages_from_registry() {
     local section=$(get_category_section "$category")
     echo ""
     echo "━━━ Installing $section.$category ($PROFILE_TYPE profile) ━━━"
-    
+
     local distro=$(get_distro)
-    
+
     if ! check_min_version "$category"; then
         echo "Skipping $category due to version requirements"
         return 1
     fi
-    
+
+    # Run pre-install command (check distro-specific first, then category-level)
+    local pre_install_command=$(yq eval ".${section}.${category}.${distro}.pre_install_command // .${section}.${category}.pre_install_command" "$PACKAGE_REGISTRY" 2>/dev/null)
+    if [ -n "$pre_install_command" ] && [ "$pre_install_command" != "null" ]; then
+        echo "Running pre-install command"
+        eval "$pre_install_command" || echo "Pre-install command failed (continuing)"
+    fi
+
     enable_repos_from_registry "$category"
     
     local packages=$(get_packages "$category")
@@ -563,10 +567,8 @@ install_packages_from_registry() {
         add_user_to_groups "$groups"
     fi
     
-    local post_install=$(parse_packages "$category" "$distro" "post_install")
-    if [ -n "$post_install" ] && [ "$post_install" != "null" ]; then
-        run_post_install "$category" "$post_install"
-    fi
+    # Run post-install command
+    run_post_install "$category"
 }
 
 install_section() {
