@@ -37,3 +37,16 @@ fish_add_path /usr/sbin /sbin
 
 # opencode
 fish_add_path /home/mason/.opencode/bin
+
+# direnv hook for automatic nix-shell loading
+direnv hook fish | source
+
+# Unbind fish default Alt+h/j/k/l to allow tmux-navigator to work
+bind -M default \eh ''
+bind -M insert \eh ''
+bind -M default \ej ''
+bind -M insert \ej ''
+bind -M default \ek ''
+bind -M insert \ek ''
+bind -M default \el ''
+bind -M insert \el ''
