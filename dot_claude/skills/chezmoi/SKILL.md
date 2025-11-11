@@ -70,6 +70,13 @@ When a user reports that their local file has changes that differ from the chezm
 ### Critical Understanding
 The user has ALREADY made changes to their local file and wants the template updated to MATCH those changes. Do NOT suggest applying the template to overwrite their local changes.
 
+**CRITICAL - Template Conditionals:**
+- **NEVER remove template conditionals** (e.g., `{{ if .is_work }}...{{ end }}`) from .tmpl files unless EXPLICITLY requested
+- Template conditionals exist for environment-specific logic and should be preserved
+- When updating templates to match local changes, preserve all existing conditionals and template variables
+- If the local file differs from the template due to conditional logic, the LOCAL file should be updated to match the template logic, NOT the other way around
+- Only when the user explicitly says to remove or modify conditionals should they be changed
+
 ### Step-by-Step Process
 
 1. **Identify the exact local changes:**
@@ -78,11 +85,27 @@ The user has ALREADY made changes to their local file and wants the template upd
    ```
    This shows the difference between what chezmoi would generate vs what exists locally.
 
-   **CRITICAL - Understanding the diff output:**
-   - Lines starting with `-` show what the TEMPLATE would generate (template's current state)
-   - Lines starting with `+` show what the LOCAL FILE contains (local file's current state)
-   - These symbols indicate SOURCE, not chronology
-   - To update template to match local: Replace template content that produces `-` lines with content that produces `+` lines
+   **CRITICAL - Understanding chezmoi diff output:**
+
+   Chezmoi diff compares two things:
+   - **SOURCE**: What chezmoi has tracked in `~/.local/share/chezmoi/` (the "source state")
+   - **TARGET**: What actually exists in your home directory (the "destination state")
+
+   The diff format shows:
+   - Lines with `-` prefix: Content that exists in chezmoi's SOURCE (would be written to target)
+   - Lines with `+` prefix: Content that exists in the TARGET (actual local file)
+
+   **Common scenario**: User edits local file, hasn't run `chezmoi add` yet
+   - Lines with `-` = old content still in chezmoi source
+   - Lines with `+` = new content in local file that needs to be saved
+   - **Action needed**: Run `chezmoi add` or manually edit the source file to match the `+` lines
+
+   **Opposite scenario**: User pulled changes from git, hasn't applied them yet
+   - Lines with `-` = new content in chezmoi source
+   - Lines with `+` = old content in local file
+   - **Action needed**: Run `chezmoi apply` (but ONLY if you want to overwrite local changes!)
+
+   **Critical**: The `-`/`+` symbols show LOCATION (source vs target), NOT time (old vs new). Always check timestamps to determine which direction to sync.
 
 2. **Find the template source file:**
    ```bash
@@ -114,8 +137,11 @@ The user has ALREADY made changes to their local file and wants the template upd
    - This is the preferred method for simple files
 
 7. **For template files, update manually:**
+   - **ALWAYS check the render first** using `chezmoi execute-template` or by reading the template to see what conditionals and variables exist
    - Edit the template file directly using the Edit tool
    - Pay attention to:
+     - Template conditionals (`{{ if }}`, `{{ range }}`, etc.) - preserve these unless explicitly asked to change
+     - Template variables (`{{ .chezmoi.username }}`, etc.) - preserve these
      - Commented vs uncommented lines
      - Trailing whitespace (spaces, tabs)
      - Line endings
@@ -129,6 +155,8 @@ The user has ALREADY made changes to their local file and wants the template upd
 
 ### Common Pitfalls
 
+- **Removing template conditionals**: NEVER remove `{{ if }}...{{ end }}` blocks or other template logic unless explicitly requested. These conditionals exist for environment-specific configuration and should be preserved.
+- **Not checking render before editing**: Always read the template file first to identify what conditionals and variables exist before making changes.
 - **Confusing diff symbols with chronology**: The `-` and `+` symbols show SOURCE (template vs local), NOT time (old vs new). Use timestamps to determine which change is newer.
 - **Reading files instead of diff**: Always read BOTH the template file AND the local file directly to verify their actual content. Don't rely solely on diff interpretation.
 - **Describing changes backwards**: When describing what will happen, be clear about the direction. DON'T say "The local file has X changes" when you mean "The template will be updated with X changes from the local file." The local file ALREADY HAS the changes; they are being SAVED TO the template.
