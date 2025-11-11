@@ -61,21 +61,21 @@ if [ "$has_zombie" = true ]; then
     exit 0
 fi
 
-# Check if waybar has visible windows
+# Check if waybar has visible layers (more reliable than checking clients)
 if command -v hyprctl &>/dev/null; then
-    if timeout 3 hyprctl clients -j 2>&1 | jq -e '.[] | select(.class == "waybar")' &>/dev/null; then
-        echo "waybar health check passed (process healthy, windows visible)"
+    if timeout 3 hyprctl layers 2>&1 | grep -q "namespace: waybar"; then
+        echo "waybar health check passed (process healthy, layers visible)"
     else
-        echo "WARNING: waybar process running but no windows detected"
+        echo "WARNING: waybar process running but no layers detected"
         echo "Restarting waybar..."
         systemctl --user restart waybar
-        sleep 2
-        if timeout 3 hyprctl clients -j 2>&1 | jq -e '.[] | select(.class == "waybar")' &>/dev/null; then
-            echo "waybar restarted successfully, windows now visible"
+        sleep 5
+        if timeout 3 hyprctl layers 2>&1 | grep -q "namespace: waybar"; then
+            echo "waybar restarted successfully, layers now visible"
         else
-            echo "WARNING: waybar restarted but still no windows"
+            echo "WARNING: waybar restarted but still no layers"
         fi
     fi
 else
-    echo "waybar health check passed (hyprctl not available, skipping window check)"
+    echo "waybar health check passed (hyprctl not available, skipping layer check)"
 fi
