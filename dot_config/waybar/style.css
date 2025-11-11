@@ -53,6 +53,13 @@ window#waybar {
     animation: pulse 2s ease-in-out infinite;
 }
 
+#custom-screen-recorder.hidden {
+    opacity: 0;
+    padding: 0;
+    margin: 0;
+    min-width: 0;
+}
+
 @keyframes pulse {
     0% {
         opacity: 1;

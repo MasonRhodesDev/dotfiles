@@ -23,10 +23,10 @@ if is_recording; then
     tooltip="Screen recording in progress - click to stop"
     text="$icon REC"
 else
-    icon="󰻃"
-    class="idle"
+    icon=""
+    class="idle hidden"
     tooltip="Screen recorder idle - click to start recording"
-    text="$icon"
+    text=" "
 fi
 
 printf '{"text": "%s", "tooltip": "%s", "class": "%s"}\n' "$text" "$tooltip" "$class"
