@@ -1,0 +1,8 @@
+# Test results
+results/
+
+# Build logs
+*.log
+
+# Docker build cache
+.buildx-cache/

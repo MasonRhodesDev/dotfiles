@@ -1,0 +1,61 @@
+# Arch Linux test container for chezmoi dotfiles
+FROM archlinux:latest
+
+# Update system and install minimal dependencies (yq auto-installed by ensure_yq())
+RUN pacman -Syu --noconfirm && \
+    pacman -S --noconfirm \
+    git \
+    curl \
+    sudo \
+    base-devel \
+    fontconfig \
+    jq \
+    procps-ng \
+    && pacman -Scc --noconfirm
+
+# Create test user
+RUN useradd -m -s /bin/bash test_user && \
+    echo "test_user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+# Set hostname for personal profile
+RUN echo "mason-personal-test" > /etc/hostname
+
+# Set up Wayland environment for headless Hyprland testing (as root)
+RUN mkdir -p /run/user/1000 && chown test_user:test_user /run/user/1000
+
+# Switch to test user
+USER test_user
+WORKDIR /home/test_user
+
+# Install chezmoi
+RUN sh -c "$(curl -fsLS get.chezmoi.io)" -- -b /home/test_user/.local/bin
+
+# Add chezmoi to PATH
+ENV PATH="/home/test_user/.local/bin:${PATH}"
+
+# Set up git config (required by chezmoi)
+RUN git config --global user.email "test@example.com" && \
+    git config --global user.name "Test User" && \
+    git config --global init.defaultBranch main
+
+# Install yay (AUR helper) - needed for AUR packages
+RUN cd /tmp && \
+    git clone https://aur.archlinux.org/yay.git && \
+    cd yay && \
+    makepkg -si --noconfirm && \
+    cd ~ && \
+    rm -rf /tmp/yay
+
+# Copy dotfiles repo into container
+COPY --chown=test_user:test_user . /home/test_user/.local/share/chezmoi/
+
+# Set chezmoi source directory
+ENV CHEZMOI_SOURCE_DIR=/home/test_user/.local/share/chezmoi
+
+# Set up Wayland environment for headless Hyprland testing
+ENV XDG_RUNTIME_DIR=/run/user/1000
+
+WORKDIR /home/test_user
+
+# Default command runs a shell
+CMD ["/bin/bash"]

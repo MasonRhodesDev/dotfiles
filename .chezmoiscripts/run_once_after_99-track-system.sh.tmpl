@@ -1,5 +1,4 @@
 #!/bin/bash
-set -eu
 
 MANIFEST_FILE="{{ .chezmoi.sourceDir }}/{{ .tracking.manifest_file }}"
 HOSTNAME="{{ .chezmoi.hostname }}"
@@ -12,6 +11,13 @@ TIMESTAMP="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 
 echo "Tracking system: $HOSTNAME ($DISTRO $VERSION, $PROFILE profile)"
 
+# Check if jq is available - exit early before any jq operations
+if ! command -v jq &>/dev/null; then
+    echo "jq not found, skipping system tracking"
+    exit 0
+fi
+
+# Check if manifest file exists, create it if not
 if [ ! -f "$MANIFEST_FILE" ]; then
     echo '{"systems": {}, "last_updated": "'$TIMESTAMP'"}' > "$MANIFEST_FILE"
 fi
