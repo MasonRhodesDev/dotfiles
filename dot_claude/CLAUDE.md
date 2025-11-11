@@ -28,8 +28,9 @@ This is a **chezmoi dotfiles repository** managing system configuration files fo
 
 - `dot_*` files become `.*` in home directory via chezmoi
 - `.tmpl` files are processed as Go templates with chezmoi data
-- `software_installers/` - Ordered installation scripts for system setup
+- `software_installers/` - Ordered installation scripts for system setup  
 - `scripts/` - Utility scripts for system management
+- `git_installers/` - Scripts for installing git-based software
 - `chezmoi-daemon/` - Background service for config monitoring
 
 ## Neovim Configuration
