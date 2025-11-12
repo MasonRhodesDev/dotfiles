@@ -182,5 +182,19 @@ if [ "$NEEDS_SHELL_RESTART" = true ]; then
     log_info "Some tools require a shell restart to be available in PATH"
 fi
 
+# Initialize theme system
+if command -v lmtt &>/dev/null; then
+    log_info "Initializing theme system..."
+    THEME_STATE="$HOME/.cache/theme_state"
+    MODE="dark"
+    if [ -f "$THEME_STATE" ]; then
+        MODE=$(cat "$THEME_STATE")
+    fi
+    log_info "Applying $MODE theme..."
+    lmtt switch "$MODE" || log_warn "Failed to apply theme"
+else
+    log_debug "lmtt command not found, skipping theme initialization"
+fi
+
 log_phase_end "Post-Installation"
 exit 0

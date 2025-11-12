@@ -5,7 +5,6 @@
     font-size: 14px;
     font-family: "SF Pro Text", sans-serif;
     font-weight: normal;
-    min-height: 0;
 }
 
 window#waybar {
@@ -17,10 +16,10 @@ window#waybar {
 .modules-right,
 .modules-center {
     padding: 0;
-    margin-top: 8px;
-    margin-bottom: 4px;
-    margin-right: 8px;
-    margin-left: 8px;
+    margin-top: 6px;
+    margin-bottom: 6px;
+    margin-right: 4px;
+    margin-left: 4px;
 }
 
 .modules-left,
@@ -28,7 +27,7 @@ window#waybar {
     border-radius: 8px;
     background: alpha(@background, 0.9);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-    padding: 4px 8px;
+    padding: 2px 6px;
 }
 
 .modules-center {
@@ -38,11 +37,11 @@ window#waybar {
 
 /* Screen recorder module - prominent red when recording */
 #custom-screen-recorder {
-    padding-left: 12px;
-    padding-right: 12px;
+    padding-left: 4px;
+    padding-right: 4px;
     border-radius: 8px;
     margin: 0px;
-    margin-right: 8px;
+    margin-right: 4px;
     background: transparent;
 }
 
@@ -80,8 +79,8 @@ window#waybar {
 
 /* Media module - same height as other containers, auto-hide when empty */
 #custom-media {
-    padding-left: 12px;
-    padding-right: 12px;
+    padding-left: 4px;
+    padding-right: 4px;
     border-radius: 8px;
     margin: 0px;
     background: alpha(@background, 0.9);
@@ -123,34 +122,57 @@ tooltip {
 
 /* Width constraints for dynamic content modules */
 #clock {
-    min-width: 130px;
+    min-width: 0px;
 }
 
 #battery {
-    min-width: 70px;
+    min-width: 0px;
 }
 
 #pulseaudio {
-    min-width: 65px;
+    min-width: 0px;
 }
 
 /* Individual module margins for balanced spacing */
 #bluetooth {
-    margin-right: 2px;
+    margin-right: 0px;
 }
 
 #network {
-    margin-right: 2px;
+    margin-right: 0px;
+    font-size: 14px;
+    min-height: 20px;
+    padding: 2px 4px;
 }
 
 #tray {
-    margin-right: 4px;
-    margin-left: 2px;
+    margin-right: 0px;
+    margin-left: 0px;
+    min-height: 24px;
+    padding: 4px 6px;
+}
+
+#tray menu {
+    font-family: "SF Pro Text", sans-serif;
+}
+
+#tray > .passive {
+    -gtk-icon-effect: dim;
+}
+
+#tray > .active {
+    margin: 0 2px;
+}
+
+#tray > .needs-attention {
+    -gtk-icon-effect: highlight;
+    background-color: alpha(@accent, 0.2);
+    border-radius: 4px;
 }
 
 /* Notification module - matches workspace styling */
 #custom-notification {
-    padding: 2px 4px;
+    padding: 0px 4px;
     border-radius: 8px;
     color: alpha(@accent, 0.4);
     background: transparent;
@@ -186,6 +208,7 @@ tooltip {
 #tray {
     padding: 2px 4px;
     color: @foreground;
+    min-height: 18px;
 }
 
 #workspaces {
@@ -196,10 +219,7 @@ tooltip {
 /* Workspace buttons - consistent styling */
 #workspaces button {
     all: unset;
-    padding-top: 1px;
-    padding-bottom: 1px;
-    padding-left: 8px;
-    padding-right: 8px;
+    padding: 0px 8px;
     border-radius: 6px;
     color: alpha(@accent, 0.4);
     min-width: 24px;

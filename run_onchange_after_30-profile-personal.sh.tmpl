@@ -1,8 +1,9 @@
 #!/bin/bash
-# Work profile specific installations
+# Personal profile specific installations
+# packages.toml: {{ include "software_installers/packages.toml" | sha256sum }}
 
-{{- if ne .profile.type "work" }}
-# Not a work machine - skip execution
+{{- if ne .profile.type "personal" }}
+# Not a personal machine - skip execution
 exit 0
 {{- end }}
 
@@ -16,12 +17,12 @@ source "$SCRIPT_DIR/lib-state.sh"
 source "$SCRIPT_DIR/lib-collision.sh"
 source "$SCRIPT_DIR/lib-helpers.sh"
 
-PHASE="profile-work"
+PHASE="profile-personal"
 
 # Initialize logging
 init_log_file "$PHASE"
 
-log_phase_start "Work Profile Installation"
+log_phase_start "Personal Profile Installation"
 
 # Initialize state
 init_state_db
@@ -33,22 +34,22 @@ if ! acquire_lock; then
     exit 0
 fi
 
-# Build category list (work profile only)
+# Build category list (personal profile only)
 PACKAGE_REGISTRY="{{ .chezmoi.sourceDir }}/software_installers/packages.toml"
 
 CATEGORIES=()
 
-cats=$(yq eval ".work | keys | .[]" "$PACKAGE_REGISTRY" 2>/dev/null)
+cats=$(yq eval ".personal | keys | .[]" "$PACKAGE_REGISTRY" 2>/dev/null)
 for category in $cats; do
-    CATEGORIES+=("work.${category}")
+    CATEGORIES+=("personal.${category}")
 done
 
 if [ ${#CATEGORIES[@]} -eq 0 ]; then
-    log_info "No work packages defined"
+    log_info "No personal packages defined"
     exit 0
 fi
 
-log_info "Work profile categories to install: ${#CATEGORIES[@]}"
+log_info "Personal profile categories to install: ${#CATEGORIES[@]}"
 
 # Install each category
 FAILED=()
@@ -57,8 +58,8 @@ SKIPPED=()
 
 for category in "${CATEGORIES[@]}"; do
     # Determine install level for this category
-    cat_name="${category#work.}"
-    install_level=$(yq eval ".work.\"$cat_name\".install_level // \"system\"" "$PACKAGE_REGISTRY" 2>/dev/null)
+    cat_name="${category#personal.}"
+    install_level=$(yq eval ".personal.\"$cat_name\".install_level // \"system\"" "$PACKAGE_REGISTRY" 2>/dev/null)
 
     # Skip system-level packages (already installed in system phase)
     if [ "$install_level" = "system" ]; then
@@ -81,7 +82,7 @@ done
 
 # Summary
 echo ""
-log_info "━━━ Work Profile Summary ━━━"
+log_info "━━━ Personal Profile Summary ━━━"
 log_info "Succeeded: ${#SUCCEEDED[@]}"
 log_info "Skipped: ${#SKIPPED[@]}"
 log_info "Failed: ${#FAILED[@]}"
@@ -101,5 +102,5 @@ if [ ${#FAILED[@]} -gt 0 ]; then
     printf '  ✗ %s\n' "${FAILED[@]}"
 fi
 
-log_phase_end "Work Profile"
+log_phase_end "Personal Profile"
 exit 0

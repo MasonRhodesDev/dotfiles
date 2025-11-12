@@ -23,7 +23,7 @@ description = "Essential system utilities"
 install_level = "system"
 priority = 2
   [common.core_utils.fedora]
-  packages = ["vim", "curl", "git", "jq", "thunar", "solaar", "wireplumber", "NetworkManager", "go", "gcc-go", "keychain", "powerline-fonts", "fira-code-fonts", "piper", "headsetcontrol", "direnv"]
+  packages = ["vim", "curl", "git", "jq", "thunar", "solaar", "wireplumber", "NetworkManager", "go", "gcc-go", "keychain", "powerline-fonts", "fira-code-fonts", "google-roboto-fonts", "google-roboto-condensed-fonts", "google-roboto-slab-fonts", "piper", "headsetcontrol", "direnv"]
   repos = ["copr:solopasha/hyprland"]
   min_version = "40"
 
@@ -101,14 +101,18 @@ description = "Web browsers"
   extensions = ["bitwarden"]
 
 [common.ide]
-install_level = "system"
+install_level = "user"
 priority = 7
 description = "Integrated development environments"
   [common.ide.fedora]
-  packages = ["neovim"]
+  packages = []
+  install_command = "curl -LO https://github.com/neovim/neovim/releases/download/v0.11.5/nvim-linux-x86_64.tar.gz && tar xzf nvim-linux-x86_64.tar.gz && rm -rf ~/.local/nvim-linux-x86_64 && mv nvim-linux-x86_64 ~/.local/ && mkdir -p ~/.local/bin && ln -sf ~/.local/nvim-linux-x86_64/bin/nvim ~/.local/bin/nvim && rm nvim-linux-x86_64.tar.gz"
+  verify_command = "~/.local/bin/nvim --version | head -1 | grep 'v0.11.5'"
 
   [common.ide.arch]
-  packages = ["neovim"]
+  packages = []
+  install_command = "curl -LO https://github.com/neovim/neovim/releases/download/v0.11.5/nvim-linux-x86_64.tar.gz && tar xzf nvim-linux-x86_64.tar.gz && rm -rf ~/.local/nvim-linux-x86_64 && mv nvim-linux-x86_64 ~/.local/ && mkdir -p ~/.local/bin && ln -sf ~/.local/nvim-linux-x86_64/bin/nvim ~/.local/bin/nvim && rm nvim-linux-x86_64.tar.gz"
+  verify_command = "~/.local/bin/nvim --version | head -1 | grep 'v0.11.5'"
 
 [common.astal]
 install_level = "system"
