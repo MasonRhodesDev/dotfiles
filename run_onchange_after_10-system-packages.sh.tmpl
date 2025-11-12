@@ -1,10 +1,11 @@
 #!/bin/bash
-# User-level package installation (no sudo required)
-# Runs AFTER system packages are installed
+# System-level package installation (requires sudo)
+# Runs AFTER dotfiles are applied successfully
+# packages.toml: {{ include "software_installers/packages.toml" | sha256sum }}
 
-set +e
-set -u
-set -o pipefail
+set +e          # Don't exit on error - continue to next phase
+set -u          # Error on undefined variables
+set -o pipefail # Pipe failures propagate
 
 SCRIPT_DIR="{{ .chezmoi.homeDir }}/.local/share/chezmoi-libs"
 source "$SCRIPT_DIR/lib-logging.sh"
@@ -12,24 +13,43 @@ source "$SCRIPT_DIR/lib-state.sh"
 source "$SCRIPT_DIR/lib-collision.sh"
 source "$SCRIPT_DIR/lib-helpers.sh"
 
-PHASE="user"
+PHASE="system"
 
 # Initialize logging
 init_log_file "$PHASE"
+cleanup_old_logs 30
 
-log_phase_start "User-Level Package Installation"
+log_phase_start "System-Level Package Installation"
 
-# Initialize state
+# Initialize state and collision detection
 init_state_db
 init_collision_detection
 
 # Acquire lock
 if ! acquire_lock; then
     log_error "Could not acquire installation lock"
+    exit 0  # Exit gracefully so chezmoi continues
+fi
+
+# Check for migration needed
+if needs_migration; then
+    log_info "First run detected, checking for old software_installers..."
+    if [ -d "$HOME/software_installers" ]; then
+        log_warn "Old ~/software_installers found"
+        log_warn "New system will manage packages via chezmoi"
+        log_warn "Backing up old directory..."
+        mv "$HOME/software_installers" "$HOME/software_installers.backup-$(date +%Y%m%d-%H%M%S)"
+    fi
+    mark_migration_complete
+fi
+
+# Validate prerequisites
+if ! validate_prerequisites "$PHASE"; then
+    log_error "Prerequisites not met for $PHASE phase"
     exit 0
 fi
 
-# Build category list (user-level only)
+# Build category list for this phase (system-level only)
 PACKAGE_REGISTRY="{{ .chezmoi.sourceDir }}/software_installers/packages.toml"
 PROFILE_TYPE="{{ .profile.type }}"
 
@@ -48,18 +68,18 @@ for section in common work personal; do
     cats=$(yq eval ".${section} | keys | .[]" "$PACKAGE_REGISTRY" 2>/dev/null)
     for category in $cats; do
         install_level=$(yq eval ".${section}.${category}.install_level // \"system\"" "$PACKAGE_REGISTRY" 2>/dev/null)
-        if [ "$install_level" = "user" ]; then
+        if [ "$install_level" = "system" ]; then
             CATEGORIES+=("${section}.${category}")
         fi
     done
 done
 
 if [ ${#CATEGORIES[@]} -eq 0 ]; then
-    log_info "No user packages to install for this profile"
+    log_info "No system packages to install for this profile"
     exit 0
 fi
 
-log_info "User-level categories to install: ${#CATEGORIES[@]}"
+log_info "System-level categories to install: ${#CATEGORIES[@]}"
 
 # Install each category
 FAILED=()
@@ -70,6 +90,7 @@ for category in "${CATEGORIES[@]}"; do
     if install_packages_from_registry "$category" "$PHASE"; then
         SUCCEEDED+=("$category")
     else
+        # Check if it was skipped vs failed
         status=$(get_category_status "$PHASE" "$category")
         if [ "$status" = "skipped" ]; then
             SKIPPED+=("$category")
@@ -79,33 +100,9 @@ for category in "${CATEGORIES[@]}"; do
     fi
 done
 
-# Post-install setup for specific tools
-if command -v fnm &>/dev/null; then
-    log_info "Setting up Node.js via fnm..."
-    eval "$(fnm env --use-on-cd)" || true
-    if ! fnm list | grep -q "lts"; then
-        log_info "Installing Node.js LTS..."
-        fnm install --lts || log_warn "Failed to install Node.js LTS"
-        fnm use lts-latest || true
-        fnm default lts-latest || true
-    else
-        log_info "Node.js LTS already installed"
-    fi
-fi
-
-if command -v bun &>/dev/null; then
-    log_info "Verifying bun installation..."
-    bun --version || log_warn "bun installed but not working correctly"
-fi
-
-if command -v oh-my-posh &>/dev/null; then
-    log_info "Verifying oh-my-posh installation..."
-    oh-my-posh --version || log_warn "oh-my-posh installed but not working correctly"
-fi
-
 # Summary
 echo ""
-log_info "━━━ User Phase Summary ━━━"
+log_info "━━━ System Phase Summary ━━━"
 log_info "Succeeded: ${#SUCCEEDED[@]}"
 log_info "Skipped: ${#SKIPPED[@]}"
 log_info "Failed: ${#FAILED[@]}"
@@ -127,5 +124,5 @@ if [ ${#FAILED[@]} -gt 0 ]; then
     log_warn "Review log for details: $(get_log_file)"
 fi
 
-log_phase_end "User Phase"
-exit 0
+log_phase_end "System Phase"
+exit 0  # Always exit 0 to continue to next phase

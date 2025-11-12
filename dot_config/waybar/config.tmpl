@@ -58,9 +58,9 @@
             }
         },
         "network": {
-            "format-wifi": "",
-            "format-ethernet":"",
-            "format-disconnected": "",
+            "format-wifi": "󰖩",
+            "format-ethernet":"󰈀",
+            "format-disconnected": "󰖪",
             "tooltip-format-disconnected": "Error",
             "tooltip-format-wifi": "{essid} ({signalStrength}%) ",
             "tooltip-format-ethernet": "{ifname} 🖧 ",
@@ -177,13 +177,12 @@
             "on-click-right": "~/.config/swaync/scripts/volume-osd.sh mute"
         },
         "tray": {
-            "icon-size": 14,
-            "spacing": 8
+            "icon-size": 18,
+            "spacing": 6
         },
         "custom/idle-inhibitor": {
             "format": "{}",
             "return-type": "json",
-            "restart-interval": 3,
             "exec": "$HOME/.config/waybar/scripts/logind-idle-monitor.sh",
             "on-click": "logind-idle-control toggle",
             "escape": false

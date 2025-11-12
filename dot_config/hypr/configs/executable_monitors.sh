@@ -69,7 +69,6 @@ apply_monitor_config() {
             # State 3: external monitors, lid open = screen on, positioned left
             local edp_config=$(get_edp_config)
             hyprctl keyword monitor "$edp_config"
-            hyprctl reload
             ;;
         "open_false")
             # State 4: no external monitors, lid open = screen on
