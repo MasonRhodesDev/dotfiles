@@ -90,12 +90,17 @@ priority = 6
 description = "Web browsers"
   [common.browsers.fedora]
   packages = ["vivaldi-stable"]
+  repos = ["https://repo.vivaldi.com/archive/vivaldi-fedora.repo"]
+  min_package_version = "7.7"
+  verify_command = "rpm -q --queryformat '%{VERSION}' vivaldi-stable | grep -E '^(7\\.[7-9]|[8-9]\\.)'"
   default_browser = "vivaldi-stable.desktop"
   profiles = ["personal"]
   extensions = ["bitwarden"]
 
   [common.browsers.arch]
   aur_packages = ["vivaldi"]
+  min_package_version = "7.7"
+  verify_command = "pacman -Q vivaldi | awk '{print $2}' | grep -E '^(7\\.[7-9]|[8-9]\\.)'"
   default_browser = "vivaldi-stable.desktop"
   profiles = ["personal"]
   extensions = ["bitwarden"]

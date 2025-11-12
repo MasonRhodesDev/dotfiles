@@ -145,6 +145,19 @@ if systemctl --user list-unit-files chezmoi-daemon.timer &>/dev/null; then
     log_debug "chezmoi daemon timer is active"
 fi
 
+# Enable Hyprland config reload listener for waybar
+if systemctl --user list-unit-files hyprland-configreload-listener.service &>/dev/null; then
+    if ! systemctl --user is-enabled hyprland-configreload-listener.service &>/dev/null; then
+        log_info "Enabling Hyprland config reload listener..."
+        systemctl --user enable hyprland-configreload-listener.service &>/dev/null || log_warn "Failed to enable hyprland-configreload-listener.service"
+    fi
+    if ! systemctl --user is-active hyprland-configreload-listener.service &>/dev/null; then
+        log_info "Starting Hyprland config reload listener..."
+        systemctl --user start hyprland-configreload-listener.service &>/dev/null || log_warn "Failed to start hyprland-configreload-listener.service"
+    fi
+    log_debug "Hyprland config reload listener is active"
+fi
+
 # Enable lid handler on laptops
 if [ -e /proc/acpi/button/lid ] && systemctl --user list-unit-files lid-handler.service &>/dev/null; then
     if ! systemctl --user is-enabled lid-handler.service &>/dev/null; then

@@ -1,0 +1,13 @@
+[Unit]
+Description=Hyprland config reload listener for waybar restart
+After=graphical-session.target waybar.service
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/scripts/hyprland-configreload-listener.sh
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=graphical-session.target
