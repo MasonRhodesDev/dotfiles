@@ -1,6 +1,7 @@
 return {
   "milanglacier/minuet-ai.nvim",
-  dependencies = { 
+  commit = "e994d0ee275232ee375898e532a2e66213120912",
+  dependencies = {
     "nvim-lua/plenary.nvim",
   },
   config = function()
