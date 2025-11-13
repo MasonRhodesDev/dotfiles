@@ -1,7 +1,8 @@
 return {
   "NickvanDyke/opencode.nvim",
+  commit = "abde303aa43517d32a84dbeeb14037ef146a106a",
   dependencies = {
-    { "folke/snacks.nvim", opts = { input = {}, picker = {} } },
+    { "folke/snacks.nvim", commit = "68da653d206069007f71d4373049193248bf913b", opts = { input = {}, picker = {} } },
   },
   config = function()
     vim.g.opencode_opts = {
