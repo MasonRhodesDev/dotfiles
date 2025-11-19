@@ -31,6 +31,20 @@ priority = 2
   packages = ["vim", "curl", "git", "jq", "thunar", "wireplumber", "networkmanager", "go", "keychain", "direnv"]
   aur_packages = ["solaar", "ttf-fira-code", "piper", "headsetcontrol"]
 
+[common.fonts.lilex]
+description = "Lilex monospace font for terminal and code editing"
+install_level = "user"
+priority = 3
+  [common.fonts.lilex.fedora]
+  packages = []
+  install_command = "mkdir -p ~/.local/share/fonts/Lilex && curl -fLo /tmp/Lilex.zip https://github.com/mishamyrt/Lilex/releases/download/2.621/Lilex.zip && unzip -o /tmp/Lilex.zip -d ~/.local/share/fonts/Lilex '*.ttf' '*.otf' 2>/dev/null || true && rm /tmp/Lilex.zip && fc-cache -fv"
+  verify_command = "fc-list | grep -qi lilex"
+
+  [common.fonts.lilex.arch]
+  packages = []
+  install_command = "mkdir -p ~/.local/share/fonts/Lilex && curl -fLo /tmp/Lilex.zip https://github.com/mishamyrt/Lilex/releases/download/2.621/Lilex.zip && unzip -o /tmp/Lilex.zip -d ~/.local/share/fonts/Lilex '*.ttf' '*.otf' 2>/dev/null || true && rm /tmp/Lilex.zip && fc-cache -fv"
+  verify_command = "fc-list | grep -qi lilex"
+
 [common.terminal]
 description = "Terminal emulators and shell tools"
 install_level = "system"

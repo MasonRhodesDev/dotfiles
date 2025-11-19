@@ -18,6 +18,14 @@ if [ ! -d "$SF_PRO_DIR" ]; then
 fi
 cp "$SF_PRO_DIR"/*.otf "$FONTS_DIR/" 2>/dev/null || true
 
+# Install Lilex font
+echo "Installing Lilex font..."
+LILEX_URL="https://github.com/mishamyrt/Lilex/releases/download/2.621/Lilex.zip"
+LILEX_ZIP="$REPOS_DIR/Lilex.zip"
+curl -fLo "$LILEX_ZIP" "$LILEX_URL"
+unzip -o "$LILEX_ZIP" -d "$FONTS_DIR/Lilex" "*.ttf" "*.otf" 2>/dev/null || true
+rm "$LILEX_ZIP"
+
 # Install Nerd Fonts (FiraCode and JetBrains Mono)
 echo "Installing FiraCode Nerd Font..."
 FIRA_URL="https://github.com/ryanoasis/nerd-fonts/releases/latest/download/FiraCode.zip"
@@ -58,4 +66,4 @@ fc-cache -fv
 
 echo "Font installation complete!"
 echo "Installed fonts:"
-fc-list | grep -iE "sf pro|firacode nerd|jetbrains.*nerd|noto sans|powerline" | cut -d: -f2 | sort -u
+fc-list | grep -iE "lilex|sf pro|firacode nerd|jetbrains.*nerd|noto sans|powerline" | cut -d: -f2 | sort -u
