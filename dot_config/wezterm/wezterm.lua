@@ -72,6 +72,13 @@ else
   }
 end
 
+-- Font configuration
+config.font = wezterm.font_with_fallback({
+  'Lilex',
+  'JetBrainsMono Nerd Font',
+  'FiraCode Nerd Font',
+})
+
 -- Use default hyperlink rules and add file path detection
 config.hyperlink_rules = wezterm.default_hyperlink_rules()
 
