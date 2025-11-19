@@ -1,0 +1,198 @@
+#!/usr/bin/env node
+
+/**
+ * Git Commit Message Generator
+ *
+ * Analyzes staged changes and generates a concise conventional commit message
+ * Format: type(scope): description (<108 chars)
+ *
+ * Usage: git-generate-commit
+ */
+
+import { execSync } from 'child_process'
+
+// ============================================
+// Helpers
+// ============================================
+
+function run(cmd) {
+  try {
+    return execSync(cmd, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] }).trim()
+  } catch {
+    return null
+  }
+}
+
+function getStagedFiles() {
+  const output = run('git diff --staged --name-status')
+  if (!output) return []
+
+  return output.split('\n').map(line => {
+    const [status, ...pathParts] = line.split('\t')
+    return { status, path: pathParts.join('\t') }
+  }).filter(f => f.path)
+}
+
+function getStagedDiff() {
+  return run('git diff --staged') || ''
+}
+
+// ============================================
+// Analysis
+// ============================================
+
+function analyzeFiles(files) {
+  const paths = files.map(f => f.path)
+  const extensions = new Set(paths.map(p => p.split('.').pop()).filter(Boolean))
+  const dirs = new Set(paths.map(p => p.includes('/') ? p.split('/')[0] : null).filter(Boolean))
+
+  const hasTests = paths.some(p => /test|spec/.test(p))
+  const hasDocs = paths.some(p => /README|\.md$|^docs\//.test(p))
+  const hasConfig = paths.some(p => /config|\.json$|\.ya?ml$|\.toml$/.test(p))
+  const hasPackage = paths.some(p => /package\.json/.test(p))
+
+  return { paths, extensions, dirs, hasTests, hasDocs, hasConfig, hasPackage }
+}
+
+function analyzeDiff(diff) {
+  const lines = diff.split('\n')
+  const additions = lines.filter(l => l.startsWith('+')).length
+  const deletions = lines.filter(l => l.startsWith('-')).length
+
+  const hasNew = /(\+.*new |create|add|implement)/i.test(diff)
+  const hasFix = /(fix|bug|issue|resolve|correct)/i.test(diff)
+  const hasRefactor = /(refactor|reorganize|restructure|extract|rename)/i.test(diff)
+  const hasUpdate = /(update|modify|change|adjust)/i.test(diff)
+  const hasRemove = /(remove|delete|drop)/i.test(diff)
+
+  return { additions, deletions, hasNew, hasFix, hasRefactor, hasUpdate, hasRemove }
+}
+
+// ============================================
+// Generation
+// ============================================
+
+function determineType(fileAnalysis, diffAnalysis) {
+  if (fileAnalysis.hasDocs) return 'docs'
+  if (fileAnalysis.hasTests) return 'test'
+  if (diffAnalysis.hasFix) return 'fix'
+  if (fileAnalysis.hasConfig || fileAnalysis.hasPackage) return 'chore'
+  if (diffAnalysis.hasRefactor) return 'refactor'
+  if (diffAnalysis.hasNew || diffAnalysis.additions > diffAnalysis.deletions * 2) return 'feat'
+  if (diffAnalysis.hasUpdate) return 'chore'
+  return 'chore'
+}
+
+function determineScope(fileAnalysis) {
+  // Single directory? Use it as scope
+  if (fileAnalysis.dirs.size === 1) {
+    const dir = Array.from(fileAnalysis.dirs)[0]
+    // Clean up common directory names
+    if (dir === 'src') return null
+    if (dir.length < 15) return dir
+  }
+
+  // Single file? Use filename without extension
+  if (fileAnalysis.paths.length === 1) {
+    const filename = fileAnalysis.paths[0].split('/').pop().replace(/\.[^.]+$/, '')
+    if (filename.length < 15) return filename
+  }
+
+  return null
+}
+
+function generateDescription(files, fileAnalysis, diffAnalysis) {
+  const count = files.length
+
+  // Try to be specific
+  if (count === 1) {
+    const file = files[0]
+    const filename = file.path.split('/').pop()
+
+    if (diffAnalysis.hasNew) return `add ${filename}`
+    if (diffAnalysis.hasFix) return `fix ${filename}`
+    if (diffAnalysis.hasRemove) return `remove ${filename}`
+    if (diffAnalysis.hasRefactor) return `refactor ${filename}`
+    return `update ${filename}`
+  }
+
+  // Multiple files
+  if (fileAnalysis.hasDocs) return `update documentation`
+  if (fileAnalysis.hasTests) return `update tests`
+  if (fileAnalysis.hasConfig) return `update configuration`
+
+  if (diffAnalysis.hasNew) return `add ${count} files`
+  if (diffAnalysis.hasFix) return `fix multiple issues`
+  if (diffAnalysis.hasRemove) return `remove ${count} files`
+  if (diffAnalysis.hasRefactor) return `refactor ${count} files`
+
+  return `update ${count} files`
+}
+
+function formatMessage(type, scope, description) {
+  let msg = type
+  if (scope) msg += `(${scope})`
+  msg += `: ${description}`
+
+  // Enforce 108 char limit
+  if (msg.length > 108) {
+    const prefix = scope ? `${type}(${scope}): ` : `${type}: `
+    const maxLen = 105 - prefix.length
+    description = description.substring(0, maxLen) + '...'
+    msg = prefix + description
+  }
+
+  return msg
+}
+
+// ============================================
+// Main
+// ============================================
+
+function main() {
+  // Check git repo
+  if (!run('git rev-parse --git-dir')) {
+    console.error('❌ Not a git repository')
+    process.exit(1)
+  }
+
+  // Check staged changes
+  const files = getStagedFiles()
+  if (files.length === 0) {
+    console.error('❌ No staged changes\n')
+    console.error('Stage files first:')
+    console.error('  git add <files>')
+    process.exit(1)
+  }
+
+  // Analyze
+  const diff = getStagedDiff()
+  const fileAnalysis = analyzeFiles(files)
+  const diffAnalysis = analyzeDiff(diff)
+
+  // Generate
+  const type = determineType(fileAnalysis, diffAnalysis)
+  const scope = determineScope(fileAnalysis)
+  const description = generateDescription(files, fileAnalysis, diffAnalysis)
+  const message = formatMessage(type, scope, description)
+
+  // Output
+  console.log()
+  console.log('📝 Generated commit message:')
+  console.log()
+  console.log(`  ${message}`)
+  console.log()
+  console.log(`  (${message.length}/108 characters)`)
+  console.log()
+  console.log('To commit:')
+  console.log(`  git commit -m "${message}"`)
+  console.log()
+  console.log('Or edit as needed')
+}
+
+try {
+  main()
+} catch (error) {
+  console.error('❌ Error:', error.message)
+  process.exit(1)
+}
