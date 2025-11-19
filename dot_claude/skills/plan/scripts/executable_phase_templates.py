@@ -16,120 +16,98 @@ from typing import Dict
 PHASE_TEMPLATES: Dict[str, str] = {
     "research": """# Research Phase
 
-## Objective
-Gather and document information needed to understand the problem space and plan the solution.
+**Objective:** Gather information to understand problem space
 
-## Inputs
-- Project goal from CURRENT_PLAN.md
-- Any user-provided context or requirements
-
-## Outputs
-- `research_findings.md` - Key findings and insights
-- `.plans/knowledge-base/*.md` - Reference documentation for future phases
-- `phase_summary.md` - Concise summary of research outcomes
-
-## Memory Management
-- Store comprehensive documentation in knowledge-base for cross-phase reference
-- Keep phase_summary.md under 500 words for efficient loading
-- Avoid loading full research in future phases unless explicitly needed
+**Outputs Required:**
+- `research_findings.md` - Key findings
+- `phase_summary.md` - <500 words summary
+- `.plans/knowledge-base/*.md` - Reference docs (as needed)
 
 ## Process
+
 1. **Identify Information Needs**
-   - What needs to be understood?
-   - What existing code/systems are relevant?
-   - What constraints exist?
+   - What needs understanding?
+   - Relevant existing code/systems?
+   - Constraints?
 
 2. **Gather Information**
-   - Search codebase for relevant patterns
+   - Search codebase for patterns
    - Read existing documentation
-   - Identify dependencies and integration points
+   - Identify dependencies
 
 3. **Document Findings**
-   - Create structured documentation in knowledge-base
-   - Note critical insights in research_findings.md
-   - Write phase_summary.md for orchestrator
+   - Create knowledge-base files for cross-phase references
+   - Write research_findings.md with insights
+   - Write concise phase_summary.md (<500 words)
 
-4. **Prepare for Planning Phase**
-   - List key considerations for planning
-   - Identify potential approaches
-   - Note constraints and requirements
+4. **Prepare for Planning**
+   - List key considerations
+   - Identify approaches
+   - Note constraints
 
-## Completion Criteria
-- [ ] All critical information gathered
-- [ ] Findings documented in knowledge-base
-- [ ] phase_summary.md created
-- [ ] Ready to begin planning phase
+**Checklist:**
+- [ ] Critical information gathered
+- [ ] Findings in knowledge-base
+- [ ] phase_summary.md created (<500 words)
+- [ ] Ready for planning
 """,
 
     "planning": """# Planning Phase
 
-## Objective
-Design the solution approach based on research findings.
+**Objective:** Design solution based on research
 
-## Inputs
-- `../ research/phase_summary.md` - Research outcomes (load this, NOT full research)
-- Project goal from CURRENT_PLAN.md
+**Inputs:** `../research/phase_summary.md` ONLY (not full research)
 
-## Outputs
-- `plan.md` - Detailed implementation plan
-- `architecture.md` - System design and architecture decisions
-- `phase_summary.md` - Concise plan overview
-
-## Memory Management
-- Only load research phase_summary.md, not full research context
-- Keep architecture decisions concise and focused
-- Store detailed technical specs in separate files
+**Outputs Required:**
+- `plan.md` - Implementation plan
+- `architecture.md` - Design decisions
+- `phase_summary.md` - <500 words summary
 
 ## Process
-1. **Review Research Summary**
-   - Load only research/phase_summary.md
-   - Identify key constraints and requirements
+
+1. **Review Research**
+   - Load research/phase_summary.md ONLY
+   - Identify constraints and requirements
 
 2. **Design Solution**
-   - Define architecture and approach
-   - Break down into implementable steps
-   - Identify dependencies and order
+   - Define architecture
+   - Break into steps
+   - Order by dependencies
 
-3. **Create Implementation Plan**
-   - Write step-by-step plan in plan.md
+3. **Create Plan**
+   - Write plan.md with implementation steps
    - Document architecture decisions
    - List required resources
 
-4. **Write Phase Summary**
-   - Summarize approach in under 300 words
+4. **Write Summary**
+   - Summarize approach (<300 words)
    - List critical decisions
    - Note key files/components
 
-## Completion Criteria
-- [ ] Clear implementation plan created
+**Checklist:**
+- [ ] Implementation plan created
 - [ ] Architecture documented
-- [ ] phase_summary.md created
-- [ ] Ready for revision phase
+- [ ] phase_summary.md created (<500 words)
+- [ ] Ready for revision
 """,
 
     "revision": """# Revision Phase
 
-## Objective
-Review and refine the plan, identify gaps or improvements.
+**Objective:** Review and refine plan
 
-## Inputs
-- `../planning/phase_summary.md` - Planning outcomes
-- `../planning/plan.md` - Full implementation plan
+**Inputs:**
+- `../planning/phase_summary.md`
+- `../planning/plan.md`
 
-## Outputs
-- `review_notes.md` - Review findings and recommendations
-- `revised_plan.md` - Updated plan (if changes needed)
-- `phase_summary.md` - Summary of revisions
-
-## Memory Management
-- Load planning outputs for review
-- Keep revision notes focused on changes only
-- Avoid re-documenting unchanged aspects
+**Outputs Required:**
+- `review_notes.md` - Findings
+- `revised_plan.md` - Updates (if needed)
+- `phase_summary.md` - <500 words summary
 
 ## Process
+
 1. **Review Plan**
-   - Load planning phase outputs
-   - Check for completeness and feasibility
+   - Check completeness and feasibility
    - Identify gaps or risks
 
 2. **Provide Feedback**
@@ -138,49 +116,40 @@ Review and refine the plan, identify gaps or improvements.
    - Validate against requirements
 
 3. **Revise if Needed**
-   - Update plan based on feedback
-   - Create revised_plan.md if changes made
-   - Otherwise, approve existing plan
+   - Update plan or approve as-is
+   - Create revised_plan.md if changed
 
-4. **Write Phase Summary**
+4. **Write Summary**
    - Summarize review outcomes
    - List key changes (if any)
-   - Confirm plan is ready
 
-## Completion Criteria
-- [ ] Plan reviewed thoroughly
+**Checklist:**
+- [ ] Plan reviewed
 - [ ] Feedback documented
 - [ ] Revisions made (if needed)
-- [ ] phase_summary.md created
-- [ ] Ready for building phase
+- [ ] phase_summary.md created (<500 words)
+- [ ] Ready for building
 """,
 
     "building": """# Building Phase
 
-## Objective
-Implement the solution according to the plan.
+**Objective:** Implement the solution
 
-## Inputs
-- `../revision/phase_summary.md` - Final plan approval
-- `../planning/plan.md` - Implementation plan
-- Knowledge base references as needed
+**Inputs:**
+- `../revision/phase_summary.md`
+- `../planning/plan.md`
+- Knowledge base (on-demand)
 
-## Outputs
-- Implementation artifacts (code, configs, etc.)
-- `implementation_log.md` - What was built and any deviations
-- `phase_summary.md` - Summary of implementation
-
-## Memory Management
-- Load only plan and revision summary initially
-- Reference knowledge base files on-demand
-- Do NOT load full research or planning context
-- Keep implementation_log focused on deviations and key decisions
+**Outputs Required:**
+- Implementation artifacts (code, configs)
+- `implementation_log.md` - Deviations and key decisions
+- `phase_summary.md` - <500 words summary
 
 ## Process
+
 1. **Load Plan**
-   - Read planning/plan.md
-   - Read revision/phase_summary.md
-   - Prepare implementation checklist
+   - Read planning/plan.md and revision/phase_summary.md
+   - Prepare checklist
 
 2. **Execute Implementation**
    - Follow plan step-by-step
@@ -188,45 +157,37 @@ Implement the solution according to the plan.
    - Reference knowledge base as needed
 
 3. **Track Progress**
-   - Update implementation_log with completed steps
-   - Note any issues or changes from plan
+   - Note issues or changes from plan
    - Document new decisions
 
-4. **Write Phase Summary**
+4. **Write Summary**
    - Summarize what was built
-   - Note any deviations from plan
-   - List artifacts created
+   - Note deviations
+   - List artifacts
 
-## Completion Criteria
+**Checklist:**
 - [ ] All planned items implemented
 - [ ] Deviations documented
 - [ ] implementation_log.md created
-- [ ] phase_summary.md created
-- [ ] Ready for validation phase
+- [ ] phase_summary.md created (<500 words)
+- [ ] Ready for validation
 """,
 
     "validation": """# Validation Phase
 
-## Objective
-Verify the implementation meets requirements and works correctly.
+**Objective:** Verify implementation works correctly
 
-## Inputs
-- `../building/phase_summary.md` - Implementation summary
-- `../building/implementation_log.md` - Implementation details
-- Project goal from CURRENT_PLAN.md
+**Inputs:**
+- `../building/phase_summary.md`
+- `../building/implementation_log.md` (if needed)
 
-## Outputs
-- `validation_results.md` - Test results and verification
-- `issues.md` - Any problems found
-- `phase_summary.md` - Summary of validation
-
-## Memory Management
-- Load building phase summary
-- Reference implementation_log for details
-- Do NOT load full building context
-- Keep validation results structured and scannable
+**Outputs Required:**
+- `validation_results.md` - Test results
+- `issues.md` - Problems found (if any)
+- `phase_summary.md` - <500 words summary
 
 ## Process
+
 1. **Review Implementation**
    - Load building/phase_summary.md
    - Understand what was built
@@ -234,69 +195,51 @@ Verify the implementation meets requirements and works correctly.
 2. **Execute Validation**
    - Run tests if applicable
    - Verify against requirements
-   - Check for issues or gaps
+   - Check for issues
 
 3. **Document Results**
    - Write validation_results.md
-   - List any issues in issues.md
-   - Note pass/fail for each requirement
+   - List issues in issues.md (if any)
+   - Note pass/fail per requirement
 
-4. **Write Phase Summary**
-   - Summarize validation outcomes
+4. **Write Summary**
+   - Summarize outcomes
    - List critical issues (if any)
-   - Confirm completion or note needed fixes
 
-## Completion Criteria
+**Checklist:**
 - [ ] Validation executed
 - [ ] Results documented
-- [ ] Issues identified (if any)
-- [ ] phase_summary.md created
+- [ ] phase_summary.md created (<500 words)
 - [ ] Ready for cleanup or iteration
 """,
 
     "cleanup": """# Cleanup Phase
 
-## Objective
-Finalize the project and optionally remove plan artifacts.
+**Objective:** Finalize project
 
-## Inputs
-- All phase summaries
-- CURRENT_PLAN.md
+**Inputs:** All phase summaries ONLY
 
-## Outputs
+**Outputs Required:**
 - `final_summary.md` - Complete project summary
-- Optional: Plan files removed (if user confirms)
-
-## Memory Management
-- Load only phase summaries, not full context
-- Create final summary from summaries
-- Minimal context needed for cleanup
 
 ## Process
-1. **Review All Phase Summaries**
+
+1. **Review Phase Summaries**
    - Load each phase/phase_summary.md
-   - Understand complete project flow
+   - Understand project flow
 
 2. **Create Final Summary**
-   - Write final_summary.md with:
-     - Project goal
-     - What was accomplished
-     - Key decisions and outcomes
-     - Final artifacts and locations
+   - Project goal and what was accomplished
+   - Key decisions and outcomes
+   - Final artifacts and locations
 
 3. **Confirm Cleanup**
    - Ask user if plan files should be removed
-   - If yes, run cleanup utility
-   - If no, keep plan files for reference
+   - Run cleanup utility if yes
 
-4. **Complete Project**
-   - Mark plan as completed in CURRENT_PLAN.md
-   - Move final_summary.md to project root (optional)
-
-## Completion Criteria
+**Checklist:**
 - [ ] final_summary.md created
 - [ ] User consulted about cleanup
-- [ ] Plan marked complete
 - [ ] Project finalized
 """
 }
