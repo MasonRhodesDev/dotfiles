@@ -1,10 +1,6 @@
 [user]
     name = Mason Rhodes
-{{- if contains "work" .chezmoi.hostname }}
     email = work@example.com
-{{- else }}
-    email = user@example.com
-{{- end }}
 
 [credential]
     credentialStore = secretservice
@@ -21,3 +17,6 @@
 [init]
         defaultBranch = main
 
+[alias]
+	commit-gen = !git-commit-gen
+	cg = "!f() { MSG=$(git-commit-gen) && git commit -F - <<< \"$MSG\"; }; f"
