@@ -1,0 +1,74 @@
+[
+  // ==========================================
+  // SPACE LEADER BINDINGS (Vim normal/visual mode)
+  // ==========================================
+  // Leader bindings in Editor
+  {
+    "context": "Editor && (vim_mode == normal || vim_mode == visual) && !VimWaiting && !menu",
+    "bindings": {
+      // File explorer (toggle to project panel)
+      "space e": "project_panel::ToggleFocus",
+
+      // Claude AI (toggle right dock with assistant)
+      "space a c": "workspace::ToggleRightDock",
+
+      // Git (toggle to git panel)
+      "space g g": "git_panel::ToggleFocus",
+
+      // File finding
+      "space f f": "file_finder::Toggle",
+      "space f t": "buffer_search::Deploy",
+      "space f r": "tab_switcher::Toggle",
+
+      // Buffer/editor management
+      "space b b": "tab_switcher::Toggle",
+      "space b d": "pane::CloseActiveItem",
+      "space b s": "workspace::Save",
+      "space b n": "pane::ActivateNextItem",
+      "space b p": "pane::ActivatePreviousItem",
+
+      // Split
+      "space v": "pane::SplitRight",
+
+      // General
+      // "space h": cleared - use :noh in vim mode instead
+      "space w": "editor::ToggleSoftWrap",
+      "space q": "workspace::CloseWindow",
+
+      // Tab navigation
+      "space tab c": "pane::CloseActiveItem",
+      "space tab o": "pane::CloseInactiveItems",
+      "space tab h": "pane::ActivatePreviousItem",
+      "space tab l": "pane::ActivateNextItem",
+
+      // LSP
+      "space l a": "editor::ToggleCodeActions",
+      "space l r": "editor::Rename",
+      "space l f": "editor::Format"
+    }
+  },
+
+  // Leader bindings in Project Panel / Explorer
+  {
+    "context": "ProjectPanel",
+    "bindings": {
+      "space e": "workspace::ToggleLeftDock",
+      "space a c": "workspace::ToggleRightDock",
+      "space g g": "workspace::ToggleLeftDock",
+      "space f f": "file_finder::Toggle"
+    }
+  },
+
+  // ==========================================
+  // ALT+H/J/K/L NAVIGATION (All modes)
+  // ==========================================
+  {
+    "context": "Workspace",
+    "bindings": {
+      "alt-h": "workspace::ActivatePaneLeft",
+      "alt-j": "workspace::ActivatePaneDown",
+      "alt-k": "workspace::ActivatePaneUp",
+      "alt-l": "workspace::ActivatePaneRight"
+    }
+  }
+]
