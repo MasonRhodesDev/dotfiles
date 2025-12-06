@@ -52,6 +52,64 @@ tar -xf proton-ge-*.tar.gz
 mv GE-Proton* ~/.steam/steam/compatdata/
 ```
 
+### Automated Management with manage_proton_ge.sh
+
+The ProtonDB skill includes a comprehensive Proton-GE manager for automated installation and version management.
+
+#### Quick Start
+
+**List installed versions:**
+```bash
+scripts/manage_proton_ge.sh list
+```
+
+**Install latest version:**
+```bash
+scripts/manage_proton_ge.sh install
+```
+
+**Install specific version:**
+```bash
+scripts/manage_proton_ge.sh install GE-Proton9-1
+```
+
+**Get game-specific recommendation:**
+```bash
+scripts/manage_proton_ge.sh get-recommended <app_id>
+```
+
+#### All Available Commands
+
+| Command | Description |
+|---------|-------------|
+| `list` | Show installed Proton-GE versions with dates and sizes |
+| `list-available` | Show latest releases available on GitHub |
+| `install [version]` | Install specific version or latest if none specified |
+| `remove <version>` | Remove installed version (with confirmation) |
+| `check-updates` | Check if newer version available |
+| `get-recommended <app_id>` | Extract recommended version from ProtonDB reports |
+
+#### Features
+
+- **Auto-detection:** Automatically detects native Steam or Flatpak installation
+- **Checksum verification:** SHA512 verification ensures download integrity
+- **Update notifications:** Check for and install newer releases
+- **Game recommendations:** Analyzes ProtonDB reports to suggest best version
+- **Safe removal:** Confirmation prompts prevent accidental deletion
+- **Progress feedback:** Clear status updates during operations
+
+#### Integration with Game Analysis
+
+The manager integrates automatically with other ProtonDB scripts:
+
+```bash
+# check_game.sh will suggest Proton-GE for Silver-rated games
+scripts/check_game.sh 1245620
+
+# generate_launch_options.sh highlights GE version usage
+scripts/generate_launch_options.sh 1245620 --amd-only
+```
+
 ### Proton Versions Comparison
 
 | Version | Update Frequency | Stability | Game Support | Use Case |

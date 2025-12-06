@@ -180,6 +180,32 @@ echo "---------------------"
 jq -r '.protonVersion' "$TEMP_FILE" | sort | uniq -c | sort -rn | head -10
 echo ""
 
+# Highlight Proton-GE versions specifically
+echo "Proton-GE Versions:"
+echo "-------------------"
+GE_VERSIONS=$(jq -r '.protonVersion' "$TEMP_FILE" 2>/dev/null | \
+    grep -iE "GE-Proton|Proton-GE" | sort | uniq -c | sort -rn)
+
+if [ -n "$GE_VERSIONS" ]; then
+    echo "$GE_VERSIONS"
+    echo ""
+
+    MOST_COMMON_GE=$(echo "$GE_VERSIONS" | head -1 | awk '{print $2}')
+    USAGE_COUNT=$(echo "$GE_VERSIONS" | head -1 | awk '{print $1}')
+
+    echo "Most commonly used: $MOST_COMMON_GE ($USAGE_COUNT reports)"
+    echo ""
+    echo "Install this version:"
+    echo "  scripts/manage_proton_ge.sh install $MOST_COMMON_GE"
+else
+    echo "No Proton-GE versions found in filtered reports"
+    echo ""
+    echo "Consider trying latest Proton-GE:"
+    echo "  scripts/manage_proton_ge.sh install"
+fi
+
+echo ""
+
 # Extract GPU models
 echo "GPU Models in Reports:"
 echo "----------------------"

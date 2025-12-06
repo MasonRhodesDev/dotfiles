@@ -1,0 +1,10 @@
+[Unit]
+Description=USB Wake Configuration Monitor
+Documentation=man:systemd.service(5)
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/usb-wake-monitor.sh
+
+[Install]
+WantedBy=default.target

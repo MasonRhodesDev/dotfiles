@@ -1,0 +1,13 @@
+[Unit]
+Description=USB Wake Sleep Handler
+Documentation=man:systemd-sleep(8)
+Before=sleep.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStartPre=%h/.local/share/systemd-sleep-hooks/usb-wake pre
+ExecStopPost=%h/.local/share/systemd-sleep-hooks/usb-wake post
+
+[Install]
+WantedBy=sleep.target
