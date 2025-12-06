@@ -1,0 +1,11 @@
+# USB Wake Configuration Rules
+# Automatically enable wake capability for USB devices to support wake from suspend
+
+# Enable wake for ALL USB hubs (critical for wake signal propagation through hub chain)
+ACTION=="add", SUBSYSTEM=="usb", ATTR{bDeviceClass}=="09", RUN+="/bin/sh -c 'echo enabled > /sys$devpath/power/wakeup'"
+
+# Enable wake for keyboard (ZSA Voyager - Vendor: 3297, Product: 1977)
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="3297", ATTR{idProduct}=="1977", RUN+="/bin/sh -c 'echo enabled > /sys$devpath/power/wakeup'"
+
+# Enable wake for mouse (Logitech Lightspeed - Vendor: 046d, Product: c539)
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="046d", ATTR{idProduct}=="c539", RUN+="/bin/sh -c 'echo enabled > /sys$devpath/power/wakeup'"

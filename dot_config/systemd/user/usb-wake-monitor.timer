@@ -1,0 +1,11 @@
+[Unit]
+Description=USB Wake Configuration Monitor Timer
+Documentation=man:systemd.timer(5)
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
