@@ -1,0 +1,38 @@
+#!/bin/bash
+
+echo "=== Setting up USB Wake Sleep Hook ==="
+
+# Ensure directories exist
+mkdir -p "$HOME/.local/share/systemd-sleep-hooks"
+mkdir -p "$HOME/.local/state"
+
+# Verify sleep hook script exists and is executable
+SLEEP_HOOK="$HOME/.local/share/systemd-sleep-hooks/usb-wake"
+if [ ! -x "$SLEEP_HOOK" ]; then
+    echo "ERROR: Sleep hook script not found or not executable at $SLEEP_HOOK"
+    exit 1
+fi
+
+echo "✓ Sleep hook script verified"
+
+# Enable and start the systemd user service
+echo "Enabling USB wake sleep handler service..."
+systemctl --user daemon-reload
+systemctl --user enable usb-wake-sleep-handler.service
+
+echo "✓ Sleep handler service enabled"
+
+echo ""
+echo "=== USB Wake Sleep Hook Setup Complete ==="
+echo ""
+echo "The service will automatically:"
+echo "  - Enable USB wake settings before system suspends"
+echo "  - Re-enable USB wake settings after system resumes"
+echo ""
+echo "Logs are written to: ~/.local/state/usb-wake-sleep.log"
+echo ""
+echo "To test:"
+echo "  1. Check current wake status: cat /sys/bus/usb/devices/usb5/power/wakeup"
+echo "  2. Suspend the system: systemctl suspend"
+echo "  3. Wake via power button"
+echo "  4. Check logs: cat ~/.local/state/usb-wake-sleep.log"

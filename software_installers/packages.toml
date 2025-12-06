@@ -78,8 +78,8 @@ depends_on = ["core_utils"]
   min_version = "40"
 
   [common.hyprland.arch]
-  packages = ["wl-clipboard", "grim", "slurp", "pavucontrol", "dunst", "waybar"]
-  aur_packages = ["hyprland-git", "hyprlock-git", "hypridle-git", "hyprpicker-git", "hyprcursor-git", "hyprutils-git", "hyprlang-git", "hyprwayland-scanner-git", "xdg-desktop-portal-hyprland-git", "wofi-git", "swaybg-git", "matugen-git", "swaync-git", "swayosd-git"]
+  packages = ["wl-clipboard", "grim", "slurp", "pavucontrol", "dunst", "waybar", "wofi", "swaybg", "swaync", "swayosd"]
+  aur_packages = ["hyprland-git", "hyprlock-git", "hypridle-git", "hyprpicker-git", "hyprcursor-git", "hyprutils-git", "hyprlang-git", "hyprwayland-scanner-git", "xdg-desktop-portal-hyprland-git", "matugen-bin", "greetd-git", "greetd-regreet-git", "hyprpaper-git", "hyprpolkitagent-git", "hyprsunset-git", "hyprsysteminfo-git"]
 
 [common.browsers]
 install_level = "system"
@@ -176,9 +176,10 @@ priority = 9
 optional = true
   [common.python_dev.fedora]
   packages = ["python3", "python3-pip", "python3-virtualenv", "pipx"]
-  
+
   [common.python_dev.arch]
-  packages = ["python", "python-pip", "python-virtualenv", "python-pipx"]
+  packages = ["python", "python-pip"]
+  aur_packages = ["python310", "pywal-git"]
 
 [common.rust_dev]
 description = "Rust development toolchain"
@@ -200,6 +201,16 @@ priority = 11
 
   [common.nix.arch]
   packages = ["nix"]
+
+[common.arch_utilities]
+description = "Arch-specific package management utilities"
+install_level = "system"
+priority = 12
+  [common.arch_utilities.fedora]
+  packages = []
+
+  [common.arch_utilities.arch]
+  aur_packages = ["downgrade", "paru"]
 
 # ============================================================================
 # WORK-ONLY PACKAGES
@@ -316,20 +327,22 @@ priority = 21
 description = "Gaming platforms and tools"
   [personal.gaming.fedora]
   packages = ["steam", "lutris", "gamemode"]
-  
+
   [personal.gaming.arch]
-  packages = ["steam", "lutris", "gamemode"]
+  packages = ["steam", "lutris"]
+  aur_packages = ["gamemode-git", "proton-ge-custom-bin", "minecraft-launcher", "emulationstation-de", "emudeck-bin"]
   multilib = true
 
-[personal.media_creation]
+[personal.printing]
 install_level = "system"
 priority = 22
-description = "Audio/video editing and creation"
-  [personal.media_creation.fedora]
-  packages = ["kdenlive", "audacity", "inkscape", "blender", "obs-studio"]
+description = "3D printing tools and slicers"
+optional = true
+  [personal.printing.fedora]
+  packages = []
 
-  [personal.media_creation.arch]
-  packages = ["kdenlive", "audacity", "inkscape", "blender", "obs-studio"]
+  [personal.printing.arch]
+  aur_packages = ["orca-slicer-git"]
 
 [personal.social]
 install_level = "user"

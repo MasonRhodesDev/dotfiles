@@ -1,0 +1,35 @@
+#!/bin/bash
+
+echo "=== Enabling USB Wake Monitor ==="
+
+# Verify monitoring script exists and is executable
+MONITOR_SCRIPT="$HOME/.local/bin/usb-wake-monitor.sh"
+if [ ! -x "$MONITOR_SCRIPT" ]; then
+    echo "ERROR: Monitoring script not found or not executable at $MONITOR_SCRIPT"
+    exit 1
+fi
+
+echo "✓ Monitoring script verified"
+
+# Enable and start the timer
+echo "Enabling USB wake monitor timer..."
+systemctl --user daemon-reload
+systemctl --user enable usb-wake-monitor.timer
+systemctl --user start usb-wake-monitor.timer
+
+echo "✓ Monitor timer enabled and started"
+
+# Run the monitor once to verify it works
+echo "Running initial check..."
+"$MONITOR_SCRIPT"
+
+echo ""
+echo "=== USB Wake Monitor Setup Complete ==="
+echo ""
+echo "Monitor will check USB wake configuration:"
+echo "  - 2 minutes after boot"
+echo "  - Every 5 minutes thereafter"
+echo ""
+echo "View logs: tail -f ~/.local/state/usb-wake-monitor.log"
+echo "Check timer status: systemctl --user status usb-wake-monitor.timer"
+echo "Check service status: systemctl --user status usb-wake-monitor.service"
