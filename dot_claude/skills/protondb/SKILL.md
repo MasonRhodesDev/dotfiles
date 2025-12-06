@@ -53,6 +53,31 @@ scripts/generate_launch_options.sh <app_id> --amd-only
 scripts/generate_launch_options.sh <app_id> --amd-only --wayland-only
 ```
 
+### Manage Proton-GE Versions
+
+```bash
+# List installed Proton-GE versions
+scripts/manage_proton_ge.sh list
+
+# Install latest Proton-GE
+scripts/manage_proton_ge.sh install
+
+# Install specific version
+scripts/manage_proton_ge.sh install GE-Proton9-1
+
+# Get recommended version for specific game
+scripts/manage_proton_ge.sh get-recommended <app_id>
+
+# Check for updates
+scripts/manage_proton_ge.sh check-updates
+
+# Remove old version (with confirmation)
+scripts/manage_proton_ge.sh remove GE-Proton8-32
+
+# List available versions on GitHub
+scripts/manage_proton_ge.sh list-available
+```
+
 ## Analysis Workflow
 
 ### 1. Extract Game Information
@@ -117,6 +142,23 @@ scripts/generate_launch_options.sh <app_id> --amd-only
 # Filter for AMD + Wayland users
 scripts/generate_launch_options.sh <app_id> --amd-only --wayland-only
 ```
+
+### 4.5 Install Recommended Proton-GE Version
+
+For Silver/Bronze-rated games or games with compatibility issues:
+
+```bash
+# Get game-specific Proton-GE recommendation
+scripts/manage_proton_ge.sh get-recommended <app_id>
+
+# Install the recommended version
+scripts/manage_proton_ge.sh install <version>
+```
+
+The `check_game.sh` script automatically suggests Proton-GE installation when beneficial. Proton-GE includes:
+- Additional game-specific patches not in official Proton
+- Video codec support for cutscenes
+- Faster updates for new game releases
 
 The script analyzes Platinum/Gold reports and shows:
 - Most common environment variables
