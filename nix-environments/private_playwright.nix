@@ -154,6 +154,9 @@ let
     # Force Playwright to use Ubuntu 24.04 builds
     export PLAYWRIGHT_HOST_PLATFORM_OVERRIDE="ubuntu24.04-x64"
 
+    # Prevent external browser opening for traces
+    export BROWSER=none
+
     echo "✓ Playwright environment loaded (Ubuntu 24.04 + Nix)"
     echo "  Ubuntu libraries: ICU 74, libffi 8, libjpeg-turbo 8"
     echo "  Nix packages: ${toString (builtins.length playwrightDeps)} packages"
