@@ -1,0 +1,248 @@
+/* SwayNC Theme - Material You */
+
+/* Define color variables to override defaults */
+@define-color cc-bg #12131a;
+@define-color noti-border-color transparent;
+@define-color noti-bg #12131a;
+@define-color noti-bg-opaque #12131a;
+@define-color noti-bg-darker #12131a;
+@define-color noti-bg-hover #12131a;
+@define-color noti-bg-hover-opaque #12131a;
+@define-color noti-bg-focus #12131a;
+@define-color noti-close-bg #ffb4ab;
+@define-color noti-close-bg-hover #ffb4ab;
+@define-color text-color #e3e1ec;
+@define-color text-color-disabled #c5c5d6;
+@define-color bg-selected #9fd491;
+
+* {
+  font-family: "SF Pro Text", sans-serif;
+  font-size: 14px;
+}
+
+/* Notification row */
+.notification-row {
+  outline: none;
+  background: transparent;
+}
+
+.notification-row:focus,
+.notification-row:hover {
+  background: transparent;
+}
+
+/* Notification background container */
+.notification-row .notification-background {
+  padding: 0;
+  background: transparent;
+}
+
+/* The actual notification */
+.notification-row .notification-background .notification {
+  background: #12131a;
+  border-radius: 12px;
+  padding: 0;
+  border: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Control Center */
+.control-center {
+  background: #12131a;
+  border-radius: 16px;
+  margin: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  color: #e3e1ec;
+}
+
+/* Notification content */
+.notification-content {
+  padding: 12px;
+  background: transparent;
+}
+
+.notification-content .summary {
+  color: #e3e1ec;
+  font-size: 15px;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.notification-content .body {
+  color: #c5c5d6;
+  font-size: 13px;
+}
+
+/* Close button */
+.notification-row .notification-background .close-button {
+  background: #ffb4ab;
+  color: #690005;
+  border-radius: 50%;
+  min-width: 24px;
+  min-height: 24px;
+  padding: 0;
+  margin: 6px;
+  border: none;
+  box-shadow: none;
+}
+
+.notification-row .notification-background .close-button:hover {
+  opacity: 0.8;
+  background: #ffb4ab;
+}
+
+/* Floating notifications */
+.floating-notifications {
+  background: transparent;
+}
+
+.floating-notifications.background {
+  background: transparent;
+}
+
+/* Control center list */
+.control-center .control-center-list {
+  background: transparent;
+}
+
+.control-center .control-center-list .notification {
+  background: #12131a;
+  border-radius: 8px;
+  padding: 0;
+  margin-top: 8px;
+  border: 1px solid #8f909f;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Widget titles */
+.widget-title {
+  margin-bottom: 8px;
+}
+
+.widget-title > label {
+  color: #e3e1ec;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.widget-title button {
+  background: #9fd491;
+  color: #083906;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 13px;
+  border: none;
+}
+
+.widget-title button:hover {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Widgets */
+.widget-dnd,
+.widget-volume, 
+.widget-backlight,
+.widget-mpris {
+  background: #12131a;
+  border-radius: 8px;
+  padding: 10px;
+  margin: 4px 0;
+  border: 1px solid #8f909f;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* DND Switch */
+.widget-dnd > switch {
+  background: #444654;
+  border-radius: 12px;
+  min-height: 20px;
+  min-width: 40px;
+  border: none;
+}
+
+.widget-dnd > switch:checked {
+  background: #9fd491;
+}
+
+.widget-dnd > switch slider {
+  background: #e3e1ec;
+  border-radius: 50%;
+  min-width: 16px;
+  min-height: 16px;
+  margin: 2px;
+}
+
+/* Sliders */
+.widget-volume scale,
+.widget-backlight scale {
+  min-height: 20px;
+  background: transparent;
+}
+
+.widget-volume scale trough,
+.widget-backlight scale trough {
+  background: #8f909f;
+  border-radius: 4px;
+  min-height: 4px;
+}
+
+.widget-volume scale highlight,
+.widget-backlight scale highlight {
+  background: #9fd491;
+  border-radius: 4px;
+  min-height: 4px;
+}
+
+.widget-volume scale slider,
+.widget-backlight scale slider {
+  background: #e3e1ec;
+  border-radius: 50%;
+  min-width: 14px;
+  min-height: 14px;
+  margin: -5px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* Media Player */
+.widget-mpris-player {
+  padding: 8px;
+  background: transparent;
+}
+
+.widget-mpris-title {
+  color: #e3e1ec;
+  font-weight: 500;
+  font-size: 14px;
+  margin-bottom: 2px;
+}
+
+.widget-mpris-subtitle {
+  color: #c5c5d6;
+  font-size: 12px;
+}
+
+.widget-mpris button {
+  background: #444654;
+  color: #e3e1ec;
+  border-radius: 50%;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0;
+  margin: 2px;
+  border: none;
+}
+
+.widget-mpris button:hover {
+  background: #8f909f;
+}
+
+.widget-mpris button:active {
+  background: #9fd491;
+  color: #083906;
+}
+
+/* Blank window */
+.blank-window {
+  background: transparent;
+}

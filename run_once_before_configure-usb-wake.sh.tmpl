@@ -3,31 +3,83 @@
 
 set -e
 
-echo "Configuring USB wake settings..."
+echo "=== Configuring USB Wake Settings ==="
 
-# Enable wake for keyboard (ZSA Voyager)
-KEYBOARD_PATH=$(grep -r "Voyager" /sys/bus/usb/devices/*/product 2>/dev/null | head -1 | cut -d: -f1 | sed 's/product$/power\/wakeup/')
-if [ -n "$KEYBOARD_PATH" ] && [ -f "$KEYBOARD_PATH" ]; then
-    echo "Enabling wake for keyboard..."
-    echo enabled | sudo tee "$KEYBOARD_PATH" > /dev/null
+# Enable USB controller wake (XHC0 - PCIe level)
+echo "Enabling USB controller wake..."
+USB_CONTROLLER="/sys/bus/pci/devices/0000:0e:00.3/power/wakeup"
+if [ -f "$USB_CONTROLLER" ]; then
+    echo enabled | sudo tee "$USB_CONTROLLER" > /dev/null
+    echo "✓ USB controller wake enabled"
+else
+    echo "⚠ USB controller not found at expected path"
 fi
 
-# Enable wake for mouse (Logitech Lightspeed)
-MOUSE_PATH=$(grep -r "Lightspeed" /sys/bus/usb/devices/*/product 2>/dev/null | head -1 | cut -d: -f1 | sed 's/product$/power\/wakeup/')
-if [ -n "$MOUSE_PATH" ] && [ -f "$MOUSE_PATH" ]; then
-    echo "Enabling wake for mouse..."
-    echo enabled | sudo tee "$MOUSE_PATH" > /dev/null
-fi
+# Enable ALL USB root hubs (critical for wake signal propagation)
+echo "Enabling all USB root hubs..."
+ROOT_HUB_COUNT=0
+for root_hub in /sys/bus/usb/devices/usb*/power/wakeup; do
+    if [ -f "$root_hub" ]; then
+        echo enabled | sudo tee "$root_hub" > /dev/null
+        ROOT_HUB_COUNT=$((ROOT_HUB_COUNT + 1))
+    fi
+done
+echo "✓ Enabled $ROOT_HUB_COUNT USB root hubs"
 
-# Enable wake for USB hubs (Genesys Logic hubs that devices connect through)
+# Enable ALL intermediate USB hubs
+echo "Enabling all intermediate USB hubs..."
+HUB_COUNT=0
 for hub in /sys/bus/usb/devices/*/product; do
     if grep -q "Hub" "$hub" 2>/dev/null; then
         HUB_WAKE="${hub%/product}/power/wakeup"
         if [ -f "$HUB_WAKE" ]; then
-            echo "Enabling wake for hub: $(cat $hub)"
             echo enabled | sudo tee "$HUB_WAKE" > /dev/null
+            HUB_COUNT=$((HUB_COUNT + 1))
         fi
     fi
 done
+echo "✓ Enabled $HUB_COUNT intermediate USB hubs"
 
-echo "USB wake configuration complete"
+# Enable keyboard by vendor ID (ZSA Voyager: 3297:1977)
+echo "Enabling keyboard wake..."
+KEYBOARD_FOUND=false
+for device in /sys/bus/usb/devices/*/idVendor; do
+    if [ "$(cat "$device" 2>/dev/null)" = "3297" ]; then
+        DEVICE_DIR=$(dirname "$device")
+        if [ "$(cat "$DEVICE_DIR/idProduct" 2>/dev/null)" = "1977" ]; then
+            WAKEUP_PATH="$DEVICE_DIR/power/wakeup"
+            if [ -f "$WAKEUP_PATH" ]; then
+                echo enabled | sudo tee "$WAKEUP_PATH" > /dev/null
+                PRODUCT=$(cat "$DEVICE_DIR/product" 2>/dev/null || echo "Unknown")
+                echo "✓ Keyboard wake enabled: $PRODUCT"
+                KEYBOARD_FOUND=true
+            fi
+        fi
+    fi
+done
+if ! $KEYBOARD_FOUND; then
+    echo "⚠ Keyboard (ZSA Voyager) not found - may not be connected"
+fi
+
+# Enable mouse by vendor ID (Logitech Lightspeed: 046d:c539)
+echo "Enabling mouse wake..."
+MOUSE_FOUND=false
+for device in /sys/bus/usb/devices/*/idVendor; do
+    if [ "$(cat "$device" 2>/dev/null)" = "046d" ]; then
+        DEVICE_DIR=$(dirname "$device")
+        if [ "$(cat "$DEVICE_DIR/idProduct" 2>/dev/null)" = "c539" ]; then
+            WAKEUP_PATH="$DEVICE_DIR/power/wakeup"
+            if [ -f "$WAKEUP_PATH" ]; then
+                echo enabled | sudo tee "$WAKEUP_PATH" > /dev/null
+                PRODUCT=$(cat "$DEVICE_DIR/product" 2>/dev/null || echo "Unknown")
+                echo "✓ Mouse wake enabled: $PRODUCT"
+                MOUSE_FOUND=true
+            fi
+        fi
+    fi
+done
+if ! $MOUSE_FOUND; then
+    echo "⚠ Mouse (Logitech Lightspeed) not found - may not be connected"
+fi
+
+echo "=== USB Wake Configuration Complete ==="
