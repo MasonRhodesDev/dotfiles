@@ -127,6 +127,28 @@ elif [ "$TIER" = "silver" ]; then
     echo "Playable but may need configuration"
     echo "Suggested Proton: Try Experimental or Proton-GE"
     echo "Check ProtonDB for required workarounds"
+    echo ""
+    echo "Proton-GE Recommendation"
+    echo "------------------------"
+
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    MANAGER_SCRIPT="$SCRIPT_DIR/manage_proton_ge.sh"
+
+    if [ -f "$MANAGER_SCRIPT" ] && [ -x "$MANAGER_SCRIPT" ]; then
+        "$MANAGER_SCRIPT" get-recommended "$APP_ID" 2>/dev/null || {
+            echo "Install Proton-GE for better compatibility:"
+            echo "  scripts/manage_proton_ge.sh install"
+        }
+    else
+        echo "Suggested: Install Proton-GE for better compatibility"
+        echo ""
+        echo "Proton-GE includes:"
+        echo "  - Additional game-specific patches"
+        echo "  - Video codec support"
+        echo "  - Faster compatibility updates"
+        echo ""
+        echo "Install with: scripts/manage_proton_ge.sh install"
+    fi
 elif [ "$TIER" = "bronze" ] || [ "$TIER" = "borked" ]; then
     echo "Not recommended for Linux gaming"
     echo "Check ProtonDB for any recent improvements"

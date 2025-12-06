@@ -1,0 +1,45 @@
+#!/bin/bash
+
+echo "=== Setting up USB Wake Udev Rules ==="
+
+UDEV_RULES_SOURCE="$HOME/.config/udev/rules.d/60-usb-wake.rules"
+UDEV_RULES_DEST="/etc/udev/rules.d/60-usb-wake.rules"
+
+# Verify source rules file exists
+if [ ! -f "$UDEV_RULES_SOURCE" ]; then
+    echo "ERROR: Udev rules file not found at $UDEV_RULES_SOURCE"
+    exit 1
+fi
+
+echo "✓ Udev rules file verified"
+
+# Copy rules to system location (requires sudo)
+echo "Installing udev rules (requires sudo)..."
+sudo cp "$UDEV_RULES_SOURCE" "$UDEV_RULES_DEST"
+sudo chmod 644 "$UDEV_RULES_DEST"
+
+echo "✓ Udev rules installed to $UDEV_RULES_DEST"
+
+# Reload udev rules
+echo "Reloading udev rules..."
+sudo udevadm control --reload-rules
+
+echo "✓ Udev rules reloaded"
+
+# Trigger USB subsystem to apply rules to existing devices
+echo "Triggering USB subsystem..."
+sudo udevadm trigger --subsystem-match=usb
+
+echo "✓ USB subsystem triggered"
+
+echo ""
+echo "=== USB Wake Udev Rules Setup Complete ==="
+echo ""
+echo "Rules will automatically enable USB wake for:"
+echo "  - All USB hubs (device class 09)"
+echo "  - ZSA Voyager keyboard (3297:1977)"
+echo "  - Logitech Lightspeed mouse (046d:c539)"
+echo ""
+echo "To verify rules are active:"
+echo "  cat /sys/bus/usb/devices/5-2/power/wakeup"
+echo "  cat /sys/bus/usb/devices/5-2.4/power/wakeup"
