@@ -58,8 +58,6 @@ bind -M insert \el ''
 set --export BUN_INSTALL "$HOME/.bun"
 fish_add_path $BUN_INSTALL/bin
 
-alias claude="/home/mason/.claude/local/claude"
-
 # Enable playwright nix environment in current directory
 function playwright-nix-enable
     echo 'use nix ~/nix-environments/playwright.nix' > .envrc
