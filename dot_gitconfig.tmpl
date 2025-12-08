@@ -16,7 +16,3 @@
 
 [init]
         defaultBranch = main
-
-[alias]
-	commit-gen = !git-commit-gen
-	cg = "!f() { MSG=$(git-commit-gen) && git commit -F - <<< \"$MSG\"; }; f"
