@@ -1,5 +1,4 @@
-# SSH agent setup
-if not set -q SSH_AUTH_SOCK
-    eval (ssh-agent -c) > /dev/null 2>&1
-    ssh-add ~/.ssh/id_ed25519 > /dev/null 2>&1
+# SSH agent setup - use systemd socket
+if test -z "$SSH_AUTH_SOCK"
+    set -gx SSH_AUTH_SOCK "$XDG_RUNTIME_DIR/ssh-agent.socket"
 end
