@@ -1,0 +1,44 @@
+#!/bin/bash
+# Setup Jujutsu VCS for chezmoi dotfiles
+
+set -e
+
+echo "Setting up Jujutsu (jj) for chezmoi..."
+
+# Check if jj is installed
+if ! command -v jj &> /dev/null; then
+    echo "Installing jujutsu..."
+{{- if eq .chezmoi.osRelease.id "arch" }}
+    sudo pacman -S --noconfirm jujutsu
+{{- else if eq .chezmoi.osRelease.id "fedora" }}
+    sudo dnf install -y jujutsu
+{{- else }}
+    echo "Warning: jujutsu not available for this OS"
+    echo "Install manually: https://github.com/jj-vcs/jj"
+    exit 0
+{{- end }}
+fi
+
+# Initialize jj in chezmoi repo if not already done
+CHEZMOI_DIR="$HOME/.local/share/chezmoi"
+if [ ! -d "$CHEZMOI_DIR/.jj" ]; then
+    echo "Initializing jj in colocated mode..."
+    cd "$CHEZMOI_DIR"
+    jj git init --colocate
+
+    # Set trunk() alias for repo
+    echo "Configuring jj trunk() alias..."
+    jj config set --repo 'revset-aliases."trunk()"' 'personal-pc@origin'
+
+    # Track remote bookmarks
+    jj bookmark track main@origin personal-pc@origin work-pc@origin || true
+
+    echo "✅ Jujutsu initialized successfully"
+else
+    echo "✅ Jujutsu already initialized"
+fi
+
+# Suppress git detached HEAD warnings
+git -C "$CHEZMOI_DIR" config advice.detachedHead false
+
+echo "✅ Jujutsu setup complete"
