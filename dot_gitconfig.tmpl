@@ -10,13 +10,11 @@
 
 [push]
     autoSetupRemote = true
-
-[url "git@github.com:"]
-    insteadOf = https://github.com/
-
 [init]
         defaultBranch = main
 
 [alias]
 	commit-gen = !git-commit-gen
 	cg = "!f() { MSG=$(git-commit-gen) && git commit -F - <<< \"$MSG\"; }; f"
+[url "git@github.com:"]
+	insteadof = https://github.com/

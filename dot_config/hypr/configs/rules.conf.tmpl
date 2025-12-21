@@ -1,8 +1,5 @@
 
-{{ if .is_work }}
-decoration:blur:enabled = false
-decoration:shadow:enabled = false
-{{ end }}
+
 
 #windowrulev2= move onscreen cursor, class:.*
 
@@ -62,7 +59,7 @@ windowrulev2=size 1000 600,class:^(org.pulseaudio.pavucontrol)$
 windowrulev2=stayfocused,class:^(org.pulseaudio.pavucontrol)$
 windowrulev2=pin,class:^(org.pulseaudio.pavucontrol)$
 
-{{ if not .is_work }}
+
 # Steam rules
 # Window sizing handled by steam-window-manager.sh script
 # Prevent 5x5 spawn bug for empty title steam windows
@@ -74,4 +71,4 @@ windowrulev2=minsize 1 1,title:^()$,class:^(steam)$
 workspace=7, border:false, rounding:false
 windowrulev2=workspace 7,class:^(gamescope)$
 windowrulev2=workspace 7,class:^steam_app_\d+$
-{{ end }}
+
