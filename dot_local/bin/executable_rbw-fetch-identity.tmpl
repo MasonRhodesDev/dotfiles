@@ -1,0 +1,53 @@
+#!/bin/bash
+# Fetch identity from Bitwarden via rbw with caching
+
+CACHE_FILE="$HOME/.cache/chezmoi/bitwarden-identity.json"
+CACHE_DIR=$(dirname "$CACHE_FILE")
+ITEM_NAME="chezmoi-data"
+
+# Ensure cache directory exists with secure permissions
+mkdir -p -m 0700 "$CACHE_DIR"
+
+# Try to fetch from Bitwarden if rbw is available and unlocked
+if command -v rbw &> /dev/null && rbw unlocked &> /dev/null 2>&1; then
+    # Fetch custom fields from the item
+    NAME=$(rbw get --field name "$ITEM_NAME" 2>/dev/null || echo "")
+    EMAIL_WORK=$(rbw get --field email_work "$ITEM_NAME" 2>/dev/null || echo "")
+    EMAIL_PERSONAL=$(rbw get --field email_personal "$ITEM_NAME" 2>/dev/null || echo "")
+    COMPANY=$(rbw get --field company "$ITEM_NAME" 2>/dev/null || echo "")
+    LOCATION=$(rbw get --field location "$ITEM_NAME" 2>/dev/null || echo "")
+
+    # If we got at least the name field, construct and cache JSON
+    if [ -n "$NAME" ]; then
+        IDENTITY=$(jq -n \
+            --arg name "$NAME" \
+            --arg email_work "$EMAIL_WORK" \
+            --arg email_personal "$EMAIL_PERSONAL" \
+            --arg company "$COMPANY" \
+            --arg location "$LOCATION" \
+            '{
+                fetched_at: (now | todate),
+                name: $name,
+                email_work: $email_work,
+                email_personal: $email_personal,
+                company: $company,
+                location: $location
+            }')
+
+        if [ $? -eq 0 ] && [ -n "$IDENTITY" ]; then
+            echo "$IDENTITY" > "$CACHE_FILE"
+            chmod 0600 "$CACHE_FILE"
+            echo "$IDENTITY"
+            exit 0
+        fi
+    fi
+fi
+
+# Fall back to cached value if available
+if [ -f "$CACHE_FILE" ]; then
+    cat "$CACHE_FILE"
+    exit 0
+fi
+
+# No cache available, return empty
+echo "{}"

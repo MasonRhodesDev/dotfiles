@@ -11,9 +11,6 @@
     work_machine = "mason-work"
     wallpaper = {{ if eq .chezmoi.hostname "mason-work" }}"/home/mason/Pictures/forrest.png"{{ else }}"/home/mason/Pictures/landscape.png"{{ end }}
     is_work = {{ if eq .chezmoi.hostname "mason-work" }}true{{ else }}false{{ end }}
-    # Bitwarden item ID for identity data (set after creating item in Bitwarden)
-    # Leave empty to use hardcoded defaults
-    bitwarden_identity_item_id = ""
 
 [data.paths]
     config = "/home/mason/.config/hypr"
@@ -36,13 +33,13 @@
 [data.tracking]
     manifest_file = ".system_manifest.json"
 
-# Bitwarden Integration with Auto-Unlock and Caching
+# Bitwarden Integration via rbw with Agent Model and Caching
 [data.bitwarden]
-    available = {{ if lookPath "bw" }}true{{ else }}false{{ end }}
-    source = {{ $bwIdentity := dict }}{{ if lookPath "bw" }}{{ $bwJson := output "sh" "-c" "~/.local/bin/bw-fetch-identity 2>/dev/null || echo '{}'" | trim }}{{ if ne $bwJson "{}" }}{{ $bwIdentity = $bwJson | fromJson }}{{ if and (hasKey $bwIdentity "name") (ne (get $bwIdentity "name") "") }}"bitwarden"{{ else }}"hardcoded"{{ end }}{{ else }}"hardcoded"{{ end }}{{ else }}"hardcoded"{{ end }}
+    available = {{ if lookPath "rbw" }}true{{ else }}false{{ end }}
+    source = {{ $bwIdentity := dict }}{{ if lookPath "rbw" }}{{ $bwJson := output "sh" "-c" "~/.local/bin/rbw-fetch-identity 2>/dev/null || echo '{}'" | trim }}{{ if ne $bwJson "{}" }}{{ $bwIdentity = $bwJson | fromJson }}{{ if and (hasKey $bwIdentity "name") (ne (get $bwIdentity "name") "") }}"bitwarden"{{ else }}"hardcoded"{{ end }}{{ else }}"hardcoded"{{ end }}{{ else }}"hardcoded"{{ end }}
 
 [data.identity]
-    name = {{ $bwIdentity := dict }}{{ if lookPath "bw" }}{{ $bwJson := output "sh" "-c" "~/.local/bin/bw-fetch-identity 2>/dev/null || echo '{}'" | trim }}{{ if ne $bwJson "{}" }}{{ $bwIdentity = $bwJson | fromJson }}{{ end }}{{ end }}{{ if and (hasKey $bwIdentity "name") (ne (get $bwIdentity "name") "") }}{{ get $bwIdentity "name" | quote }}{{ else }}"User Name"{{ end }}
-    email_work = {{ $bwIdentity := dict }}{{ if lookPath "bw" }}{{ $bwJson := output "sh" "-c" "~/.local/bin/bw-fetch-identity 2>/dev/null || echo '{}'" | trim }}{{ if ne $bwJson "{}" }}{{ $bwIdentity = $bwJson | fromJson }}{{ end }}{{ end }}{{ if and (hasKey $bwIdentity "email_work") (ne (get $bwIdentity "email_work") "") }}{{ get $bwIdentity "email_work" | quote }}{{ else }}"work@example.com"{{ end }}
-    email_personal = {{ $bwIdentity := dict }}{{ if lookPath "bw" }}{{ $bwJson := output "sh" "-c" "~/.local/bin/bw-fetch-identity 2>/dev/null || echo '{}'" | trim }}{{ if ne $bwJson "{}" }}{{ $bwIdentity = $bwJson | fromJson }}{{ end }}{{ end }}{{ if and (hasKey $bwIdentity "email_personal") (ne (get $bwIdentity "email_personal") "") }}{{ get $bwIdentity "email_personal" | quote }}{{ else }}"user@example.com"{{ end }}
-    email = {{ $bwIdentity := dict }}{{ if lookPath "bw" }}{{ $bwJson := output "sh" "-c" "~/.local/bin/bw-fetch-identity 2>/dev/null || echo '{}'" | trim }}{{ if ne $bwJson "{}" }}{{ $bwIdentity = $bwJson | fromJson }}{{ end }}{{ end }}{{ if .is_work }}{{ if and (hasKey $bwIdentity "email_work") (ne (get $bwIdentity "email_work") "") }}{{ get $bwIdentity "email_work" | quote }}{{ else }}"work@example.com"{{ end }}{{ else }}{{ if and (hasKey $bwIdentity "email_personal") (ne (get $bwIdentity "email_personal") "") }}{{ get $bwIdentity "email_personal" | quote }}{{ else }}"user@example.com"{{ end }}{{ end }}
+    name = {{ $bwIdentity := dict }}{{ if lookPath "rbw" }}{{ $bwJson := output "sh" "-c" "~/.local/bin/rbw-fetch-identity 2>/dev/null || echo '{}'" | trim }}{{ if ne $bwJson "{}" }}{{ $bwIdentity = $bwJson | fromJson }}{{ end }}{{ end }}{{ if and (hasKey $bwIdentity "name") (ne (get $bwIdentity "name") "") }}{{ get $bwIdentity "name" | quote }}{{ else }}"User Name"{{ end }}
+    email_work = {{ $bwIdentity := dict }}{{ if lookPath "rbw" }}{{ $bwJson := output "sh" "-c" "~/.local/bin/rbw-fetch-identity 2>/dev/null || echo '{}'" | trim }}{{ if ne $bwJson "{}" }}{{ $bwIdentity = $bwJson | fromJson }}{{ end }}{{ end }}{{ if and (hasKey $bwIdentity "email_work") (ne (get $bwIdentity "email_work") "") }}{{ get $bwIdentity "email_work" | quote }}{{ else }}"work@example.com"{{ end }}
+    email_personal = {{ $bwIdentity := dict }}{{ if lookPath "rbw" }}{{ $bwJson := output "sh" "-c" "~/.local/bin/rbw-fetch-identity 2>/dev/null || echo '{}'" | trim }}{{ if ne $bwJson "{}" }}{{ $bwIdentity = $bwJson | fromJson }}{{ end }}{{ end }}{{ if and (hasKey $bwIdentity "email_personal") (ne (get $bwIdentity "email_personal") "") }}{{ get $bwIdentity "email_personal" | quote }}{{ else }}"user@example.com"{{ end }}
+    email = {{ $bwIdentity := dict }}{{ if lookPath "rbw" }}{{ $bwJson := output "sh" "-c" "~/.local/bin/rbw-fetch-identity 2>/dev/null || echo '{}'" | trim }}{{ if ne $bwJson "{}" }}{{ $bwIdentity = $bwJson | fromJson }}{{ end }}{{ end }}{{ if .is_work }}{{ if and (hasKey $bwIdentity "email_work") (ne (get $bwIdentity "email_work") "") }}{{ get $bwIdentity "email_work" | quote }}{{ else }}"work@example.com"{{ end }}{{ else }}{{ if and (hasKey $bwIdentity "email_personal") (ne (get $bwIdentity "email_personal") "") }}{{ get $bwIdentity "email_personal" | quote }}{{ else }}"user@example.com"{{ end }}{{ end }}
