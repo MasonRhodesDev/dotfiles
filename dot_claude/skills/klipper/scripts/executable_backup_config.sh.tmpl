@@ -31,7 +31,7 @@ echo "Creating backup summary..."
 cat > "$BACKUP_DIR/backup_info.txt" <<EOF
 Klipper Backup
 Created: $(date)
-Source: printer@192.168.1.XXX:~/printer_ender3v2_data/
+Source: printer@{{ .printer.ip }}:~/printer_ender3v2_data/
 
 Contents:
 - config/        - Klipper configuration files

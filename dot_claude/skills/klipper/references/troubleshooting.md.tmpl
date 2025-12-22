@@ -307,18 +307,18 @@ klipper_exec "tail -200 logs/klippy.log | grep -i 'mcu'"
 **Solutions:**
 ```bash
 # Check if Moonraker is running
-ssh printer@192.168.1.XXX "systemctl status moonraker"
+ssh printer@{{ .printer.ip }} "systemctl status moonraker"
 
 # Test connection from local machine
-curl http://192.168.1.XXX:7125/server/info
+curl http://{{ .printer.ip }}:{{ .printer.port }}/server/info
 
 # Verify IP addresses match:
-# OrcaSlicer: 192.168.1.XXX:7125
-# SSH: printer@192.168.1.XXX
+# OrcaSlicer: {{ .printer.ip }}:{{ .printer.port }}
+# SSH: printer@{{ .printer.ip }}
 # These should be the same printer
 
 # Restart Moonraker if needed:
-ssh printer@192.168.1.XXX "sudo systemctl restart moonraker"
+ssh printer@{{ .printer.ip }} "sudo systemctl restart moonraker"
 ```
 
 ## Motion Issues

@@ -136,7 +136,7 @@ if [ "$KLIPPER_AVAILABLE" != "false" ]; then
         ORCA_PORT=$(echo "$PRINT_HOST" | cut -d':' -f2)
 
         echo "OrcaSlicer connects to: $ORCA_IP:$ORCA_PORT"
-        echo "Klipper SSH host: printer@192.168.1.XXX"
+        echo "Klipper SSH host: printer@{{ .printer.ip }}"
         echo ""
 
         echo -n "Testing Moonraker API... "
