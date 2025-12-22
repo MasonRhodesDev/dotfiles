@@ -42,7 +42,7 @@ This skill provides procedural knowledge for managing OrcaSlicer profiles and co
 
 Three custom profiles are tagged with [E3V2]:
 
-1. **[E3V2] Ender-3 V2** (machine) - Configured for Klipper at 192.168.1.XXX:7125
+1. **[E3V2] Ender-3 V2** (machine) - Configured for Klipper at {{ .printer.ip }}:{{ .printer.port }}
 2. **[E3V2] PLA** (filament) - Tuned flow ratio (0.95) for the specific printer
 3. **[E3V2] 0.20mm Structural** (process) - Enhanced strength with 35% infill, 6 top layers
 
@@ -149,13 +149,13 @@ vim "[E3V2] 0.20mm High Speed.json"
 ## Integration with Klipper
 
 The [E3V2] machine profile connects to Klipper/Moonraker at:
-- **Host**: `192.168.1.XXX:7125`
-- **Note**: This should match `printer@192.168.1.XXX` from the klipper skill
+- **Host**: `{{ .printer.ip }}:{{ .printer.port }}`
+- **Note**: This should match `printer@{{ .printer.ip }}` from the klipper skill
 
 ### Important Considerations
 
 1. **G-code Macros**: Machine profile includes START_PRINT and END_PRINT macros that must exist in Klipper config
-2. **Print Host Address**: Verify IP `192.168.1.XXX` resolves to printer at `192.168.1.XXX`
+2. **Print Host Address**: Verify IP `{{ .printer.ip }}` resolves to printer at `{{ .printer.ip }}`
 3. **Upload Directory**: G-code appears in `~/printer_ender3v2_data/gcodes/` on the printer
 4. **Macro Parameters**: START_PRINT receives `EXTRUDER_TEMP`, `BED_TEMP`, `CHAMBER_TEMP`
 

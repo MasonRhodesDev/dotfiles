@@ -16,6 +16,8 @@ if command -v rbw &> /dev/null && rbw unlocked &> /dev/null 2>&1; then
     EMAIL_PERSONAL=$(rbw get --field email_personal "$ITEM_NAME" 2>/dev/null || echo "")
     COMPANY=$(rbw get --field company "$ITEM_NAME" 2>/dev/null || echo "")
     LOCATION=$(rbw get --field location "$ITEM_NAME" 2>/dev/null || echo "")
+    PRINTER_IP=$(rbw get --field printer_ip "$ITEM_NAME" 2>/dev/null || echo "")
+    PRINTER_PORT=$(rbw get --field printer_port "$ITEM_NAME" 2>/dev/null || echo "")
 
     # If we got at least the name field, construct and cache JSON
     if [ -n "$NAME" ]; then
@@ -25,18 +27,24 @@ if command -v rbw &> /dev/null && rbw unlocked &> /dev/null 2>&1; then
             --arg email_personal "$EMAIL_PERSONAL" \
             --arg company "$COMPANY" \
             --arg location "$LOCATION" \
+            --arg printer_ip "$PRINTER_IP" \
+            --arg printer_port "$PRINTER_PORT" \
             '{
                 fetched_at: (now | todate),
                 name: $name,
                 email_work: $email_work,
                 email_personal: $email_personal,
                 company: $company,
-                location: $location
+                location: $location,
+                printer_ip: $printer_ip,
+                printer_port: $printer_port
             }')
 
         if [ $? -eq 0 ] && [ -n "$IDENTITY" ]; then
-            echo "$IDENTITY" > "$CACHE_FILE"
-            chmod 0600 "$CACHE_FILE"
+            # Use atomic write with temp file and move
+            echo "$IDENTITY" > "$CACHE_FILE.tmp"
+            chmod 0600 "$CACHE_FILE.tmp"
+            mv "$CACHE_FILE.tmp" "$CACHE_FILE"
             echo "$IDENTITY"
             exit 0
         fi

@@ -3,7 +3,7 @@
 set -e
 set -o pipefail
 
-cd $HOME/repos/redacted
+cd "$HOME/repos/redacted"
 
 # if not on main branch, checkout main
 if [[ $(git branch --show-current) != "main" ]]; then

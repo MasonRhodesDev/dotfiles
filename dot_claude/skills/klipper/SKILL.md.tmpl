@@ -16,7 +16,7 @@ This skill provides procedural knowledge and helper functions for managing a Kli
 - Backup or restore printer configurations
 - Troubleshoot BLTouch, bed mesh, or motion issues
 - Modify macros or printer settings
-- Work with the remote printer at 192.168.1.XXX
+- Work with the remote printer at {{ .printer.ip }}
 
 ## Setup
 
@@ -40,7 +40,7 @@ Source the klipper-mount.sh script to access these functions:
 
 ## Printer Information
 
-- **Host**: printer@192.168.1.XXX
+- **Host**: printer@{{ .printer.ip }}
 - **Remote Path**: ~/printer_ender3v2_data/
 - **Local Cache**: ~/.cache/klipper/
 - **Printer Model**: Ender 3 V2

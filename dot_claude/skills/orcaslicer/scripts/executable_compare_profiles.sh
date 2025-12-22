@@ -59,7 +59,7 @@ echo ""
 # Create sorted JSON for comparison
 TEMP1=$(mktemp)
 TEMP2=$(mktemp)
-trap "rm -f $TEMP1 $TEMP2" EXIT
+trap "rm -f \"$TEMP1\" \"$TEMP2\"" EXIT
 
 jq -S . "$PROFILE1" > "$TEMP1"
 jq -S . "$PROFILE2" > "$TEMP2"

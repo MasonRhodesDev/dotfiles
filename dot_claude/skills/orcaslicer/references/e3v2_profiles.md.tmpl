@@ -23,13 +23,13 @@ Inherits from: `Creality Ender-3 V2 0.4 nozzle` (system profile)
 **Print Host Integration:**
 ```json
 {
-    "print_host": "192.168.1.XXX:7125",
+    "print_host": "{{ .printer.ip }}:{{ .printer.port }}",
     "printhost_authorization_type": "key"
 }
 ```
 
 - Configured for Moonraker/Klipper integration
-- IP address should match printer at `192.168.1.XXX`
+- IP address should match printer at `{{ .printer.ip }}`
 - Port 7125 is standard Moonraker API port
 
 **Build Volume:**
@@ -63,7 +63,7 @@ The machine profile includes custom start G-code that calls Klipper macros:
 START_PRINT EXTRUDER_TEMP=[nozzle_temperature] BED_TEMP=[bed_temperature]
 ```
 
-**Important**: This macro must exist in Klipper config at `printer@192.168.1.XXX:~/printer_ender3v2_data/config/`
+**Important**: This macro must exist in Klipper config at `printer@{{ .printer.ip }}:~/printer_ender3v2_data/config/`
 
 The START_PRINT macro typically handles:
 - Homing (G28)

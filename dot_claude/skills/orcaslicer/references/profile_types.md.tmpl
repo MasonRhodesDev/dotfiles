@@ -37,7 +37,7 @@ Define printer hardware characteristics and physical capabilities.
 - `layer_change_gcode` - Commands run on layer changes
 
 **Print Host:**
-- `print_host` - Moonraker/Octoprint address (e.g., 192.168.1.XXX:7125)
+- `print_host` - Moonraker/Octoprint address (e.g., {{ .printer.ip }}:{{ .printer.port }})
 - `printhost_authorization_type` - Authentication method
 
 **Bed Leveling:**
@@ -57,7 +57,7 @@ Define printer hardware characteristics and physical capabilities.
     "printable_area": [[0,0], [235,0], [235,232], [0,232]],
     "printable_height": "250",
     "retraction_length": ["1"],
-    "print_host": "192.168.1.XXX:7125",
+    "print_host": "{{ .printer.ip }}:{{ .printer.port }}",
     "machine_start_gcode": "START_PRINT EXTRUDER_TEMP=[nozzle_temperature] BED_TEMP=[bed_temperature]"
 }
 ```

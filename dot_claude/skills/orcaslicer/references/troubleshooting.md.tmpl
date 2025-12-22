@@ -136,33 +136,33 @@ cp ../../system/Creality/machine/base_profile.json ./new_profile.json
 
 ```bash
 # 1. Verify printer IP address
-# OrcaSlicer machine profile shows: 192.168.1.XXX:7125
-# Klipper SSH: printer@192.168.1.XXX
+# OrcaSlicer machine profile shows: {{ .printer.ip }}:{{ .printer.port }}
+# Klipper SSH: printer@{{ .printer.ip }}
 # These should be the same printer
 
 # Test connectivity:
-ping 192.168.1.XXX
-ping 192.168.1.XXX
+ping {{ .printer.ip }}
+ping {{ .printer.ip }}
 
 # 2. Check Moonraker is running
-ssh printer@192.168.1.XXX "systemctl status moonraker"
+ssh printer@{{ .printer.ip }} "systemctl status moonraker"
 
 # Should show: active (running)
 
 # 3. Test Moonraker API directly
-curl http://192.168.1.XXX:7125/server/info
+curl http://{{ .printer.ip }}:{{ .printer.port }}/server/info
 
 # Should return JSON with server info
 
 # 4. Check firewall
-ssh printer@192.168.1.XXX "sudo ufw status"
+ssh printer@{{ .printer.ip }} "sudo ufw status"
 
 # Port 7125 should be allowed
 
 # 5. Verify machine profile settings
 cat ~/.config/OrcaSlicer/user/default/machine/[E3V2]\ Ender-3\ V2.json | jq .print_host
 
-# Should be: "192.168.1.XXX:7125"
+# Should be: "{{ .printer.ip }}:{{ .printer.port }}"
 
 # Update if needed (close OrcaSlicer first):
 # Edit JSON and change "print_host" value
@@ -192,7 +192,7 @@ This is normal behavior. After upload:
 To enable auto-start (optional):
 ```bash
 # Edit moonraker.conf on printer
-ssh printer@192.168.1.XXX
+ssh printer@{{ .printer.ip }}
 cd ~/printer_ender3v2_data/config
 vim moonraker.conf
 
@@ -222,7 +222,7 @@ sudo systemctl restart moonraker
 
 ```bash
 # 1. Verify START_PRINT exists in Klipper
-ssh printer@192.168.1.XXX
+ssh printer@{{ .printer.ip }}
 cd ~/printer_ender3v2_data/config
 grep -r "START_PRINT" .
 
@@ -269,7 +269,7 @@ cat ~/.config/OrcaSlicer/user/default/machine/[E3V2]\ Ender-3\ V2.json | jq .z_o
 # Should be: "0" or not present
 
 # 2. Z-offset should be in Klipper config instead:
-ssh printer@192.168.1.XXX
+ssh printer@{{ .printer.ip }}
 grep "z_offset" ~/printer_ender3v2_data/config/printer.cfg
 
 # Should show: z_offset: 2.0 (or your calibrated value)
@@ -360,7 +360,7 @@ cat ~/.config/OrcaSlicer/user/default/machine/[E3V2]\ Ender-3\ V2.json | jq .noz
 # New flow = 0.95 × (20.0 / 20.2) = 0.94
 
 # 5. Verify E-steps in Klipper (if flow < 0.90)
-ssh printer@192.168.1.XXX
+ssh printer@{{ .printer.ip }}
 grep "rotation_distance" ~/printer_ender3v2_data/config/printer.cfg
 # Should be calibrated for extruder
 ```
@@ -546,7 +546,7 @@ Manual verification:
 cat ~/.config/OrcaSlicer/user/default/machine/[E3V2]\ Ender-3\ V2.json | jq .machine_start_gcode
 
 # 2. Compare Klipper START_PRINT macro
-ssh printer@192.168.1.XXX "cat ~/printer_ender3v2_data/config/klipper-macros/start_end.cfg" | grep -A 20 "START_PRINT"
+ssh printer@{{ .printer.ip }} "cat ~/printer_ender3v2_data/config/klipper-macros/start_end.cfg" | grep -A 20 "START_PRINT"
 
 # 3. Verify parameters match
 # OrcaSlicer sends: EXTRUDER_TEMP=[nozzle_temperature] BED_TEMP=[bed_temperature]

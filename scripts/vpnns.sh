@@ -70,13 +70,13 @@ get_nameservers() {
 if [ $# -gt 0 ] && [ "$1" = "--clean" ]; then
     echo "Cleaning up namespace $namespace"
     # bring down the namespace
-    ip netns exec $namespace ip link set mv1 down 2> /dev/null
+    ip netns exec "$namespace" ip link set mv1 down 2> /dev/null
 
     # Bring down the macvlan interface
     ip link set mv1 down 2> /dev/null
 
     # Remove namespace
-    ip netns del $namespace 2> /dev/null
+    ip netns del "$namespace" 2> /dev/null
 
     # Remove macvlan interface
     ip link del mv1 2> /dev/null
@@ -86,7 +86,7 @@ fi
 
 # Add namespace
 echo "Adding namespace $namespace"
-ip netns add $namespace
+ip netns add "$namespace"
 
 # Wait for namespace creation
 wait_for_namespace "$namespace"
@@ -100,28 +100,28 @@ wait_for_interface "mv1"
 
 # Add macvlan interface to namespace
 echo "Adding macvlan interface to namespace"
-ip link set mv1 netns $namespace
+ip link set mv1 netns "$namespace"
 
 # # Wait for link creation in namespace
 wait_for_link_creation "$namespace" "mv1"
 
 # Bring up loopback interface
 echo "Bringing up loopback interface"
-ip netns exec $namespace ip link set dev lo up
+ip netns exec "$namespace" ip link set dev lo up
 
 # Get nameservers from primary interface
 nameservers=$(get_nameservers)
 
 # Configure custom resolv.conf for the namespace
 echo "Configuring custom resolv.conf for the namespace $namespace with nameservers $nameservers"
-mkdir -p $(dirname "$custom_resolv_conf")
+mkdir -p "$(dirname "$custom_resolv_conf")"
 echo "nameserver $nameservers" > "$custom_resolv_conf"
 
 # Bring up macvlan interface
 echo "Bringing up macvlan interface"
-ip netns exec $namespace ip link set dev mv1 up
+ip netns exec "$namespace" ip link set dev mv1 up
 
 # Set IP address of with dhclient
 echo "Setting IP address of macvlan interface with dhclient"
 # pipe the output to nohup-ns-$namespace-dhclient.log
-nohup ip netns exec $namespace dhclient mv1 > nohup-ns-$namespace-dhclient.log 2>&1 &
+nohup ip netns exec "$namespace" dhclient mv1 > "nohup-ns-$namespace-dhclient.log" 2>&1 &

@@ -45,7 +45,7 @@ Reference guide for frequently used OrcaSlicer setting keys across all profile t
 
 | Setting Key | Type | Description | Example |
 |-------------|------|-------------|---------|
-| `print_host` | String | Octoprint/Moonraker address | `"192.168.1.XXX:7125"` |
+| `print_host` | String | Octoprint/Moonraker address | `"{{ .printer.ip }}:{{ .printer.port }}"` |
 | `printhost_authorization_type` | String | Auth method | `"key"` or `"password"` |
 | `printhost_apikey` | String | API key for auth | `"1234567890ABCDEF"` |
 

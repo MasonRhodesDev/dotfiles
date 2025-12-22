@@ -122,7 +122,7 @@ echo ""
 
 # Create temporary file for analysis
 TEMP_FILE=$(mktemp)
-trap "rm -f $TEMP_FILE" EXIT
+trap "rm -f \"$TEMP_FILE\"" EXIT
 
 # Extract relevant data from reports
 echo "$REPORTS" | jq -r '.reports[] |
