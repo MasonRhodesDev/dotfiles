@@ -1,11 +1,11 @@
 #:schema https://docs.jj-vcs.dev/latest/config-schema.json
 
 [user]
-name = "Mason Rhodes"
+name = "{{ .identity.name }}"
 {{- if .is_work }}
-email = "work@example.com"
+email = "{{ .identity.email_work }}"
 {{- else }}
-email = "user@example.com"
+email = "{{ .identity.email_personal }}"
 {{- end }}
 
 [ui]

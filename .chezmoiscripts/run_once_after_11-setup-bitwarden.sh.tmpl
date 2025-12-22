@@ -1,0 +1,38 @@
+#!/bin/bash
+# Setup Bitwarden CLI for chezmoi dotfiles
+
+set -e
+
+echo "Setting up Bitwarden CLI..."
+
+# Check if bw is installed
+if ! command -v bw &> /dev/null; then
+    echo "Installing bitwarden-cli..."
+{{- if eq .chezmoi.osRelease.id "arch" }}
+    sudo pacman -S --noconfirm bitwarden-cli
+{{- else if eq .chezmoi.osRelease.id "fedora" }}
+    # Fedora may need npm install or manual download
+    if command -v npm &> /dev/null; then
+        sudo npm install -g @bitwarden/cli
+    else
+        echo "Warning: npm not found. Install nodejs first:"
+        echo "  sudo dnf install nodejs"
+        echo "Then install bitwarden-cli:"
+        echo "  sudo npm install -g @bitwarden/cli"
+        exit 0
+    fi
+{{- else }}
+    echo "Warning: bitwarden-cli not available for this OS"
+    echo "Install manually: https://bitwarden.com/help/cli/"
+    exit 0
+{{- end }}
+fi
+
+echo "✅ Bitwarden CLI installed"
+echo ""
+echo "Next steps:"
+echo "1. Login: bw login --sso"
+echo "2. Store password in keyring: secret-tool store --label='Bitwarden Master Password' service bitwarden username \$(whoami)"
+echo "3. Run: chezmoi apply"
+echo ""
+echo "For manual setup, see: ~/.local/share/chezmoi/.plans/sprightly-weaving-naur.md"

@@ -1,8 +1,8 @@
-init-author-name=Mason Rhodes
-{{- if contains "work" .chezmoi.hostname }}
-init-author-email=work@example.com
+init-author-name={{ .identity.name }}
+{{- if .is_work }}
+init-author-email={{ .identity.email_work }}
 {{- else }}
-init-author-email=user@example.com
+init-author-email={{ .identity.email_personal }}
 {{- end }}
 {{- if env "GITHUB_NPM_TOKEN" }}
 always-auth=true

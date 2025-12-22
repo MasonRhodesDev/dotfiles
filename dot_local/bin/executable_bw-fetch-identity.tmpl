@@ -1,0 +1,58 @@
+#!/bin/bash
+# Fetch identity from Bitwarden with caching
+
+CACHE_FILE="$HOME/.cache/chezmoi/bitwarden-identity.json"
+CACHE_DIR=$(dirname "$CACHE_FILE")
+{{- if .bitwarden_identity_item_id }}
+ITEM_ID="${1:-{{ .bitwarden_identity_item_id }}}"
+{{- else }}
+ITEM_ID="${1}"
+{{- end }}
+
+# Exit if no item ID provided
+if [ -z "$ITEM_ID" ]; then
+    # Fall back to cached value if available
+    if [ -f "$CACHE_FILE" ]; then
+        cat "$CACHE_FILE"
+        exit 0
+    fi
+    echo "{}"
+    exit 0
+fi
+
+# Ensure cache directory exists
+mkdir -p "$CACHE_DIR"
+
+# Try to unlock first
+BW_SESSION=$(~/.local/bin/bw-auto-unlock 2>/dev/null)
+if [ -n "$BW_SESSION" ]; then
+    export BW_SESSION
+fi
+
+# Try to fetch from Bitwarden if unlocked
+if command -v bw &> /dev/null && bw status 2>/dev/null | jq -e '.status == "unlocked"' > /dev/null 2>&1; then
+    # Fetch item and extract custom fields
+    IDENTITY=$(bw get item "$ITEM_ID" 2>/dev/null | jq '{
+        fetched_at: (now | todate),
+        name: ((.fields[] | select(.name == "name") | .value) // ""),
+        email_work: ((.fields[] | select(.name == "email_work") | .value) // ""),
+        email_personal: ((.fields[] | select(.name == "email_personal") | .value) // ""),
+        company: ((.fields[] | select(.name == "company") | .value) // ""),
+        location: ((.fields[] | select(.name == "location") | .value) // "")
+    }' 2>/dev/null)
+
+    if [ $? -eq 0 ] && [ -n "$IDENTITY" ] && [ "$IDENTITY" != "null" ]; then
+        echo "$IDENTITY" > "$CACHE_FILE"
+        echo "$IDENTITY"
+        exit 0
+    fi
+fi
+
+# Fall back to cached value if available
+if [ -f "$CACHE_FILE" ]; then
+    cat "$CACHE_FILE"
+    exit 0
+fi
+
+# No cache available, return empty
+echo "{}"

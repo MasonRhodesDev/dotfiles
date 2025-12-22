@@ -1,6 +1,6 @@
 [user]
-    name = Mason Rhodes
-    email = work@example.com
+    name = {{ .identity.name }}
+    email = {{ .identity.email }}
 
 [credential]
     credentialStore = secretservice
