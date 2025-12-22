@@ -1,0 +1,29 @@
+#!/bin/bash
+# Auto-unlock Bitwarden using secret-tool stored password
+
+# Check if bw command exists
+if ! command -v bw &> /dev/null; then
+    exit 1
+fi
+
+# Check if already unlocked
+if bw status 2>/dev/null | jq -e '.status == "unlocked"' > /dev/null 2>&1; then
+    bw status | jq -r '.userEmail // empty'
+    exit 0
+fi
+
+# Retrieve password from keyring
+BW_PASSWORD=$(secret-tool lookup service bitwarden username "$(whoami)" 2>/dev/null)
+
+if [ -n "$BW_PASSWORD" ]; then
+    # Unlock using retrieved password
+    BW_SESSION=$(echo "$BW_PASSWORD" | bw unlock --raw 2>/dev/null)
+    if [ $? -eq 0 ] && [ -n "$BW_SESSION" ]; then
+        export BW_SESSION
+        echo "$BW_SESSION"
+        exit 0
+    fi
+fi
+
+# Failed to unlock
+exit 1
