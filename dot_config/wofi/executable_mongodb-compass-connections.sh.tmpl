@@ -1,16 +1,29 @@
 {{ if .is_work -}}
 #!/bin/bash
 
-MONGODB_COMPASS_CONNECTIONS_FOLDER_ID=REDACTED_FOLDER_ID
+MONGODB_FOLDER="MongoDB Compass Connections"
 
-entries=$(bw list items --folderid $MONGODB_COMPASS_CONNECTIONS_FOLDER_ID)
+# Get all entries (rbw doesn't filter by folder ID, so we use folder name)
+# List all items in JSON format
+entries=$(rbw list --raw 2>/dev/null | jq -r --arg folder "$MONGODB_FOLDER" '.[] | select(.folder == $folder)')
 
-selected=$(echo -e $entries | jq -r '.[] | .name' | wofi --width 250 --height 210 --dmenu --cache-file /dev/null)
+# Show entry names in wofi
+selected=$(echo "$entries" | jq -r '.name' | wofi --width 250 --height 210 --dmenu --cache-file /dev/null)
 
-selected_conn_str=$(bw get item $(echo -e $entries | jq -r ".[] | select(.name == \"$selected\") | .id") | jq -r '.fields[] | select(.name == "compass") | .value')
+if [ -z "$selected" ]; then
+  exit 0
+fi
+
+# Get the connection string from the selected item
+selected_conn_str=$(rbw get --field compass "$selected" 2>/dev/null)
 
 if [ -n "$selected_conn_str" ]; then
-  mongodb-compass $selected_conn_str
+  # Validate it looks like a MongoDB URI
+  if [[ "$selected_conn_str" =~ ^mongodb(\+srv)?:// ]]; then
+    mongodb-compass "$selected_conn_str"
+  else
+    notify-send "Invalid connection string format" --urgency=critical
+  fi
 else
   notify-send "No connection string found" --urgency=critical
 fi

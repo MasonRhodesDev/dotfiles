@@ -1,0 +1,133 @@
+#!/bin/bash
+# Interactive rbw (Bitwarden CLI) setup for chezmoi dotfiles
+# Runs once before first apply, guides through login and setup
+
+echo "========================================="
+echo "rbw (Bitwarden CLI) Setup for Chezmoi"
+echo "========================================="
+echo ""
+
+# Check if already configured
+if command -v rbw &> /dev/null && rbw unlocked &> /dev/null; then
+    echo "✅ rbw already configured and unlocked"
+    exit 0
+fi
+
+# Install rbw if not present
+if ! command -v rbw &> /dev/null; then
+    echo "📦 Installing rbw..."
+{{- if eq .chezmoi.osRelease.id "arch" }}
+    if sudo pacman -S --noconfirm rbw 2>/dev/null; then
+        echo "✅ Installed via pacman"
+    else
+        echo "⚠️  pacman install failed. Continuing without Bitwarden..."
+        exit 0
+    fi
+{{- else if eq .chezmoi.osRelease.id "fedora" }}
+    echo "⚠️  rbw not available in Fedora repos. Continuing without Bitwarden..."
+    echo "To install manually: https://github.com/doy/rbw"
+    exit 0
+{{- else }}
+    echo "⚠️  Continuing without Bitwarden..."
+    echo "To install manually: https://github.com/doy/rbw"
+    exit 0
+{{- end }}
+fi
+
+echo ""
+echo "========================================="
+echo "Step 1: Login to Bitwarden"
+echo "========================================="
+echo ""
+echo "Enter your Bitwarden email address:"
+read -p "Email: " email
+
+if [ -z "$email" ]; then
+    echo "⚠️  No email provided. Continuing with placeholder values..."
+    exit 0
+fi
+
+# Configure rbw with email
+rbw config set email "$email"
+
+# Register device (required for official Bitwarden server)
+echo ""
+echo "Registering device with Bitwarden..."
+if ! rbw register 2>/dev/null; then
+    echo "⚠️  Registration failed. Continuing anyway..."
+fi
+
+# Login
+echo ""
+echo "Logging in to Bitwarden..."
+if rbw login 2>/dev/null; then
+    echo "✅ Login successful!"
+else
+    echo "⚠️  Login failed. Continuing with placeholder values..."
+    echo "To login later: rbw login"
+    exit 0
+fi
+
+echo ""
+echo "========================================="
+echo "Step 2: Unlock Vault"
+echo "========================================="
+echo ""
+echo "Unlocking rbw vault..."
+if rbw unlock 2>/dev/null; then
+    echo "✅ Vault unlocked!"
+    # Secure rbw configuration directory
+    chmod 0700 "$HOME/.config/rbw" 2>/dev/null || true
+else
+    echo "⚠️  Unlock failed. Continuing with placeholder values..."
+    echo "To unlock later: rbw unlock"
+    exit 0
+fi
+
+echo ""
+echo "========================================="
+echo "Step 3: Create chezmoi-data Item"
+echo "========================================="
+echo ""
+echo "You need a Secure Note in Bitwarden named 'chezmoi-data' with custom fields."
+echo ""
+echo "Create via Browser/Extension:"
+echo "  1. Open Bitwarden web vault or browser extension"
+echo "  2. Create 'Secure Note' named 'chezmoi-data'"
+echo "  3. Add custom fields:"
+echo "     - name: Your Full Name"
+echo "     - email_work: your.work@email.com"
+echo "     - email_personal: your.personal@email.com"
+echo "  4. Save the item"
+echo ""
+echo "Note: rbw will automatically sync and access the item."
+echo ""
+read -p "Press Enter after creating the item (or Ctrl+C to skip)..." dummy
+
+# Sync to fetch the new item
+echo ""
+echo "Syncing rbw..."
+if rbw sync 2>/dev/null; then
+    echo "✅ Sync complete!"
+else
+    echo "⚠️  Sync failed. Item may not be available yet."
+fi
+
+echo ""
+echo "========================================="
+echo "✅ rbw Setup Complete!"
+echo "========================================="
+echo ""
+echo "If you skipped item creation, manually create 'chezmoi-data'"
+echo "secure note in Bitwarden with custom fields:"
+echo "  - name: Your Full Name"
+echo "  - email_work: your.work@email.com"
+echo "  - email_personal: your.personal@email.com"
+echo ""
+echo "Then run: rbw sync"
+echo ""
+echo "Continuing with chezmoi apply..."
+echo ""
+
+# Always exit successfully (non-blocking)
+exit 0
