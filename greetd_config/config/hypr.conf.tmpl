@@ -1,0 +1,59 @@
+exec-once = regreet; hyprctl dispatch exit
+exec-once = sleep 2 && socat -U - UNIX-CONNECT:$XDG_RUNTIME_DIR/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket2.sock | grep --line-buffered focusedmon | while read l; do hyprctl dispatch focusworkspaceoncurrentmonitor 1; done
+
+# Monitor configuration
+{{ if .is_work -}}
+# Primary monitor - ultrawide
+monitor = desc:Dell Inc. DELL S3422DWG HSRTS63,3440x1440@144,0x0,1
+
+# Secondary monitor - 4K vertical with rotation
+monitor = desc:Dell Inc. DELL S2721QS 6VSGM43,3840x2160@60,3440x0,1.5,transform,3
+
+# Laptop display - auto-handled by lid state, positioned after externals
+monitor = eDP-2,preferred,auto,1
+{{ end -}}
+
+# Fallback for any unknown monitors
+monitor = ,preferred,auto,1
+
+exec-once = swaybg -i /etc/greetd/bg.png -m fill
+
+misc {
+    disable_hyprland_logo = true
+    disable_splash_rendering = true
+}
+
+env = GTK_USE_PORTAL,0
+env = GDK_DEBUG,no-portals
+env = XCURSOR_SIZE,24
+
+input {
+    kb_layout = us
+    follow_mouse = 1
+    sensitivity = 0
+}
+
+general {
+    gaps_in = 5
+    gaps_out = 20
+    border_size = 2
+    col.active_border = rgba(000000ee) rgba(333333ee) 45deg
+    col.inactive_border = rgba(000000aa)
+    layout = dwindle
+    allow_tearing = false
+}
+
+animations {
+    enabled = false
+}
+
+decoration {
+    rounding = 0
+    blur {
+        enabled = false
+    }
+}
+
+debug {
+    disable_logs = false
+}
