@@ -11,7 +11,14 @@ if ! command -v jj &> /dev/null; then
 {{- if eq .chezmoi.osRelease.id "arch" }}
     sudo pacman -S --noconfirm jujutsu
 {{- else if eq .chezmoi.osRelease.id "fedora" }}
-    sudo dnf install -y jujutsu
+    # No official Fedora package - use cargo install
+    # See: https://github.com/jj-vcs/jj/issues/6469
+    if command -v cargo &> /dev/null; then
+        cargo install --locked jj-cli
+    else
+        echo "Error: cargo not found. Install rust/cargo first, then run: cargo install --locked jj-cli"
+        exit 1
+    fi
 {{- else }}
     echo "Warning: jujutsu not available for this OS"
     echo "Install manually: https://github.com/jj-vcs/jj"
