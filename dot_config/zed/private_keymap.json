@@ -1,4 +1,12 @@
 [
+  // Disable default space binding for which-key
+  {
+    "context": "VimControl && !menu",
+    "bindings": {
+      "space": null
+    }
+  },
+
   // ==========================================
   // SPACE LEADER BINDINGS (Vim normal/visual mode)
   // ==========================================
@@ -56,6 +64,32 @@
       "space a c": "workspace::ToggleRightDock",
       "space g g": "workspace::ToggleLeftDock",
       "space f f": "file_finder::Toggle"
+    }
+  },
+
+  // Leader bindings when no buffer open (excludes Terminal)
+  {
+    "context": "Workspace && !Terminal && !Editor",
+    "bindings": {
+      "space e": "project_panel::ToggleFocus",
+      "space a c": "workspace::ToggleRightDock",
+      "space g g": "git_panel::ToggleFocus",
+      "space f f": "file_finder::Toggle"
+    }
+  },
+
+  // Leader bindings in Terminal
+  {
+    "context": "Terminal",
+    "bindings": {
+      "space e": "project_panel::ToggleFocus",
+      "space a c": "workspace::ToggleRightDock",
+      "space g g": "git_panel::ToggleFocus",
+      "space f f": "file_finder::Toggle",
+
+      // Split terminal
+      "space v": "pane::SplitRight",
+      "space s": "pane::SplitDown"
     }
   },
 
