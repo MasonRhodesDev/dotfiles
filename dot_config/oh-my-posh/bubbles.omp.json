@@ -9,7 +9,7 @@
           "foreground": "#E64747",
           "leading_diamond": "",
           "style": "diamond",
-          "template": "{{ if .SSHSession }} {{ end }}{{ .UserName }}",
+          "template": "{{ if .SSHSession }}󰢹 {{ end }}{{ .UserName }}",
           "trailing_diamond": " ",
           "type": "session"
         },
