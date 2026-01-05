@@ -3,13 +3,10 @@
 vt = 1
 
 [default_session]
-# gtkgreet with GTK4 and custom CSS
-command = "gtkgreet -l -s /etc/greetd/gtkgreet.css"
+# regreet - GTK4 greeter running under Hyprland compositor
+# Hyprland config: /etc/greetd/hypr.conf
+# regreet config: /etc/greetd/regreet.toml
+command = "env LIBSEAT_BACKEND=seatd Hyprland --config /etc/greetd/hypr.conf"
 
 # The user to run the greeter as
 user = "greeter"
-
-[initial_session]
-# Uncomment to auto-login on first boot
-# command = "Hyprland"
-# user = "mason"

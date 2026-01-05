@@ -10,8 +10,10 @@ config.front_end = "OpenGL"
 config.exit_behavior = "CloseOnCleanExit"
 config.skip_close_confirmation_for_processes_named = {}
 
--- Hide tab bar when only one tab is open
-config.hide_tab_bar_if_only_one_tab = true
+-- Minimal status bar: hide tabs but keep status area for SSH indicator
+config.hide_tab_bar_if_only_one_tab = false
+config.show_tabs_in_tab_bar = false
+config.show_new_tab_button_in_tab_bar = false
 
 -- Dynamic opacity based on running process
 config.window_background_opacity = 0.95
@@ -30,6 +32,22 @@ if wezterm.plugin and wezterm.plugin.require then
 else
   wezterm.log_info("wezterm.plugin API unavailable; skipping plugins")
 end
+
+-- Show status bar with SSH indicator only during SSH sessions
+wezterm.on("update-right-status", function(window, pane)
+  local process = pane:get_foreground_process_name() or ""
+  local is_ssh = process:match("ssh$") or pane:get_domain_name():match("^SSH:")
+
+  local overrides = window:get_config_overrides() or {}
+  if is_ssh then
+    overrides.enable_tab_bar = true
+    window:set_left_status(wezterm.format({ { Text = " 🔐 SSH" } }))
+  else
+    overrides.enable_tab_bar = false
+    window:set_left_status("")
+  end
+  window:set_config_overrides(overrides)
+end)
 
 -- Handle user variable changes from nvim for config overrides
 wezterm.on('user-var-changed', function(window, pane, name, value)

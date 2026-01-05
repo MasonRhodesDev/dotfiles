@@ -8,6 +8,8 @@
 exec-once = dbus-update-activation-environment --all
 exec-once=sleep 1 & dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP
 exec-once = systemctl --user start hyprpolkitagent
+# Start gnome-keyring SSH component (secrets/pkcs11 started by PAM)
+exec-once = gnome-keyring-daemon --start --components=ssh
 exec-once = /home/mason/.config/hypr/configs/monitors.sh > /home/mason/.config/hypr/logs/monitors.log 2>&1
 
 exec-once=/home/mason/.config/hypr/idle.sh
