@@ -6,7 +6,7 @@ vt = 1
 # regreet - GTK4 greeter running under Hyprland compositor
 # Hyprland config: /etc/greetd/hypr.conf
 # regreet config: /etc/greetd/regreet.toml
-command = "env LIBSEAT_BACKEND=seatd Hyprland --config /etc/greetd/hypr.conf"
+command = "env LIBSEAT_BACKEND=seatd start-hyprland --config /etc/greetd/hypr.conf"
 
 # The user to run the greeter as
 user = "greeter"
