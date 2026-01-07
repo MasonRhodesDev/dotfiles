@@ -116,6 +116,8 @@ table.insert(config.hyperlink_rules, {
 
 -- Key bindings for copy/paste with system clipboard
 config.keys = {
+  -- Shift+Enter sends Escape+CR
+  {key="Enter", mods="SHIFT", action=wezterm.action{SendString="\x1b\r"}},
   -- Copy to system clipboard
   {
     key = 'c',
