@@ -790,11 +790,11 @@ success "Directories created"
 
 info "[8/14] Installing desktop mode configuration..."
 
-# Check if Hyprland is available (prefer start-hyprland wrapper for 0.53+)
+# Check if Hyprland is available
+# Note: greetd must use plain Hyprland, not start-hyprland wrapper
+# start-hyprland requires user-level permissions not available to greeter user
 HYPRLAND_CMD=""
-if command -v start-hyprland &>/dev/null; then
-    HYPRLAND_CMD="env LIBSEAT_BACKEND=seatd start-hyprland"
-elif command -v Hyprland &>/dev/null; then
+if command -v Hyprland &>/dev/null; then
     HYPRLAND_CMD="Hyprland"
 elif [ -f /usr/bin/Hyprland ]; then
     HYPRLAND_CMD="/usr/bin/Hyprland"
@@ -813,7 +813,7 @@ vt = 1
 # regreet - GTK4 greeter running under Hyprland compositor
 # Hyprland config: /etc/greetd/hypr.conf
 # regreet config: /etc/greetd/regreet.toml
-command = "${HYPRLAND_CMD:-start-hyprland} --config /etc/greetd/hypr.conf"
+command = "${HYPRLAND_CMD:-Hyprland} --config /etc/greetd/hypr.conf"
 
 # The user to run the greeter as
 user = "greeter"
