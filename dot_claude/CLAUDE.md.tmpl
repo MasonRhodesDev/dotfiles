@@ -46,6 +46,27 @@ Global guidance for Claude Code.
 - **Use Plan skill**: Only for multi-phase projects, not simple implementations
 - Prefer fewer agents - don't over-parallelize
 
+## Model Selection (Task Agents)
+
+When spawning Task agents, select model based on task complexity:
+
+**Haiku** (default for MCP operations):
+- Data retrieval: get tasks, fetch pages, list channels, get monitors
+- Simple updates: status changes, add tags, post messages
+- API-driven operations: search, filter, aggregate (API does heavy lifting)
+
+**Sonnet** when agent reasoning required:
+- Content generation: descriptions, summaries, documentation
+- Multi-step analysis: correlating data, incident investigation
+- Adaptive decisions: browser automation with page analysis
+
+**Opus** rarely:
+- Strategic planning across large datasets
+- Root cause analysis requiring deep reasoning
+- High-stakes decisions with significant consequences
+
+Rule of thumb: If the MCP tool does the work → Haiku. If the agent thinks → Sonnet.
+
 ## Code Changes
 
 - Read before write
