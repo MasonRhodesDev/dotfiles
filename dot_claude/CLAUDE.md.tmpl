@@ -1,0 +1,80 @@
+# CLAUDE.md
+
+Global guidance for Claude Code.
+
+## Environment
+
+- Reference ~/CLAUDE_HOME.md when working from /home/mason
+- {{ .chezmoi.osRelease.name }}/Hyprland/Wayland system ({{ .chezmoi.hostname }})
+
+## MCP Servers
+{{- /* Server descriptions */ -}}
+{{- $descriptions := dict
+    "clickup" "Task management - create/update tasks, lists, time tracking, docs"
+    "slack" "Search messages, read/post to channels, list channels/users"
+    "notion" "Search, create/update pages and databases, fetch content"
+    "puppeteer" "Browser automation - navigate, screenshot, click, fill forms"
+    "datadog" "Monitors, dashboards, metrics, logs, incidents, events"
+-}}
+{{- /* Detect available servers */ -}}
+{{- $mcpOutput := output "claude" "mcp" "list" | lower -}}
+{{ range $name, $desc := $descriptions }}
+{{- if contains $name $mcpOutput }}
+- **{{ $name | title }}**: {{ $desc }}
+{{- if eq $name "notion" }}
+  - Tokens expire frequently; if errors mention "No token data found", timeout, or auth failure, prompt user to re-auth via `/mcp`
+{{- end }}
+{{- end }}
+{{- end }}
+
+## Core Principles
+
+- Only implement what's explicitly requested (no feature creep)
+- Keep solutions simple (KISS)
+- Follow existing patterns and conventions
+- Never expose secrets or sensitive data
+- No self-attribution in commits/comments/code
+
+## Task Handling
+
+- **Direct handling**: Single-file changes, simple edits, straightforward fixes
+- **Delegate to agents**: Multi-file changes, complex logic, research/exploration
+- **Use Explore agent**: For codebase questions, architecture, pattern searches
+- **Use Plan skill**: Only for multi-phase projects, not simple implementations
+- Prefer fewer agents - don't over-parallelize
+
+## Code Changes
+
+- Read before write
+- Edit over create
+- Match existing imports and patterns
+- Verify dependencies before assuming availability
+- Check tests/lint/style before commit if project has them
+
+## File Operations
+
+- Use absolute paths
+- No proactive documentation (no README.md unless requested)
+- Planning files go in .plans/
+
+## Git Operations
+
+- Offer to commit after completing work, wait for confirmation
+- Descriptive messages (focus on "why" not "what")
+- Use git status/diff to stage all changes
+- Retry commits once if pre-commit hooks make changes
+
+## Chezmoi Safety
+
+- NEVER use `chezmoi apply` (overwrites local changes)
+- NEVER use `--force` flags (bypasses safety)
+- Use `chezmoi add` to save local changes TO tracking
+- See `~/.local/share/chezmoi/CLAUDE.md` for repo-specific commands and structure
+- Primary branch: `{{ if .is_work }}work-pc{{ else }}personal-pc{{ end }}`
+
+## Communication
+
+- Natural, conversational responses
+- Concise for simple tasks, more detail when complexity warrants
+- Direct answers without excessive preamble
+- No emojis unless requested
