@@ -8,20 +8,23 @@ Global guidance for Claude Code.
 - {{ .chezmoi.osRelease.name }}/Hyprland/Wayland system ({{ .chezmoi.hostname }})
 
 ## MCP Servers
-{{- /* Server descriptions */ -}}
-{{- $descriptions := dict
-    "clickup" "Task management - create/update tasks, lists, time tracking, docs"
-    "slack" "Search messages, read/post to channels, list channels/users"
-    "notion" "Search, create/update pages and databases, fetch content"
-    "puppeteer" "Browser automation - navigate, screenshot, click, fill forms"
-    "datadog" "Monitors, dashboards, metrics, logs, incidents, events"
+{{- /* Server configs: key, display name, description */ -}}
+{{- $servers := list
+    (list "clickup" "ClickUp" "Task management - create/update tasks, lists, time tracking, docs")
+    (list "slack" "Slack" "Search messages, read/post to channels, list channels/users")
+    (list "notion" "Notion" "Search, create/update pages and databases, fetch content")
+    (list "puppeteer" "Puppeteer" "Browser automation - navigate, screenshot, click, fill forms")
+    (list "datadog" "Datadog" "Monitors, dashboards, metrics, logs, incidents, events")
 -}}
 {{- /* Detect available servers */ -}}
 {{- $mcpOutput := output "claude" "mcp" "list" | lower -}}
-{{ range $name, $desc := $descriptions }}
-{{- if contains $name $mcpOutput }}
-- **{{ $name | title }}**: {{ $desc }}
-{{- if eq $name "notion" }}
+{{ range $servers }}
+{{- $key := index . 0 -}}
+{{- $displayName := index . 1 -}}
+{{- $desc := index . 2 -}}
+{{- if contains $key $mcpOutput }}
+- **{{ $displayName }}**: {{ $desc }}
+{{- if eq $key "notion" }}
   - Tokens expire frequently; if errors mention "No token data found", timeout, or auth failure, prompt user to re-auth via `/mcp`
 {{- end }}
 {{- end }}
