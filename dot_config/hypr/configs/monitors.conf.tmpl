@@ -24,6 +24,8 @@ bindl=,switch:off:Lid Switch,exec, exec ~/.config/hypr/disable-or-suspend.js --s
 
 # Move workspace 1 to ultrawide by default
 workspace = 1, monitor:desc:Dell Inc. DELL S3422DWG HSRTS63, default:true
+{{ if not .is_work }}
 workspace = 4, monitor:desc:Dell Inc. DELL S3422DWG HSRTS63
 workspace = 7, monitor:desc:Dell Inc. DELL S3422DWG HSRTS63
+{{ end }}
 

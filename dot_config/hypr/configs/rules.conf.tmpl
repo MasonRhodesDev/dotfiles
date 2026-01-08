@@ -69,9 +69,11 @@ windowrulev2=pin,class:^(org.pulseaudio.pavucontrol)$
 windowrulev2=stayfocused,title:^()$,class:^(steam)$
 windowrulev2=minsize 1 1,title:^()$,class:^(steam)$
 
+{{ if not .is_work }}
 #gamescope
 # always on workspace 7
 workspace=7, border:false, rounding:false
 windowrulev2=workspace 7,class:^(gamescope)$
 windowrulev2=workspace 7,class:^steam_app_\d+$
+{{ end }}
 
