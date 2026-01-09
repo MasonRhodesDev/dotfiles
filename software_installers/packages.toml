@@ -88,14 +88,14 @@ install_level = "system"
 priority = 5
 depends_on = ["core_utils"]
   [common.hyprland.fedora]
-  packages = ["hyprcursor", "hyprcursor-devel", "hypridle", "hyprland", "hyprland-devel", "hyprland-protocols-devel", "hyprlang", "hyprlang-devel", "hyprlock", "hyprpicker", "hyprutils", "hyprutils-devel", "hyprwayland-scanner-devel", "xdg-desktop-portal-hyprland", "wofi", "waybar", "dunst", "pavucontrol", "swaybg", "wl-clipboard", "grim", "slurp"]
+  packages = ["hyprcursor", "hyprcursor-devel", "hypridle", "hyprland", "hyprland-devel", "hyprland-protocols-devel", "hyprlang", "hyprlang-devel", "hyprlock", "hyprpicker", "hyprutils", "hyprutils-devel", "hyprwayland-scanner-devel", "xdg-desktop-portal-hyprland", "wofi", "waybar", "dunst", "pavucontrol", "swaybg", "wl-clipboard", "grim", "slurp", "satty"]
   repos = ["copr:solopasha/hyprland", "copr:heus-sueh/packages"]
   repo_priorities = { "copr:heus-sueh/packages" = 200 }
   cargo_packages = ["matugen"]
   min_version = "40"
 
   [common.hyprland.arch]
-  packages = ["wl-clipboard", "grim", "slurp", "pavucontrol", "dunst", "waybar", "wofi", "swaybg", "swaync", "swayosd"]
+  packages = ["wl-clipboard", "grim", "slurp", "satty", "pavucontrol", "dunst", "waybar", "wofi", "swaybg", "swaync", "swayosd"]
   aur_packages = ["hyprland-git", "hyprlock-git", "hypridle-git", "hyprpicker-git", "hyprcursor-git", "hyprutils-git", "hyprlang-git", "hyprwayland-scanner-git", "xdg-desktop-portal-hyprland-git", "matugen-bin", "greetd-git", "greetd-regreet-git", "hyprpaper-git", "hyprpolkitagent-git", "hyprsunset-git", "hyprsysteminfo-git"]
 
 [common.browsers]
