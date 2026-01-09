@@ -791,6 +791,8 @@ success "Directories created"
 info "[8/14] Installing desktop mode configuration..."
 
 # Check if Hyprland is available
+# Note: greetd must use plain Hyprland, not start-hyprland wrapper
+# start-hyprland requires user-level permissions not available to greeter user
 HYPRLAND_CMD=""
 if command -v Hyprland &>/dev/null; then
     HYPRLAND_CMD="Hyprland"
