@@ -20,7 +20,7 @@ windowrule = match:title ^(.*Bitwarden.*)$, float on
 windowrule = match:class ^(gcr-prompter)$, float on, pin on, center on, stay_focused on
 
 # Voice dictation window - change 80 in move rule below to adjust bottom offset
-windowrule = match:class ^(dev.mason.dictation)$, float on, pin on, size 200 50, move 50%-100 95%, border_size 0, blur off, shadow off, initial_focus off, focus off
+windowrule = match:class ^(dev.mason.dictation)$, float on, pin on, size 200 50, move 50%-100 95%, border_size 0, no_blur on, no_shadow on, no_initial_focus on, no_focus on
 
 windowrule = match:title ^(PRE_SLEEP_WINDOW)$, float on, move -2000 -2000, size 10000 10000, opacity 0.95 override 0.95 override 0.95 override, xray off
 windowrule = match:title ^(Sign in - Google Accounts.*)$, float on
