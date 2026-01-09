@@ -1,79 +1,50 @@
 
 
 
-#windowrulev2= move onscreen cursor, class:.*
+#windowrule = match:class ^(.*)$, move onscreen cursor
 
-windowrulev2=tile,title:^(keep.google.com_/)$
-windowrulev2=workspace special:magic silent,class:^(discord)$
-windowrulev2=workspace special:magic silent,title:^(Spotify)
-windowrulev2=workspace special:magic silent,class:^(Slack)$
-windowrulev2=workspace special:magic silent,title:^(YouTube Music)
-windowrulev2=opacity 0.9 0.9,class:^(Slack)$
-windowrulev2=opacity 0.9 0.9,title:^(Spotify)
-windowrulev2=size 100 100,class:^(kitty)$
-windowrulev2=opacity 0.9 0.7,workspace:special:magic
-windowrulev2=float, title:^(Helvum)
-windowrulev2=float, title:^(_crx_nngceckbapebfimnlniiiahkandclblb)$
-windowrulev2=float, title:^(Picture in picture)$
-windowrulev2=pin, title:^(Picture in picture)$
-windowrulev2=opacity 0.9 0.9, title:^(Picture in picture)$
-windowrulev2=opacity 1 1, title:^(MainPicker)$
-windowrulev2=opacity 1 1, title:^(meet.google.com is sharing.*)
-windowrulev2=opacity 1 1, title:^(Huddle*)
-windowrulev2=float, title:^(meet.google.com is sharing.*)
-windowrulev2=pin, title:^(meet.google.com is sharing.*)
-windowrulev2=float, title:^(.*Bitwarden.*)$
-windowrulev2=pin, class:^(gcr-prompter)$
-windowrulev2=float, class:^(gcr-prompter)$
+windowrule = match:title ^(keep.google.com_/)$, tile on
+windowrule = match:class ^(discord)$, workspace special:magic silent
+windowrule = match:title ^(Spotify)$, workspace special:magic silent, opacity 0.9 0.9
+windowrule = match:class ^(Slack)$, workspace special:magic silent, opacity 0.9 0.9
+windowrule = match:title ^(YouTube Music)$, workspace special:magic silent
+windowrule = match:class ^(kitty)$, size 100 100
+windowrule = match:workspace special:magic, opacity 0.9 0.7
+windowrule = match:title ^(Helvum)$, float on
+windowrule = match:title ^(_crx_nngceckbapebfimnlniiiahkandclblb)$, float on
+windowrule = match:title ^(Picture in picture)$, float on, pin on, opacity 0.9 0.9
+windowrule = match:title ^(MainPicker)$, opacity 1 1
+windowrule = match:title ^(meet.google.com is sharing.*)$, opacity 1 1, float on, pin on
+windowrule = match:title ^(Huddle.*)$, opacity 1 1
+windowrule = match:title ^(.*Bitwarden.*)$, float on
+windowrule = match:class ^(gcr-prompter)$, float on, pin on, center on, stay_focused on
 
 # Voice dictation window - change 80 in move rule below to adjust bottom offset
-windowrulev2=float, class:^(dev.mason.dictation)$
-windowrulev2=pin, class:^(dev.mason.dictation)$
-windowrulev2=size 200 50, class:^(dev.mason.dictation)$
-windowrulev2=move 50%-100 95%, class:^(dev.mason.dictation)$
-windowrulev2=noborder, class:^(dev.mason.dictation)$
-windowrulev2=noblur, class:^(dev.mason.dictation)$
-windowrulev2=noshadow, class:^(dev.mason.dictation)$
-windowrulev2=noinitialfocus, class:^(dev.mason.dictation)$
-windowrulev2=nofocus, class:^(dev.mason.dictation)$
-windowrulev2=center, class:^(gcr-prompter)$
-windowrulev2=stayfocused, class:^(gcr-prompter)$
-windowrulev2=float, title:^(PRE_SLEEP_WINDOW)$
-windowrulev2=move -2000 -2000, title:^(PRE_SLEEP_WINDOW)$
-windowrulev2=size 10000 10000, title:^(PRE_SLEEP_WINDOW)$
-windowrulev2=opacity 0.95 override 0.95 override 0.95 override, title:^(PRE_SLEEP_WINDOW)$
-windowrulev2=xray off, title:^(PRE_SLEEP_WINDOW)$
-windowrulev2=float, title: ^(Sign in - Google Accounts*)$
+windowrule = match:class ^(dev.mason.dictation)$, float on, pin on, size 200 50, move 50%-100 95%, noborder on, noblur on, noshadow on, noinitialfocus on, nofocus on
+
+windowrule = match:title ^(PRE_SLEEP_WINDOW)$, float on, move -2000 -2000, size 10000 10000, opacity 0.95 override 0.95 override 0.95 override, xray off
+windowrule = match:title ^(Sign in - Google Accounts.*)$, float on
 
 # Chrome for Testing (Puppeteer) - send to special:mcp-puppeteer
-windowrulev2=workspace special:mcp-puppeteer silent, title:^(.*Chrome for Testing)$
+windowrule = match:title ^(.*Chrome for Testing)$, workspace special:mcp-puppeteer silent
 
 # wofi window rules (normal window mode)
-windowrulev2=float,class:^(wofi)$
-windowrulev2=opacity 0.99999 0.99999,class:^(wofi)$
-windowrulev2=center,class:^(wofi)$
-windowrulev2=stayfocused,class:^(wofi)$
-windowrulev2=pin,class:^(wofi)$
+windowrule = match:class ^(wofi)$, float on, opacity 0.99999 0.99999, center on, stay_focused on, pin on
 
 # pavucontrol rules
-windowrulev2=float,class:^(org.pulseaudio.pavucontrol)$
-windowrulev2=center,class:^(org.pulseaudio.pavucontrol)$
-windowrulev2=size 1000 600,class:^(org.pulseaudio.pavucontrol)$
-windowrulev2=stayfocused,class:^(org.pulseaudio.pavucontrol)$
-windowrulev2=pin,class:^(org.pulseaudio.pavucontrol)$
+windowrule = match:class ^(org.pulseaudio.pavucontrol)$, float on, center on, size 1000 600, stay_focused on, pin on
 
 
 # Steam rules
 # Window sizing handled by steam-window-manager.sh script
 # Prevent 5x5 spawn bug for empty title steam windows
-windowrulev2=stayfocused,title:^()$,class:^(steam)$
-windowrulev2=minsize 1 1,title:^()$,class:^(steam)$
+windowrule = match:title ^()$, match:class ^(steam)$, stay_focused on, minsize 1 1
 
 {{ if not .is_work }}
 #gamescope
 # always on workspace 7
 workspace=7, border:false, rounding:false
-windowrulev2=workspace 7,class:^(gamescope)$
-windowrulev2=workspace 7,class:^steam_app_\d+$
+windowrule = match:class ^(gamescope)$, workspace 7
+windowrule = match:class ^steam_app_\d+$, workspace 7
 {{ end }}
 
