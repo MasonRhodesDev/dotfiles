@@ -20,7 +20,7 @@ windowrule = match:title ^(.*Bitwarden.*)$, float on
 windowrule = match:class ^(gcr-prompter)$, float on, pin on, center on, stay_focused on
 
 # Voice dictation window - change 80 in move rule below to adjust bottom offset
-windowrule = match:class ^(dev.mason.dictation)$, float on, pin on, size 200 50, move 50%-100 95%, noborder on, noblur on, noshadow on, noinitialfocus on, nofocus on
+windowrule = match:class ^(dev.mason.dictation)$, float on, pin on, size 200 50, move 50%-100 95%, border_size 0, blur off, shadow off, initial_focus off, focus off
 
 windowrule = match:title ^(PRE_SLEEP_WINDOW)$, float on, move -2000 -2000, size 10000 10000, opacity 0.95 override 0.95 override 0.95 override, xray off
 windowrule = match:title ^(Sign in - Google Accounts.*)$, float on
@@ -38,7 +38,7 @@ windowrule = match:class ^(org.pulseaudio.pavucontrol)$, float on, center on, si
 # Steam rules
 # Window sizing handled by steam-window-manager.sh script
 # Prevent 5x5 spawn bug for empty title steam windows
-windowrule = match:title ^()$, match:class ^(steam)$, stay_focused on, minsize 1 1
+windowrule = match:title ^()$, match:class ^(steam)$, stay_focused on, min_size 1 1
 
 {{ if not .is_work }}
 #gamescope
