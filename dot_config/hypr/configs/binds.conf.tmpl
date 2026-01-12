@@ -23,16 +23,16 @@ bind=$mainMod SHIFT, right, movewindow, r
 bind=$mainMod SHIFT, up, movewindow, u
 bind=$mainMod SHIFT, down, movewindow, d
 # ===== Workspace bindings =====
-# Use script to close any active special workspace before switching
-bind = $mainMod, 1, exec, ~/.config/hypr/scripts/workspace-switch.sh 1
-bind = $mainMod, 2, exec, ~/.config/hypr/scripts/workspace-switch.sh 2
-bind = $mainMod, 3, exec, ~/.config/hypr/scripts/workspace-switch.sh 3
-bind = $mainMod, 4, exec, ~/.config/hypr/scripts/workspace-switch.sh 4
-bind = $mainMod, 5, exec, ~/.config/hypr/scripts/workspace-switch.sh 5
-bind = $mainMod, 6, exec, ~/.config/hypr/scripts/workspace-switch.sh 6
-bind = $mainMod, 7, exec, ~/.config/hypr/scripts/workspace-switch.sh 7
-bind = $mainMod, 8, exec, ~/.config/hypr/scripts/workspace-switch.sh 8
-bind = $mainMod, 9, exec, ~/.config/hypr/scripts/workspace-switch.sh 9
+# Unified workspace management script handles special workspace coordination
+bind = $mainMod, 1, exec, ~/.config/hypr/scripts/hypr-workspace switch 1
+bind = $mainMod, 2, exec, ~/.config/hypr/scripts/hypr-workspace switch 2
+bind = $mainMod, 3, exec, ~/.config/hypr/scripts/hypr-workspace switch 3
+bind = $mainMod, 4, exec, ~/.config/hypr/scripts/hypr-workspace switch 4
+bind = $mainMod, 5, exec, ~/.config/hypr/scripts/hypr-workspace switch 5
+bind = $mainMod, 6, exec, ~/.config/hypr/scripts/hypr-workspace switch 6
+bind = $mainMod, 7, exec, ~/.config/hypr/scripts/hypr-workspace switch 7
+bind = $mainMod, 8, exec, ~/.config/hypr/scripts/hypr-workspace switch 8
+bind = $mainMod, 9, exec, ~/.config/hypr/scripts/hypr-workspace switch 9
 bind = $mainMod, 0, togglespecialworkspace, magic
 bind=$mainMod SHIFT, 1, movetoworkspace, 1
 bind=$mainMod SHIFT, 2, movetoworkspace, 2
@@ -46,8 +46,8 @@ bind=$mainMod SHIFT, 9, movetoworkspace, 9
 bind=$mainMod SHIFT, 0, movetoworkspace, 10
 bind=$mainMod, S, togglespecialworkspace, magic
 bind=$mainMod SHIFT, S, movetoworkspace, special:magic
-bind=SUPER ALT, S, exec, ~/.config/hypr/scripts/magic-space-toggle.sh
-bind=$Hyper, S, exec, ~/.config/hypr/scripts/magic-space-move.sh
+bind=SUPER ALT, S, exec, ~/.config/hypr/scripts/hypr-workspace toggle-special
+bind=$Hyper, S, exec, ~/.config/hypr/scripts/hypr-workspace move-to-special
 bind=$mainMod SHIFT, -, movecurrentworkspacetomonitor, -1
 bind=$mainMod SHIFT, =, movecurrentworkspacetomonitor, +1
 bind=$mainMod SHIFT, EQUAL, movecurrentworkspacetomonitor, -1

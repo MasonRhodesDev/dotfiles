@@ -257,6 +257,11 @@ tooltip {
     text-shadow: 0 0 1.5px rgba(0, 0, 0, 0.2);
 }
 
+/* Has special workspace indicator - small dot in tertiary color */
+#workspaces button.has-special {
+    /* Dot is rendered in button label via Pango markup */
+}
+
 #workspaces button.empty:hover {
     color: transparent;
     text-shadow: 0 0 1.5px rgba(0, 0, 0, 0.4);
@@ -315,3 +320,4 @@ tooltip {
 #custom-idle-inhibitor.deactivated {
     color: @on_background;
 }
+
