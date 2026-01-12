@@ -23,15 +23,16 @@ bind=$mainMod SHIFT, right, movewindow, r
 bind=$mainMod SHIFT, up, movewindow, u
 bind=$mainMod SHIFT, down, movewindow, d
 # ===== Workspace bindings =====
-bind = $mainMod, 1, workspace, 1
-bind = $mainMod, 2, workspace, 2
-bind = $mainMod, 3, workspace, 3
-bind = $mainMod, 4, workspace, 4
-bind = $mainMod, 5, workspace, 5
-bind = $mainMod, 6, workspace, 6
-bind = $mainMod, 7, workspace, 7
-bind = $mainMod, 8, workspace, 8
-bind = $mainMod, 9, workspace, 9
+# Use script to close any active special workspace before switching
+bind = $mainMod, 1, exec, ~/.config/hypr/scripts/workspace-switch.sh 1
+bind = $mainMod, 2, exec, ~/.config/hypr/scripts/workspace-switch.sh 2
+bind = $mainMod, 3, exec, ~/.config/hypr/scripts/workspace-switch.sh 3
+bind = $mainMod, 4, exec, ~/.config/hypr/scripts/workspace-switch.sh 4
+bind = $mainMod, 5, exec, ~/.config/hypr/scripts/workspace-switch.sh 5
+bind = $mainMod, 6, exec, ~/.config/hypr/scripts/workspace-switch.sh 6
+bind = $mainMod, 7, exec, ~/.config/hypr/scripts/workspace-switch.sh 7
+bind = $mainMod, 8, exec, ~/.config/hypr/scripts/workspace-switch.sh 8
+bind = $mainMod, 9, exec, ~/.config/hypr/scripts/workspace-switch.sh 9
 bind = $mainMod, 0, togglespecialworkspace, magic
 bind=$mainMod SHIFT, 1, movetoworkspace, 1
 bind=$mainMod SHIFT, 2, movetoworkspace, 2
