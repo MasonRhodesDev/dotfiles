@@ -42,10 +42,13 @@ windowrule = match:class ^(Emulator)$, float on
 windowrule = match:title ^()$, match:class ^(steam)$, stay_focused on, min_size 1 1
 
 {{ if not .is_work }}
+# Steam client windows (main client, friends list, settings, etc.) start on workspace 4
+windowrule = match:class ^(steam)$, workspace 4
+
 #gamescope
-# always on workspace 7
+# Steam games only on workspace 7
 workspace=7, border:false, rounding:false
 windowrule = match:class ^(gamescope)$, workspace 7
-windowrule = match:class ^steam_app_\d+$, workspace 7
+windowrule = match:class ^(steam_app_\d+)$, workspace 7
 {{ end }}
 
