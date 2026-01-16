@@ -2,7 +2,7 @@
         "layer": "top",
         "position": "top",
         "reload_style_on_change": true,
-        "modules-left": ["hyprland/workspaces"],
+        "modules-left": ["cffi/workspace-buttons"],
         "modules-center": ["custom/screen-recorder", "custom/media"],
         "modules-right": [
             "group/expand",
@@ -18,10 +18,10 @@
         ],
 
 
-        "hyprland/workspaces": {
-            "format": "{name}",
+        "cffi/workspace-buttons": {
+            "module_path": "{{ .chezmoi.homeDir }}/.config/waybar/cffi/workspace_buttons.so",
             "all-outputs": false,
-            "show-special": false
+            "show-empty": false
         },
         "custom/notification": {
             "tooltip": true,

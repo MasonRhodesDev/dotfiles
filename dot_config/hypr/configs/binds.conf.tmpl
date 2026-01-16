@@ -1,4 +1,5 @@
 $Meh=CTRL ALT SHIFT
+$Hyper=SUPER ALT SHIFT
 
 bind=$mainMod, Q, exec, wezterm
 bind=$mainMod, C, killactive, 
@@ -21,89 +22,18 @@ bind=$mainMod SHIFT, left, movewindow, l
 bind=$mainMod SHIFT, right, movewindow, r
 bind=$mainMod SHIFT, up, movewindow, u
 bind=$mainMod SHIFT, down, movewindow, d
-# ===== Workspace bindings with double-tap special workspace support =====
-# Single tap: switch to workspace N
-# Double tap (while holding SUPER): toggle special:N
-
-# Workspace 1
-bind = $mainMod, 1, workspace, 1
-bind = $mainMod, 1, submap, ws1
-submap = ws1, reset
-bind = $mainMod, 1, togglespecialworkspace, 1
-bind = , catchall, submap, reset
-submap = reset
-
-# Workspace 2
-bind = $mainMod, 2, workspace, 2
-bind = $mainMod, 2, submap, ws2
-submap = ws2, reset
-bind = $mainMod, 2, togglespecialworkspace, 2
-bind = , catchall, submap, reset
-submap = reset
-
-# Workspace 3
-bind = $mainMod, 3, workspace, 3
-bind = $mainMod, 3, submap, ws3
-submap = ws3, reset
-bind = $mainMod, 3, togglespecialworkspace, 3
-bind = , catchall, submap, reset
-submap = reset
-
-# Workspace 4
-bind = $mainMod, 4, workspace, 4
-bind = $mainMod, 4, submap, ws4
-submap = ws4, reset
-bind = $mainMod, 4, togglespecialworkspace, 4
-bind = , catchall, submap, reset
-submap = reset
-
-# Workspace 5
-bind = $mainMod, 5, workspace, 5
-bind = $mainMod, 5, submap, ws5
-submap = ws5, reset
-bind = $mainMod, 5, togglespecialworkspace, 5
-bind = , catchall, submap, reset
-submap = reset
-
-# Workspace 6
-bind = $mainMod, 6, workspace, 6
-bind = $mainMod, 6, submap, ws6
-submap = ws6, reset
-bind = $mainMod, 6, togglespecialworkspace, 6
-bind = , catchall, submap, reset
-submap = reset
-
-# Workspace 7
-bind = $mainMod, 7, workspace, 7
-bind = $mainMod, 7, submap, ws7
-submap = ws7, reset
-bind = $mainMod, 7, togglespecialworkspace, 7
-bind = , catchall, submap, reset
-submap = reset
-
-# Workspace 8
-bind = $mainMod, 8, workspace, 8
-bind = $mainMod, 8, submap, ws8
-submap = ws8, reset
-bind = $mainMod, 8, togglespecialworkspace, 8
-bind = , catchall, submap, reset
-submap = reset
-
-# Workspace 9
-bind = $mainMod, 9, workspace, 9
-bind = $mainMod, 9, submap, ws9
-submap = ws9, reset
-bind = $mainMod, 9, togglespecialworkspace, 9
-bind = , catchall, submap, reset
-submap = reset
-
-# Special:magic with double-tap for mcp-puppeteer
+# ===== Workspace bindings =====
+# Unified workspace management script handles special workspace coordination
+bind = $mainMod, 1, exec, ~/.config/hypr/scripts/hypr-workspace switch 1
+bind = $mainMod, 2, exec, ~/.config/hypr/scripts/hypr-workspace switch 2
+bind = $mainMod, 3, exec, ~/.config/hypr/scripts/hypr-workspace switch 3
+bind = $mainMod, 4, exec, ~/.config/hypr/scripts/hypr-workspace switch 4
+bind = $mainMod, 5, exec, ~/.config/hypr/scripts/hypr-workspace switch 5
+bind = $mainMod, 6, exec, ~/.config/hypr/scripts/hypr-workspace switch 6
+bind = $mainMod, 7, exec, ~/.config/hypr/scripts/hypr-workspace switch 7
+bind = $mainMod, 8, exec, ~/.config/hypr/scripts/hypr-workspace switch 8
+bind = $mainMod, 9, exec, ~/.config/hypr/scripts/hypr-workspace switch 9
 bind = $mainMod, 0, togglespecialworkspace, magic
-bind = $mainMod, 0, submap, ws0
-submap = ws0, reset
-bind = $mainMod, 0, togglespecialworkspace, mcp-puppeteer
-bind = , catchall, submap, reset
-submap = reset
 bind=$mainMod SHIFT, 1, movetoworkspace, 1
 bind=$mainMod SHIFT, 2, movetoworkspace, 2
 bind=$mainMod SHIFT, 3, movetoworkspace, 3
@@ -116,10 +46,10 @@ bind=$mainMod SHIFT, 9, movetoworkspace, 9
 bind=$mainMod SHIFT, 0, movetoworkspace, 10
 bind=$mainMod, S, togglespecialworkspace, magic
 bind=$mainMod SHIFT, S, movetoworkspace, special:magic
-bind=$mainMod SHIFT, -, movecurrentworkspacetomonitor, -1
-bind=$mainMod SHIFT, =, movecurrentworkspacetomonitor, +1
-bind=$mainMod SHIFT, EQUAL, movecurrentworkspacetomonitor, -1
-bind=$mainMod SHIFT, MINUS, movecurrentworkspacetomonitor, +1
+bind=SUPER ALT, S, exec, ~/.config/hypr/scripts/hypr-workspace toggle-special
+bind=$Hyper, S, exec, ~/.config/hypr/scripts/hypr-workspace move-to-special
+bind=$mainMod SHIFT, MINUS, movecurrentworkspacetomonitor, -1
+bind=$mainMod SHIFT, EQUAL, movecurrentworkspacetomonitor, +1
 bind=$mainMod, mouse_down, workspace, e+1
 bind=$mainMod, mouse_up, workspace, e-1
 bind=, Print, exec, /home/mason/scripts/snip

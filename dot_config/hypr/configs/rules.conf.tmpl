@@ -5,11 +5,10 @@
 
 windowrule = match:title ^(keep.google.com_/)$, tile on
 windowrule = match:class ^(discord)$, workspace special:magic silent
-windowrule = match:title ^(Spotify)$, workspace special:magic silent, opacity 0.9 0.9
-windowrule = match:class ^(Slack)$, workspace special:magic silent, opacity 0.9 0.9
+windowrule = match:class ^(Slack)$, workspace special:magic silent
 windowrule = match:title ^(YouTube Music)$, workspace special:magic silent
 windowrule = match:class ^(kitty)$, size 100 100
-windowrule = match:workspace special:magic, opacity 0.9 0.7
+# windowrule = match:workspace special:magic, opacity 0.9 0.7
 windowrule = match:title ^(Helvum)$, float on
 windowrule = match:title ^(_crx_nngceckbapebfimnlniiiahkandclblb)$, float on
 windowrule = match:title ^(Picture in picture)$, float on, pin on, opacity 0.9 0.9
@@ -34,6 +33,8 @@ windowrule = match:class ^(wofi)$, float on, opacity 0.99999 0.99999, center on,
 # pavucontrol rules
 windowrule = match:class ^(org.pulseaudio.pavucontrol)$, float on, center on, size 1000 600, stay_focused on, pin on
 
+# Android Emulator
+windowrule = match:class ^(Emulator)$, float on
 
 # Steam rules
 # Window sizing handled by steam-window-manager.sh script
