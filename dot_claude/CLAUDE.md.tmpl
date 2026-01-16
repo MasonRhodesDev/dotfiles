@@ -10,7 +10,7 @@ Global guidance for Claude Code.
 ## MCP Servers
 {{- /* Server configs: key, display name, description */ -}}
 {{- $servers := list
-    (list "clickup" "ClickUp" "Task management - create/update tasks, lists, time tracking, docs")
+    (list "clickup" "ClickUp" "Task management - create/update tasks, lists, time tracking, docs; use `markdown_description` for formatted tickets")
     (list "slack" "Slack" "Search messages, read/post to channels, list channels/users")
     (list "notion" "Notion" "Search, create/update pages and databases, fetch content")
     (list "puppeteer" "Puppeteer" "Browser automation - navigate, screenshot, click, fill forms")
@@ -87,6 +87,7 @@ Rule of thumb: If the MCP tool does the work → Haiku. If the agent thinks → 
 - Descriptive messages (focus on "why" not "what")
 - Use git status/diff to stage all changes
 - Retry commits once if pre-commit hooks make changes
+- NO attribution footers (no "Generated with Claude Code", no Co-Authored-By)
 
 ## Chezmoi Safety
 

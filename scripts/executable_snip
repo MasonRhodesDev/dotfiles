@@ -1,10 +1,8 @@
 #!/bin/bash
-# Modern screenshot workflow: wayshot + satty for annotation
-# Pipe-based: capture → annotate → copy to clipboard
+# FAST: grim → PPM (uncompressed) → satty (HW accel) → clipboard
 
-~/.cargo/bin/wayshot --stdout -s "$(slurp)" | \
+grim -g "$(slurp -d)" -t ppm - | \
   satty --filename - \
         --copy-command "wl-copy" \
         --early-exit \
-        --default-hide-toolbars \
-        --initial-tool arrow
+        --output-filename ~/Pictures/Screenshots/$(date +%Y%m%d-%H%M%S).png
