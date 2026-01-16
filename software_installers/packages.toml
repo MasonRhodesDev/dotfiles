@@ -88,19 +88,52 @@ install_level = "system"
 priority = 5
 depends_on = ["core_utils"]
   [common.hyprland.fedora]
-  packages = ["hyprcursor", "hyprcursor-devel", "hypridle", "hyprland", "hyprland-devel", "hyprland-protocols-devel", "hyprlang", "hyprlang-devel", "hyprlock", "hyprpicker", "hyprutils", "hyprutils-devel", "hyprwayland-scanner-devel", "xdg-desktop-portal-hyprland", "wofi", "waybar", "dunst", "pavucontrol", "swaybg", "wl-clipboard", "grim", "slurp"]
+  packages = ["hyprcursor", "hyprcursor-devel", "hypridle", "hyprland", "hyprland-devel", "hyprland-protocols-devel", "hyprlang", "hyprlang-devel", "hyprlock", "hyprpicker", "hyprutils", "hyprutils-devel", "hyprwayland-scanner-devel", "xdg-desktop-portal-hyprland", "wofi", "waybar", "dunst", "pavucontrol", "swaybg", "wl-clipboard", "grim", "slurp", "satty"]
   repos = ["copr:solopasha/hyprland", "copr:heus-sueh/packages"]
   repo_priorities = { "copr:heus-sueh/packages" = 200 }
   cargo_packages = ["matugen"]
   min_version = "40"
 
   [common.hyprland.arch]
-  packages = ["wl-clipboard", "grim", "slurp", "pavucontrol", "dunst", "waybar", "wofi", "swaybg", "swaync", "swayosd"]
+  packages = ["wl-clipboard", "grim", "slurp", "satty", "pavucontrol", "dunst", "waybar", "wofi", "swaybg", "swaync", "swayosd"]
   aur_packages = ["hyprland-git", "hyprlock-git", "hypridle-git", "hyprpicker-git", "hyprcursor-git", "hyprutils-git", "hyprlang-git", "hyprwayland-scanner-git", "xdg-desktop-portal-hyprland-git", "matugen-bin", "greetd-git", "greetd-regreet-git", "hyprpaper-git", "hyprpolkitagent-git", "hyprsunset-git", "hyprsysteminfo-git"]
+
+[common.waybar_workspace_buttons]
+description = "Event-driven Hyprland workspace buttons for Waybar"
+install_level = "user"
+priority = 6
+depends_on = ["hyprland"]
+  [common.waybar_workspace_buttons.fedora]
+  packages = ["meson", "ninja-build", "gtk3-devel", "json-glib-devel"]
+
+  [[common.waybar_workspace_buttons.fedora.git_repos]]
+  url = "https://github.com/MasonRhodesDev/waybar-workspace-buttons.git"
+  install_dir = "~/git_installers/waybar-workspace-buttons"
+  update_strategy = "pull"
+  build_steps = [
+    "meson setup build --reconfigure || meson setup build",
+    "ninja -C build",
+    "mkdir -p ~/.config/waybar/cffi",
+    "cp build/workspace_buttons.so ~/.config/waybar/cffi/"
+  ]
+
+  [common.waybar_workspace_buttons.arch]
+  packages = ["meson", "ninja", "gtk3", "json-glib"]
+
+  [[common.waybar_workspace_buttons.arch.git_repos]]
+  url = "https://github.com/MasonRhodesDev/waybar-workspace-buttons.git"
+  install_dir = "~/git_installers/waybar-workspace-buttons"
+  update_strategy = "pull"
+  build_steps = [
+    "meson setup build --reconfigure || meson setup build",
+    "ninja -C build",
+    "mkdir -p ~/.config/waybar/cffi",
+    "cp build/workspace_buttons.so ~/.config/waybar/cffi/"
+  ]
 
 [common.browsers]
 install_level = "system"
-priority = 6
+priority = 7
 description = "Web browsers"
   [common.browsers.fedora]
   packages = ["vivaldi-stable"]
