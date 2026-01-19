@@ -46,118 +46,42 @@ Global guidance for Claude Code.
 - **Use Plan skill**: Only for multi-phase projects, not simple implementations
 - Prefer fewer agents - don't over-parallelize
 
+### Rule of 5
+
+Agentic tasks require **at least 5 iterations on average** before being deemed correct. This reflects the iterative nature of AI agent workflows:
+- Agents plan, execute, reflect, and refine
+- Expect 3-5 cycles for convergence on programming tasks
+- Build in feedback loops and validation steps
+- Don't assume first-pass solutions are production-ready
+- Use reflection patterns: execute → evaluate → adjust → repeat
+
+### Task-Specific Guidance
+
+For detailed rules on specific operations, see:
+- **Git operations**: `~/.claude/tasks/git.md`
+- **Chezmoi operations**: `~/.claude/tasks/chezmoi.md`
+- **Beads task tracking**: `~/.claude/tasks/beads.md`
+
 ## Model Selection (Task Agents)
 
-Choose the lightest model that can reliably complete the task. Default to Haiku unless the task requires deeper reasoning.
+When spawning Task agents, select model based on task complexity:
 
-### Decision Framework
+**Haiku** (default for MCP operations):
+- Data retrieval: get tasks, fetch pages, list channels, get monitors
+- Simple updates: status changes, add tags, post messages
+- API-driven operations: search, filter, aggregate (API does heavy lifting)
 
-Ask these questions in order:
-1. **Are the instructions clear and unambiguous?** → Likely Haiku
-2. **Does it require multi-step reasoning or problem-solving?** → Likely Sonnet
-3. **Does it involve architectural decisions or critical systems?** → Consider Sonnet/Opus
+**Sonnet** when agent reasoning required:
+- Content generation: descriptions, summaries, documentation
+- Multi-step analysis: correlating data, incident investigation
+- Adaptive decisions: browser automation with page analysis
 
-### Haiku (default - use aggressively)
+**Opus** rarely:
+- Strategic planning across large datasets
+- Root cause analysis requiring deep reasoning
+- High-stakes decisions with significant consequences
 
-**MCP Operations:**
-- All data retrieval: get tasks, fetch pages, search messages, get monitors
-- Simple CRUD: create tasks, update status, post messages, add tags
-- Data aggregation: search logs, filter metrics (API does the work)
-
-**File Operations:**
-- Reading files for information retrieval
-- Simple edits following clear patterns (rename variable, update config value)
-- Template filling and config updates
-- Writing files from clear specifications
-
-**Code Operations:**
-- Grep/Glob searches for specific patterns
-- Running predefined commands (tests, builds, linters)
-- Gathering context from documentation
-- Straightforward implementations with detailed requirements
-
-**When to use:**
-- Instructions specify exact changes
-- Following existing patterns/conventions
-- Low-stakes changes (docs, configs, tests)
-- Single-file modifications
-- Task is primarily I/O (read, search, fetch, write)
-
-### Sonnet (when reasoning is core to the task)
-
-**Analysis & Investigation:**
-- Bug investigation requiring hypothesis formation
-- Code review for anti-patterns or issues
-- Incident correlation across multiple data sources
-- Performance analysis and optimization suggestions
-
-**Complex Implementation:**
-- Multi-file changes requiring coordination
-- Ambiguous requirements needing interpretation
-- Adaptive logic (browser automation with page-specific decisions)
-- Refactoring requiring architectural understanding
-
-**Content & Communication:**
-- Technical writing requiring tone/style (summaries, documentation)
-- PR descriptions synthesizing multiple changes
-- Incident reports connecting cause and effect
-
-**When to use:**
-- Requirements need interpretation
-- Multiple valid approaches exist
-- Needs to understand "why" not just "what"
-- Cross-component coordination required
-- Medium-stakes decisions
-
-### Opus (rarely - only for highest complexity)
-
-**Strategic Decisions:**
-- Cross-repository architectural planning
-- Major refactoring affecting multiple systems
-- Security-critical implementation decisions
-- Performance optimization requiring deep system understanding
-
-**Complex Problem-Solving:**
-- Root cause analysis across distributed systems
-- Debugging issues with multiple possible causes
-- High-stakes production decisions
-
-**When to use:**
-- Failure has significant consequences
-- Requires reasoning about system-wide implications
-- Multiple complex factors must be weighed
-- Budget allows for thorough analysis
-
-### Examples
-
-**Haiku:**
-- "Get all open tasks from ClickUp"
-- "Read the config file and tell me the API endpoint"
-- "Update the version number in package.json to 2.0.0"
-- "Search for all occurrences of 'UserService'"
-- "Run the test suite and report failures"
-
-**Sonnet:**
-- "Investigate why users are seeing intermittent 500 errors"
-- "Review this PR for potential race conditions"
-- "Refactor the authentication flow to support OAuth"
-- "Write a technical summary of the incident"
-- "Implement pagination - decide between cursor and offset based on requirements"
-
-**Opus:**
-- "Design a migration strategy from monolith to microservices"
-- "Analyze performance bottlenecks across the entire request path"
-- "Review security implications of this crypto implementation"
-- "Plan the deprecation of legacy authentication system"
-
-### Rule of Thumb
-
-- **API does the work** → Haiku
-- **Instructions are clear** → Haiku
-- **Need to think through approach** → Sonnet
-- **System-wide implications** → Opus
-
-When in doubt, try Haiku first. It's fast and cost-effective, and you can always escalate to Sonnet if the task proves more complex.
+Rule of thumb: If the MCP tool does the work → Haiku. If the agent thinks → Sonnet.
 
 ## Code Changes
 
@@ -173,21 +97,6 @@ When in doubt, try Haiku first. It's fast and cost-effective, and you can always
 - No proactive documentation (no README.md unless requested)
 - Planning files go in .plans/
 
-## Git Operations
-
-- Offer to commit after completing work, wait for confirmation
-- Descriptive messages (focus on "why" not "what")
-- Use git status/diff to stage all changes
-- Retry commits once if pre-commit hooks make changes
-- NO attribution footers (no "Generated with Claude Code", no Co-Authored-By)
-
-## Chezmoi Safety
-
-- NEVER use `chezmoi apply` (overwrites local changes)
-- NEVER use `--force` flags (bypasses safety)
-- Use `chezmoi add` to save local changes TO tracking
-- See `~/.local/share/chezmoi/CLAUDE.md` for repo-specific commands and structure
-- Primary branch: `{{ if .is_work }}work-pc{{ else }}personal-pc{{ end }}`
 
 ## Communication
 
