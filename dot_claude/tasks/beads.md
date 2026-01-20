@@ -18,10 +18,22 @@ Use `bd` (beads) for structured task tracking in projects. Git-backed dependency
 
 ## When to Use
 
-- Prefer beads over ad-hoc TODO lists for complex, multi-step projects
-- Use for projects with task dependencies
-- Use when tasks need to be tracked across sessions
-- Use for multi-agent or long-running projects
+**MANDATORY for projects with `.beads/` directory** - If beads is initialized, always use it.
+
+Use beads when:
+- ✅ Complex, multi-step projects (prefer over ad-hoc TODO lists)
+- ✅ Tasks have dependencies (A must complete before B)
+- ✅ Work spans multiple sessions (track progress over time)
+- ✅ Multi-agent or long-running projects
+- ✅ Planning phase complete (convert plan into trackable tasks)
+
+**Integration with Planning:**
+After completing EnterPlanMode:
+1. Create beads tasks from plan: `bd create "Task description"`
+2. Set dependencies: `bd dep add <parent-id> <child-id>`
+3. Track work: `bd ready` to find next available task
+4. Update status: `bd update <id> --status in_progress`
+5. Close completed: `bd close <id>`
 
 ## Modes
 
