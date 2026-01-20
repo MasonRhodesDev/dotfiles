@@ -46,6 +46,14 @@ Global guidance for Claude Code.
 - **Use Plan skill**: Only for multi-phase projects, not simple implementations
 - Prefer fewer agents - don't over-parallelize
 
+### Planning Workflow
+
+For non-trivial implementations:
+1. **Check for beads** - If `.beads/` exists, use `bd` for task tracking (see ~/tasks/beads.md)
+2. **Plan first** - Use EnterPlanMode for multi-step or ambiguous tasks
+3. **Create beads tasks** - Break plan into trackable `bd` issues with dependencies
+4. **Execute systematically** - Work through tasks using `bd ready` to find next work
+
 ## Model Selection (Task Agents)
 
 Choose the lightest model that can reliably complete the task. Default to Haiku unless the task requires deeper reasoning.
@@ -166,6 +174,22 @@ When in doubt, try Haiku first. It's fast and cost-effective, and you can always
 - Match existing imports and patterns
 - Verify dependencies before assuming availability
 - Check tests/lint/style before commit if project has them
+
+### Rule of 5 for LLM Code Development
+
+Follow this iterative 5-step cycle for all code generation:
+
+1. **PLAN (Define Scope)** - Break projects into small, atomic units (one function or fix at a time). Never request large, monolithic code blocks.
+
+2. **CHECK (Review Architecture)** - Before coding, define data structures, flow, and module responsibilities. Verify the LLM understands the intended solution, not just final output.
+
+3. **CODE (Iterative Implementation)** - Use AI to generate code for one specific task at a time.
+
+4. **CHECK (Review & Test)** - Review generated code for errors, security risks, and constraint adherence before running. Write meaningful tests that actually verify behavior, not just pass trivially.
+
+5. **RUN (Execute & Refactor)** - Execute the code. If it fails, log the error and iterate. If it passes, refactor to ensure it fits the overall codebase.
+
+**This is a cycle** - Repeat steps 3-5 iteratively for each atomic unit defined in step 1.
 
 ## File Operations
 
