@@ -181,14 +181,6 @@ When in doubt, try Haiku first. It's fast and cost-effective, and you can always
 - Retry commits once if pre-commit hooks make changes
 - NO attribution footers (no "Generated with Claude Code", no Co-Authored-By)
 
-## Chezmoi Safety
-
-- NEVER use `chezmoi apply` (overwrites local changes)
-- NEVER use `--force` flags (bypasses safety)
-- Use `chezmoi add` to save local changes TO tracking
-- See `~/.local/share/chezmoi/CLAUDE.md` for repo-specific commands and structure
-- Primary branch: `{{ if .is_work }}work-pc{{ else }}personal-pc{{ end }}`
-
 ## Communication
 
 - Natural, conversational responses
