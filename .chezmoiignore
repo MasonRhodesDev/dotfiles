@@ -21,3 +21,13 @@ tests/
 **/__pycache__/
 **/*.pyc
 .config/fish/fish_variables
+
+# Chezmoi Agent files
+AGENTS.md
+CLAUDE.md
+
+# Beads issue tracking (stays in repo, not applied to home)
+.beads/
+
+# Git configuration (stays in repo)
+.gitattributes
