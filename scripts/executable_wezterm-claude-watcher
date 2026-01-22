@@ -48,23 +48,29 @@ if [[ -z "$SESSION_FILE" ]]; then
 fi
 if [[ -n "$SESSION_FILE" ]] && [[ -f "$SESSION_FILE" ]]; then
     ACTIVITY=$(extract_activity "$SESSION_FILE")
+
+    # If no activity found (new/empty session), use empty string
+    # This will make WezTerm show just "Claude" without activity text
+    if [[ -z "$ACTIVITY" ]]; then
+        ACTIVITY=""
+    fi
+
     echo "$ACTIVITY" > "$STATUS_FILE"
 
     # Send initial OSC sequence to WezTerm (write to terminal device)
-    if [[ -n "$ACTIVITY" ]]; then
-        printf '\033]1337;SetUserVar=CLAUDE_ACTIVITY=%s\007' "$(echo -n "$ACTIVITY" | base64)" > "$TTY_DEVICE" 2>/dev/null
-    fi
+    # Send even if empty to clear any previous activity
+    printf '\033]1337;SetUserVar=CLAUDE_ACTIVITY=%s\007' "$(echo -n "$ACTIVITY" | base64)" > "$TTY_DEVICE" 2>/dev/null
 fi
 
 # Watch for changes to the session file
 if [[ -n "$SESSION_FILE" ]] && command -v inotifywait >/dev/null 2>&1; then
     inotifywait -m -e modify "$SESSION_FILE" 2>/dev/null | while read -r; do
         ACTIVITY=$(extract_activity "$SESSION_FILE")
-        if [[ -n "$ACTIVITY" ]]; then
-            echo "$ACTIVITY" > "$STATUS_FILE"
 
-            # Send OSC sequence to WezTerm to update status (write to terminal device)
-            printf '\033]1337;SetUserVar=CLAUDE_ACTIVITY=%s\007' "$(echo -n "$ACTIVITY" | base64)" > "$TTY_DEVICE" 2>/dev/null
-        fi
+        # Always update, even if empty (to clear stale activity)
+        echo "$ACTIVITY" > "$STATUS_FILE"
+
+        # Send OSC sequence to WezTerm to update status (write to terminal device)
+        printf '\033]1337;SetUserVar=CLAUDE_ACTIVITY=%s\007' "$(echo -n "$ACTIVITY" | base64)" > "$TTY_DEVICE" 2>/dev/null
     done
 fi
