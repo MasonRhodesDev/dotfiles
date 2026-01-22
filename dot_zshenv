@@ -1,0 +1,4 @@
+. "$HOME/.cargo/env"
+
+# WezTerm integration
+[[ -f "$HOME/.config/zsh/wezterm.zsh" ]] && . "$HOME/.config/zsh/wezterm.zsh"
