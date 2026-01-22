@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+# Event-driven Claude activity watcher for WezTerm
+# Watches Claude session files and updates status when they change
+
+# Only run in Claude sessions
+[[ "${CLAUDECODE:-0}" != "1" ]] && exit 0
+
+PROJECTS_DIR="$HOME/.claude/projects/-home-mason"
+STATUS_FILE="/tmp/claude-activity-$$"
+TTY_DEVICE="${1:-/dev/tty}"  # Terminal device to write OSC sequences to
+
+# Cleanup on exit
+trap "rm -f '$STATUS_FILE'" EXIT
+
+# Function to extract activity from session file
+extract_activity() {
+    local session_file="$1"
+    tac "$session_file" | \
+        jq -r 'select(.message.role=="user" and (.message.content | type) == "string") | .message.content' 2>/dev/null | \
+        head -n 1 | \
+        head -c 40 || true
+}
+
+# Find the session file most actively being written to (likely this session)
+# Correlation strategy: Find files modified in the last 10 seconds
+# This should correspond to the current Claude session that just started
+NOW=$(date +%s)
+SESSION_FILE=""
+
+for file in "$PROJECTS_DIR"/*.jsonl; do
+    [[ "$file" == *agent-* ]] && continue
+    [[ ! -f "$file" ]] && continue
+
+    # Get file modification time
+    MTIME=$(stat -c %Y "$file" 2>/dev/null || stat -f %m "$file" 2>/dev/null)
+    AGE=$((NOW - MTIME))
+
+    # If modified in last 10 seconds, this is likely our session
+    if [[ $AGE -lt 10 ]]; then
+        SESSION_FILE="$file"
+        break
+    fi
+done
+
+# Fallback: if no recently modified file, use most recent
+if [[ -z "$SESSION_FILE" ]]; then
+    SESSION_FILE=$(ls -t "$PROJECTS_DIR"/*.jsonl 2>/dev/null | grep -v agent | head -1)
+fi
+if [[ -n "$SESSION_FILE" ]] && [[ -f "$SESSION_FILE" ]]; then
+    ACTIVITY=$(extract_activity "$SESSION_FILE")
+    echo "$ACTIVITY" > "$STATUS_FILE"
+
+    # Send initial OSC sequence to WezTerm (write to terminal device)
+    if [[ -n "$ACTIVITY" ]]; then
+        printf '\033]1337;SetUserVar=CLAUDE_ACTIVITY=%s\007' "$(echo -n "$ACTIVITY" | base64)" > "$TTY_DEVICE" 2>/dev/null
+    fi
+fi
+
+# Watch for changes to the session file
+if [[ -n "$SESSION_FILE" ]] && command -v inotifywait >/dev/null 2>&1; then
+    inotifywait -m -e modify "$SESSION_FILE" 2>/dev/null | while read -r; do
+        ACTIVITY=$(extract_activity "$SESSION_FILE")
+        if [[ -n "$ACTIVITY" ]]; then
+            echo "$ACTIVITY" > "$STATUS_FILE"
+
+            # Send OSC sequence to WezTerm to update status (write to terminal device)
+            printf '\033]1337;SetUserVar=CLAUDE_ACTIVITY=%s\007' "$(echo -n "$ACTIVITY" | base64)" > "$TTY_DEVICE" 2>/dev/null
+        fi
+    done
+fi

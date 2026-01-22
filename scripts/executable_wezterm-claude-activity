@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Extract Claude activity summary for WezTerm status bar
+# Returns: brief activity description (first line of latest user message)
+
+# Only run in Claude sessions
+[[ "${CLAUDECODE:-0}" != "1" ]] && exit 0
+
+PROJECTS_DIR="$HOME/.claude/projects/-home-mason"
+
+# Find most recently modified session file
+SESSION_FILE=$(ls -t "$PROJECTS_DIR"/*.jsonl 2>/dev/null | head -1)
+
+if [[ -z "$SESSION_FILE" || ! -f "$SESSION_FILE" ]]; then
+    exit 0
+fi
+
+# Extract most recent user message with string content (not tool results)
+# Using tac to read file backwards for performance (last message is at end)
+# Content can be either a string or an array - we want string content only
+# Note: head -c 40 will cause SIGPIPE (exit 141) which is expected
+tac "$SESSION_FILE" | \
+    jq -r 'select(.message.role=="user" and (.message.content | type) == "string") | .message.content' 2>/dev/null | \
+    head -n 1 | \
+    head -c 40 || true  # Truncate to 40 chars max, ignore SIGPIPE
