@@ -1,8 +1,8 @@
 # WezTerm integration for fish shell
 # Export Claude Code session status as WezTerm user variable
 
-# Only run in WezTerm
-if set -q WEZTERM_PANE
+# Only run in WezTerm AND in interactive shells (not command subshells)
+if set -q WEZTERM_PANE; and status is-interactive
     # Export CLAUDECODE status to WezTerm via OSC sequence
     if set -q CLAUDECODE
         # Set user variable: CLAUDE_ACTIVE=1 (base64 encoded: MQ==)
@@ -15,7 +15,11 @@ if set -q WEZTERM_PANE
         # Pass the parent's TTY so the watcher can send OSC sequences back to this terminal
         # (using parent PID because Claude's bash subprocess doesn't have a TTY)
         set tty_device "/dev/"(ps -o tty= -p $ppid)
-        nohup /home/mason/scripts/wezterm-claude-watcher $tty_device $ppid >/dev/null 2>&1 &
-        disown
+
+        # Check if watcher is already running for this session
+        if not pgrep -f "wezterm-claude-watcher.*$ppid" >/dev/null 2>&1
+            nohup /home/mason/scripts/wezterm-claude-watcher $tty_device $ppid >/dev/null 2>&1 &
+            disown
+        end
     end
 end
