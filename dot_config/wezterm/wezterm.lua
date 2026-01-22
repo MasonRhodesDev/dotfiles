@@ -79,8 +79,6 @@ local function get_claude_component(pane)
   local user_vars = pane:get_user_vars()
   local activity = user_vars.CLAUDE_ACTIVITY or ""
 
-  wezterm.log_info("get_claude_component: activity=" .. tostring(activity))
-
   if activity ~= "" then
     table.insert(parts, " 🤖 " .. activity)
   else
@@ -130,9 +128,6 @@ end)
 
 -- Handle user variable changes from nvim for config overrides
 wezterm.on('user-var-changed', function(window, pane, name, value)
-  -- Debug logging
-  wezterm.log_info("user-var-changed: name=" .. tostring(name) .. " value=" .. tostring(value))
-
   -- Handle nvim config overrides
   if wezterm_config_nvim and wezterm_config_nvim.override_user_var then
     local overrides = window:get_config_overrides() or {}
@@ -142,7 +137,6 @@ wezterm.on('user-var-changed', function(window, pane, name, value)
 
   -- Handle Claude activity updates - force status bar refresh
   if name == "CLAUDE_ACTIVITY" then
-    wezterm.log_info("CLAUDE_ACTIVITY received, triggering status refresh")
     -- Trigger a status update by emitting update-right-status
     window:perform_action(wezterm.action.EmitEvent("update-right-status"), pane)
   end
