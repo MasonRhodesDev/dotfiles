@@ -71,9 +71,19 @@ local function get_ssh_component()
   return " 🔐 SSH"
 end
 
--- Claude component builder
+-- Claude component builder (event-driven via user variables)
 local function get_claude_component(pane)
-  local parts = {" 🤖 Claude"}
+  local parts = {}
+
+  -- Get activity from user variable (set by background watcher)
+  local user_vars = pane:get_user_vars()
+  local activity = user_vars.CLAUDE_ACTIVITY or ""
+
+  if activity ~= "" then
+    table.insert(parts, " 🤖 " .. activity)
+  else
+    table.insert(parts, " 🤖 Claude")
+  end
 
   -- Add working directory
   local cwd = pane:get_current_working_dir()
@@ -118,12 +128,18 @@ end)
 
 -- Handle user variable changes from nvim for config overrides
 wezterm.on('user-var-changed', function(window, pane, name, value)
-  if not wezterm_config_nvim or not wezterm_config_nvim.override_user_var then
-    return
+  -- Handle nvim config overrides
+  if wezterm_config_nvim and wezterm_config_nvim.override_user_var then
+    local overrides = window:get_config_overrides() or {}
+    overrides = wezterm_config_nvim.override_user_var(overrides, name, value)
+    window:set_config_overrides(overrides)
   end
-  local overrides = window:get_config_overrides() or {}
-  overrides = wezterm_config_nvim.override_user_var(overrides, name, value)
-  window:set_config_overrides(overrides)
+
+  -- Handle Claude activity updates - force status bar refresh
+  if name == "CLAUDE_ACTIVITY" then
+    -- Trigger a status update by emitting update-right-status
+    window:perform_action(wezterm.action.EmitEvent("update-right-status"), pane)
+  end
 end)
 
 -- Load dynamic colors from lmtt (Linux Matugen Theme Toggle)
