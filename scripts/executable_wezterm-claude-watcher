@@ -5,12 +5,13 @@
 # Only run in Claude sessions
 [[ "${CLAUDECODE:-0}" != "1" ]] && exit 0
 
-PROJECTS_DIR="$HOME/.claude/projects/-home-mason"
-STATUS_FILE="/tmp/claude-activity-$$"
 TTY_DEVICE="${1:-/dev/tty}"  # Terminal device to write OSC sequences to
+CLAUDE_PPID="${2:-$$}"       # Parent PID to identify this session
+STATUS_FILE="/tmp/claude-activity-$$"
+MARKER_FILE="/tmp/claude-session-$CLAUDE_PPID"
 
 # Cleanup on exit
-trap "rm -f '$STATUS_FILE'" EXIT
+trap "rm -f '$STATUS_FILE' '$MARKER_FILE'" EXIT
 
 # Function to extract activity from session file
 extract_activity() {
@@ -21,30 +22,17 @@ extract_activity() {
         head -c 40 || true
 }
 
-# Find the session file most actively being written to (likely this session)
-# Correlation strategy: Find files modified in the last 10 seconds
-# This should correspond to the current Claude session that just started
-NOW=$(date +%s)
+# Read session file path from marker file created by shell config
+# This explicitly tells us which session file belongs to this Claude process
 SESSION_FILE=""
 
-for file in "$PROJECTS_DIR"/*.jsonl; do
-    [[ "$file" == *agent-* ]] && continue
-    [[ ! -f "$file" ]] && continue
+if [[ -f "$MARKER_FILE" ]]; then
+    SESSION_FILE=$(cat "$MARKER_FILE" 2>/dev/null)
+fi
 
-    # Get file modification time
-    MTIME=$(stat -c %Y "$file" 2>/dev/null || stat -f %m "$file" 2>/dev/null)
-    AGE=$((NOW - MTIME))
-
-    # If modified in last 10 seconds, this is likely our session
-    if [[ $AGE -lt 10 ]]; then
-        SESSION_FILE="$file"
-        break
-    fi
-done
-
-# Fallback: if no recently modified file, use most recent
-if [[ -z "$SESSION_FILE" ]]; then
-    SESSION_FILE=$(ls -t "$PROJECTS_DIR"/*.jsonl 2>/dev/null | grep -v agent | head -1)
+# Verify the session file exists
+if [[ ! -f "$SESSION_FILE" ]]; then
+    exit 0
 fi
 if [[ -n "$SESSION_FILE" ]] && [[ -f "$SESSION_FILE" ]]; then
     ACTIVITY=$(extract_activity "$SESSION_FILE")
