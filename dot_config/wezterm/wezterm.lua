@@ -33,19 +33,86 @@ else
   wezterm.log_info("wezterm.plugin API unavailable; skipping plugins")
 end
 
--- Show status bar with SSH indicator only during SSH sessions
-wezterm.on("update-right-status", function(window, pane)
-  local process = pane:get_foreground_process_name() or ""
-  local is_ssh = process:match("ssh$") or pane:get_domain_name():match("^SSH:")
+-- Modular status indicator system: SSH, Claude, and future indicators
+-- Each indicator detects independently and contributes to the status display
 
+-- SSH detection
+local function detect_ssh(pane)
+  local process = pane:get_foreground_process_name() or ""
+  return process:match("ssh$") or pane:get_domain_name():match("^SSH:")
+end
+
+-- Claude detection
+local function detect_claude(pane)
+  local process = pane:get_foreground_process_name() or ""
+
+  -- Check if process is claude directly
+  if process:match("claude$") then
+    return true
+  end
+
+  -- Check for CLAUDE_ACTIVE user variable (set by fish/shell config)
+  local user_vars = pane:get_user_vars()
+  if user_vars.CLAUDE_ACTIVE == "1" then
+    return true
+  end
+
+  -- Fallback: check if title contains "claude" (Claude Code sets window title)
+  local title = pane:get_title() or ""
+  if title:lower():match("claude") then
+    return true
+  end
+
+  return false
+end
+
+-- SSH component builder
+local function get_ssh_component()
+  return " 🔐 SSH"
+end
+
+-- Claude component builder
+local function get_claude_component(pane)
+  local parts = {" 🤖 Claude"}
+
+  -- Add working directory
+  local cwd = pane:get_current_working_dir()
+  if cwd then
+    local cwd_text = cwd.file_path:gsub(os.getenv("HOME") or "", "~")
+    table.insert(parts, cwd_text)
+  end
+
+  return table.concat(parts, " | ")
+end
+
+-- Main status bar update handler
+wezterm.on("update-right-status", function(window, pane)
+  local components = {}
+
+  -- Check each indicator and add to components array
+  if detect_ssh(pane) then
+    table.insert(components, get_ssh_component())
+  end
+
+  if detect_claude(pane) then
+    table.insert(components, get_claude_component(pane))
+  end
+
+  -- Build status display
   local overrides = window:get_config_overrides() or {}
-  if is_ssh then
+
+  if #components > 0 then
+    -- Show tab bar and status when any indicator is active
     overrides.enable_tab_bar = true
-    window:set_left_status(wezterm.format({ { Text = " 🔐 SSH" } }))
+    window:set_left_status(wezterm.format({
+      { Text = table.concat(components, " | ") }
+    }))
   else
+    -- Hide tab bar when no indicators are active
     overrides.enable_tab_bar = false
     window:set_left_status("")
   end
+
   window:set_config_overrides(overrides)
 end)
 
