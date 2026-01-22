@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Event-driven Claude activity watcher for WezTerm
-# Auto-detects which session file belongs to this Claude session by watching for writes
+# Watches a manually registered session file for activity updates
 
 # Only run in Claude sessions
 [[ "${CLAUDECODE:-0}" != "1" ]] && exit 0
@@ -9,49 +9,39 @@ TTY_DEVICE="${1:-/dev/tty}"  # Terminal device to write OSC sequences to
 CLAUDE_PPID="${2:-$$}"       # Parent PID to identify this session
 STATUS_FILE="/tmp/claude-activity-$$"
 MARKER_FILE="/tmp/claude-session-$CLAUDE_PPID"
-PROJECTS_DIR="$HOME/.claude/projects/-home-mason"
 
 # Cleanup on exit
-trap "rm -f '$STATUS_FILE' '$MARKER_FILE'" EXIT
+trap "rm -f '$STATUS_FILE'" EXIT
 
 # Function to extract activity from session file
+# Extracts the session slug as the overall task description
 extract_activity() {
     local session_file="$1"
-    tac "$session_file" | \
-        jq -r 'select(.message.role=="user" and (.message.content | type) == "string") | .message.content' 2>/dev/null | \
-        head -n 1 | \
-        head -c 40 || true
+
+    # Get the session slug (human-readable task description)
+    local slug=$(grep -m 1 '"slug":' "$session_file" 2>/dev/null | \
+        jq -r '.slug' 2>/dev/null | \
+        sed 's/-/ /g' | \
+        head -c 40)
+
+    if [[ -n "$slug" ]]; then
+        echo "$slug"
+        return
+    fi
+
+    # No slug found - return empty (will show just "Claude")
+    echo ""
 }
 
-# Auto-detect which session file belongs to this Claude session
-# Strategy: Watch the projects directory and identify the first .jsonl file that gets modified
-# This will be our session file since Claude writes to it when the session starts or when messages are sent
-SESSION_FILE=""
-
-# Check if we already have a marker file with the session file
-if [[ -f "$MARKER_FILE" ]]; then
-    SESSION_FILE=$(cat "$MARKER_FILE" 2>/dev/null)
-    # Verify it still exists
-    if [[ ! -f "$SESSION_FILE" ]]; then
-        SESSION_FILE=""
-    fi
+# Read session file from marker file (must be manually registered)
+if [[ ! -f "$MARKER_FILE" ]]; then
+    # No marker file - exit gracefully (status will show just "Claude")
+    exit 0
 fi
 
-# If we don't have a session file yet, watch for the first modification
-if [[ -z "$SESSION_FILE" ]] && command -v inotifywait >/dev/null 2>&1; then
-    # Watch the directory for modifications (no timeout - wait for first interaction)
-    # The first non-agent .jsonl file that gets modified is our session file
-    inotifywait -q -e modify,close_write --format '%w%f' "$PROJECTS_DIR" 2>/dev/null | \
-        while read -r modified_file; do
-            if [[ "$modified_file" == *.jsonl ]] && [[ "$modified_file" != *agent-* ]] && [[ -f "$modified_file" ]]; then
-                SESSION_FILE="$modified_file"
-                echo "$SESSION_FILE" > "$MARKER_FILE"
-                break
-            fi
-        done
-fi
+SESSION_FILE=$(cat "$MARKER_FILE" 2>/dev/null)
 
-# If still no session file (shouldn't happen), exit gracefully
+# Verify the session file exists
 if [[ -z "$SESSION_FILE" ]] || [[ ! -f "$SESSION_FILE" ]]; then
     exit 0
 fi
