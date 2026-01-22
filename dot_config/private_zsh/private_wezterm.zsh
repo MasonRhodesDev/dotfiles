@@ -1,8 +1,8 @@
 # WezTerm integration for zsh shell
 # Export Claude Code session status as WezTerm user variable
 
-# Only run in WezTerm
-if [[ -n "$WEZTERM_PANE" ]]; then
+# Only run in WezTerm AND in interactive shells (not command subshells)
+if [[ -n "$WEZTERM_PANE" ]] && [[ -o interactive ]]; then
     # Export CLAUDECODE status to WezTerm via OSC sequence
     if [[ "$CLAUDECODE" == "1" ]]; then
         # Set user variable: CLAUDE_ACTIVE=1 (base64 encoded: MQ==)
@@ -12,7 +12,11 @@ if [[ -n "$WEZTERM_PANE" ]]; then
         # Pass the parent's TTY so the watcher can send OSC sequences back to this terminal
         # (using parent PID because Claude's bash subprocess doesn't have a TTY)
         local tty_device="/dev/$(ps -o tty= -p $PPID)"
-        nohup /home/mason/scripts/wezterm-claude-watcher "$tty_device" "$PPID" >/dev/null 2>&1 &
-        disown
+
+        # Check if watcher is already running for this session
+        if ! pgrep -f "wezterm-claude-watcher.*$PPID" >/dev/null 2>&1; then
+            nohup /home/mason/scripts/wezterm-claude-watcher "$tty_device" "$PPID" >/dev/null 2>&1 &
+            disown
+        fi
     fi
 fi
