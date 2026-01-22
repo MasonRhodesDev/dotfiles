@@ -8,24 +8,14 @@ if set -q WEZTERM_PANE
         # Set user variable: CLAUDE_ACTIVE=1 (base64 encoded: MQ==)
         printf '\033]1337;SetUserVar=CLAUDE_ACTIVE=%s\007' (echo -n "1" | base64)
 
-        # Create marker file to correlate this session to its session file
-        # Find the most recently modified session file (should be this session's file)
-        set projects_dir "$HOME/.claude/projects/-home-mason"
-        set session_file (ls -t $projects_dir/*.jsonl 2>/dev/null | grep -v agent | head -1)
+        # Get parent PID for marker file
+        set ppid (ps -o ppid= -p %self | string trim)
 
-        if test -n "$session_file"
-            # Get parent PID for marker file
-            set ppid (ps -o ppid= -p %self | string trim)
-
-            # Write session file path to marker file using parent PID as identifier
-            echo $session_file > /tmp/claude-session-$ppid
-
-            # Start background watcher for event-driven activity updates
-            # Pass the parent's TTY so the watcher can send OSC sequences back to this terminal
-            # (using parent PID because Claude's bash subprocess doesn't have a TTY)
-            set tty_device "/dev/"(ps -o tty= -p $ppid)
-            nohup /home/mason/scripts/wezterm-claude-watcher $tty_device $ppid >/dev/null 2>&1 &
-            disown
-        end
+        # Start background watcher that will auto-detect which session file belongs to this session
+        # Pass the parent's TTY so the watcher can send OSC sequences back to this terminal
+        # (using parent PID because Claude's bash subprocess doesn't have a TTY)
+        set tty_device "/dev/"(ps -o tty= -p $ppid)
+        nohup /home/mason/scripts/wezterm-claude-watcher $tty_device $ppid >/dev/null 2>&1 &
+        disown
     end
 end

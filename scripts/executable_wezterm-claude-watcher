@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Event-driven Claude activity watcher for WezTerm
-# Watches Claude session files and updates status when they change
+# Auto-detects which session file belongs to this Claude session by watching for writes
 
 # Only run in Claude sessions
 [[ "${CLAUDECODE:-0}" != "1" ]] && exit 0
@@ -9,6 +9,7 @@ TTY_DEVICE="${1:-/dev/tty}"  # Terminal device to write OSC sequences to
 CLAUDE_PPID="${2:-$$}"       # Parent PID to identify this session
 STATUS_FILE="/tmp/claude-activity-$$"
 MARKER_FILE="/tmp/claude-session-$CLAUDE_PPID"
+PROJECTS_DIR="$HOME/.claude/projects/-home-mason"
 
 # Cleanup on exit
 trap "rm -f '$STATUS_FILE' '$MARKER_FILE'" EXIT
@@ -22,16 +23,36 @@ extract_activity() {
         head -c 40 || true
 }
 
-# Read session file path from marker file created by shell config
-# This explicitly tells us which session file belongs to this Claude process
+# Auto-detect which session file belongs to this Claude session
+# Strategy: Watch the projects directory and identify the first .jsonl file that gets modified
+# This will be our session file since Claude writes to it when the session starts or when messages are sent
 SESSION_FILE=""
 
+# Check if we already have a marker file with the session file
 if [[ -f "$MARKER_FILE" ]]; then
     SESSION_FILE=$(cat "$MARKER_FILE" 2>/dev/null)
+    # Verify it still exists
+    if [[ ! -f "$SESSION_FILE" ]]; then
+        SESSION_FILE=""
+    fi
 fi
 
-# Verify the session file exists
-if [[ ! -f "$SESSION_FILE" ]]; then
+# If we don't have a session file yet, watch for the first modification
+if [[ -z "$SESSION_FILE" ]] && command -v inotifywait >/dev/null 2>&1; then
+    # Watch the directory for modifications (no timeout - wait for first interaction)
+    # The first non-agent .jsonl file that gets modified is our session file
+    inotifywait -q -e modify,close_write --format '%w%f' "$PROJECTS_DIR" 2>/dev/null | \
+        while read -r modified_file; do
+            if [[ "$modified_file" == *.jsonl ]] && [[ "$modified_file" != *agent-* ]] && [[ -f "$modified_file" ]]; then
+                SESSION_FILE="$modified_file"
+                echo "$SESSION_FILE" > "$MARKER_FILE"
+                break
+            fi
+        done
+fi
+
+# If still no session file (shouldn't happen), exit gracefully
+if [[ -z "$SESSION_FILE" ]] || [[ ! -f "$SESSION_FILE" ]]; then
     exit 0
 fi
 if [[ -n "$SESSION_FILE" ]] && [[ -f "$SESSION_FILE" ]]; then
