@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# Extract conversation summary from transcript
+
+TRANSCRIPT="$1"
+
+if command -v jq >/dev/null 2>&1 && [[ -f "$TRANSCRIPT" ]]; then
+    # Priority 1: Extract the most recent summary entry (from compaction/milestones)
+    SUMMARY=$(tac "$TRANSCRIPT" | \
+        jq -r 'select(.type=="summary") | .summary' 2>/dev/null | \
+        head -1 | \
+        head -c 40)
+
+    if [[ -n "$SUMMARY" ]]; then
+        echo "$SUMMARY"
+        exit 0
+    fi
+
+    # Priority 2: Extract git branch if available
+    BRANCH=$(jq -r 'select(.gitBranch) | .gitBranch' "$TRANSCRIPT" 2>/dev/null | head -1)
+    if [[ -n "$BRANCH" ]] && [[ "$BRANCH" != "null" ]]; then
+        echo "$BRANCH" | head -c 40
+        exit 0
+    fi
+
+    # Priority 3: Extract CWD basename
+    CWD=$(jq -r 'select(.cwd) | .cwd' "$TRANSCRIPT" 2>/dev/null | head -1)
+    if [[ -n "$CWD" ]] && [[ "$CWD" != "null" ]]; then
+        basename "$CWD" | head -c 40
+        exit 0
+    fi
+
+    echo "Idle"
+else
+    echo "Idle"
+fi
