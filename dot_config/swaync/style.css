@@ -57,98 +57,187 @@
   background: transparent;
 }
 
-.notification-default-action,
-.notification-action {
-  padding: 4px;
-  margin: 0;
-  box-shadow: none;
-  background: transparent;
-  border: 1px solid @outline;
+.notification-content .summary {
   color: @text-color;
+  font-size: 15px;
+  font-weight: 500;
+  margin-bottom: 4px;
 }
 
-.notification-default-action:hover,
-.notification-action:hover {
-  background: alpha(@bg-selected, 0.1);
+.notification-content .body {
+  color: @text-color-disabled;
+  font-size: 13px;
 }
 
-.notification-default-action:active,
-.notification-action:active {
-  background: alpha(@bg-selected, 0.2);
-}
-
-.close-button {
+/* Close button */
+.notification-row .notification-background .close-button {
   background: @noti-close-bg;
   color: @on-error;
-  border-radius: 6px;
-  padding: 4px;
+  border-radius: 50%;
+  min-width: 24px;
+  min-height: 24px;
+  padding: 0;
+  margin: 6px;
+  border: none;
+  box-shadow: none;
 }
 
-.close-button:hover {
+.notification-row .notification-background .close-button:hover {
+  opacity: 0.8;
   background: @noti-close-bg-hover;
 }
 
-/* Control center elements */
-.widget-title {
-  color: @text-color;
-  font-size: 16px;
-  font-weight: bold;
-}
-
-.widget-label {
-  color: @text-color;
-}
-
-.widget-label.disabled {
-  color: @text-color-disabled;
-}
-
-.widget-button {
-  background: alpha(@bg-selected, 0.1);
-  border: 1px solid @outline;
-  border-radius: 8px;
-  padding: 8px;
-  color: @text-color;
-}
-
-.widget-button:hover {
-  background: alpha(@bg-selected, 0.2);
-}
-
-.widget-button:active {
-  background: alpha(@bg-selected, 0.3);
-}
-
-/* DND toggle */
-.widget-dnd {
+/* Floating notifications */
+.floating-notifications {
   background: transparent;
-  border-radius: 8px;
-  padding: 8px;
 }
 
-.widget-dnd>switch {
+.floating-notifications.background {
+  background: transparent;
+}
+
+/* Control center list */
+.control-center .control-center-list {
+  background: transparent;
+}
+
+.control-center .control-center-list .notification {
+  background: @noti-bg;
+  border-radius: 8px;
+  padding: 0;
+  margin-top: 8px;
+  border: 1px solid @outline;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Widget titles */
+.widget-title {
+  margin-bottom: 8px;
+}
+
+.widget-title > label {
+  color: @text-color;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.widget-title button {
+  background: @bg-selected;
+  color: @on-primary;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 13px;
+  border: none;
+}
+
+.widget-title button:hover {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Widgets */
+.widget-dnd,
+.widget-volume,
+.widget-backlight,
+.widget-mpris {
+  background: @noti-bg;
+  border-radius: 8px;
+  padding: 10px;
+  margin: 4px 0;
+  border: 1px solid @outline;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* DND Switch */
+.widget-dnd > switch {
   background: @surface-container;
   border-radius: 12px;
+  min-height: 20px;
+  min-width: 40px;
+  border: none;
 }
 
-.widget-dnd>switch:checked {
+.widget-dnd > switch:checked {
   background: @bg-selected;
 }
 
-.widget-dnd>switch slider {
+.widget-dnd > switch slider {
   background: @text-color;
-  border-radius: 100%;
+  border-radius: 50%;
+  min-width: 16px;
+  min-height: 16px;
+  margin: 2px;
 }
 
-/* Clear all button */
-.control-center-clear-all {
-  background: alpha(@bg-selected, 0.1);
-  border: 1px solid @outline;
-  border-radius: 8px;
+/* Sliders */
+.widget-volume scale,
+.widget-backlight scale {
+  min-height: 20px;
+  background: transparent;
+}
+
+.widget-volume scale trough,
+.widget-backlight scale trough {
+  background: @outline;
+  border-radius: 4px;
+  min-height: 4px;
+}
+
+.widget-volume scale highlight,
+.widget-backlight scale highlight {
+  background: @bg-selected;
+  border-radius: 4px;
+  min-height: 4px;
+}
+
+.widget-volume scale slider,
+.widget-backlight scale slider {
+  background: @text-color;
+  border-radius: 50%;
+  min-width: 14px;
+  min-height: 14px;
+  margin: -5px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* Media Player */
+.widget-mpris-player {
+  padding: 8px;
+  background: transparent;
+}
+
+.widget-mpris-title {
   color: @text-color;
-  padding: 8px 16px;
+  font-weight: 500;
+  font-size: 14px;
+  margin-bottom: 2px;
 }
 
-.control-center-clear-all:hover {
-  background: alpha(@bg-selected, 0.2);
+.widget-mpris-subtitle {
+  color: @text-color-disabled;
+  font-size: 12px;
+}
+
+.widget-mpris button {
+  background: @surface-container;
+  color: @text-color;
+  border-radius: 50%;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0;
+  margin: 2px;
+  border: none;
+}
+
+.widget-mpris button:hover {
+  background: @outline;
+}
+
+.widget-mpris button:active {
+  background: @bg-selected;
+  color: @on-primary;
+}
+
+/* Blank window */
+.blank-window {
+  background: transparent;
 }
