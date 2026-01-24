@@ -66,20 +66,42 @@ local function detect_claude(pane)
   return false
 end
 
--- Beads detection
+-- Beads detection - search up directory tree until git root
 local function detect_beads(pane)
   local cwd = pane:get_current_working_dir()
   if not cwd then
-    return false
+    return false, nil
   end
 
-  local beads_db = cwd.file_path .. '/.beads/beads.db'
-  local file = io.open(beads_db, 'r')
-  if file then
-    file:close()
-    return true
+  local current_dir = cwd.file_path
+  local filesystem_root = "/"
+
+  while current_dir ~= filesystem_root do
+    -- Check if .beads/beads.db exists at this level
+    local beads_db = current_dir .. '/.beads/beads.db'
+    local file = io.open(beads_db, 'r')
+    if file then
+      file:close()
+      return true, current_dir
+    end
+
+    -- Check if we've hit a git repository root (stop here)
+    local git_dir = current_dir .. '/.git'
+    local git_file = io.open(git_dir, 'r')
+    if git_file then
+      git_file:close()
+      return false, nil
+    end
+
+    -- Move up one directory
+    local parent = current_dir:match("^(.*)/[^/]+$")
+    if not parent or parent == "" then
+      break
+    end
+    current_dir = parent
   end
-  return false
+
+  return false, nil
 end
 
 -- SSH component builder
@@ -112,13 +134,12 @@ local function get_claude_component(pane)
 end
 
 -- Beads component builder
-local function get_beads_component(pane)
-  local cwd = pane:get_current_working_dir()
-  if not cwd then
+local function get_beads_component(beads_dir)
+  if not beads_dir then
     return nil
   end
 
-  local beads_db = cwd.file_path .. '/.beads/beads.db'
+  local beads_db = beads_dir .. '/.beads/beads.db'
 
   -- Query total open tasks (not deleted, not closed)
   local count_query = string.format(
@@ -178,8 +199,9 @@ wezterm.on("update-right-status", function(window, pane)
     table.insert(components, get_claude_component(pane))
   end
 
-  if detect_beads(pane) then
-    local beads_component = get_beads_component(pane)
+  local has_beads, beads_dir = detect_beads(pane)
+  if has_beads then
+    local beads_component = get_beads_component(beads_dir)
     if beads_component then
       table.insert(components, beads_component)
     end
