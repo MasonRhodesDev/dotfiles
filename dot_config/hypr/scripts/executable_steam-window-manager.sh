@@ -24,15 +24,8 @@ handle_event() {
                 echo "Detected Friends List opening: $address"
                 sleep 0.5  # Brief delay to let window fully initialize
 
-                # Friends List should be the active window when it opens
-                # Move it left first (swaps position with window to its left)
-                hyprctl dispatch movewindow l
-                echo "Moved Friends List to the left"
-
-                sleep 0.2
-
-                # Then resize the active window to 400px width
-                hyprctl dispatch resizeactive exact 400 100%
+                # Resize by targeting the window address directly (no focus change)
+                hyprctl dispatch resizewindowpixel "exact 400 100%,address:0x$address"
                 echo "Resized Friends List to 400px width"
             fi
 
