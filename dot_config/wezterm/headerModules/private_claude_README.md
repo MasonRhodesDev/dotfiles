@@ -30,10 +30,10 @@ The Claude module requires additional shell configuration and background scripts
 ### Shell Integration
 
 **Fish Shell:**
-[`dot_config/fish/conf.d/private_wezterm.fish`](../../dot_config/fish/conf.d/private_wezterm.fish)
+[`dot_config/fish/conf.d/private_wezterm.fish`](../../fish/conf.d/private_wezterm.fish)
 
 **Zsh:**
-[`dot_config/private_zsh/private_wezterm.zsh`](../../dot_config/private_zsh/private_wezterm.zsh)
+[`dot_config/private_zsh/private_wezterm.zsh`](../../private_zsh/private_wezterm.zsh)
 
 These files:
 - Detect when Claude Code is running (via `$CLAUDECODE` environment variable)
@@ -45,19 +45,19 @@ These files:
 
 The shell integration uses these scripts to track Claude activity:
 
-1. **[`scripts/executable_wezterm-claude-activity-hook`](../../scripts/executable_wezterm-claude-activity-hook)**
+1. **[`scripts/executable_wezterm-claude-activity-hook`](../../../scripts/executable_wezterm-claude-activity-hook)**
    - Monitors Claude Code session files for activity
    - Updates `CLAUDE_ACTIVITY` user variable with current operation
 
-2. **[`scripts/executable_wezterm-claude-cleanup-hook`](../../scripts/executable_wezterm-claude-cleanup-hook)**
+2. **[`scripts/executable_wezterm-claude-cleanup-hook`](../../../scripts/executable_wezterm-claude-cleanup-hook)**
    - Cleans up marker files when session ends
    - Resets user variables
 
-3. **[`scripts/executable_wezterm-claude-session-hook`](../../scripts/executable_wezterm-claude-session-hook)**
+3. **[`scripts/executable_wezterm-claude-session-hook`](../../../scripts/executable_wezterm-claude-session-hook)**
    - Manages session lifecycle
    - Initializes tracking for new sessions
 
-4. **[`scripts/executable_wezterm-claude-summarize`](../../scripts/executable_wezterm-claude-summarize)**
+4. **[`scripts/executable_wezterm-claude-summarize`](../../../scripts/executable_wezterm-claude-summarize)**
    - Generates human-readable activity summaries
    - Formats session slug for display
 
@@ -162,6 +162,6 @@ The module loader will skip it on next reload.
 
 ## Related Files
 
-- **Main config:** [`dot_config/wezterm/wezterm.lua`](../../dot_config/wezterm/wezterm.lua)
-- **Module loader:** [`dot_config/wezterm/headerModulesLoader.lua`](../../dot_config/wezterm/headerModulesLoader.lua)
+- **Main config:** [`dot_config/wezterm/wezterm.lua`](../wezterm.lua)
+- **Module loader:** [`dot_config/wezterm/headerModulesLoader.lua`](../headerModulesLoader.lua)
 - **Claude module:** [`dot_config/wezterm/headerModules/claude.lua`](./claude.lua)
