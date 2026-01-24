@@ -24,8 +24,8 @@ handle_event() {
                 echo "Detected Friends List opening: $address"
                 sleep 0.5  # Brief delay to let window fully initialize
 
-                # Resize by targeting the window address directly (no focus change)
-                hyprctl dispatch resizewindowpixel "exact 400 100%,address:0x$address"
+                # Resize by targeting the window title directly (no focus change)
+                hyprctl dispatch resizewindowpixel "exact 400 100%,title:^(Friends List)$"
                 echo "Resized Friends List to 400px width"
             fi
 

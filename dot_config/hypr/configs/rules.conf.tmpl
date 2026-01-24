@@ -40,12 +40,13 @@ windowrule = match:class ^(Emulator)$, float on
 # Window sizing handled by steam-window-manager.sh script
 # Prevent non-game Steam windows from stealing focus
 windowrule = match:class ^(steam)$, no_initial_focus on
+windowrule = match:class ^(steam)$, focus_on_activate off
 # Prevent 5x5 spawn bug for empty title steam windows
 windowrule = match:title ^()$, match:class ^(steam)$, stay_focused on, min_size 1 1
 
 {{ if not .is_work }}
 # Steam client windows (main client, friends list, settings, etc.) start on workspace 4
-windowrule = match:class ^(steam)$, workspace 4
+windowrule = match:class ^(steam)$, workspace 4 silent
 
 #gamescope
 # Steam games only on workspace 7
