@@ -66,6 +66,22 @@ local function detect_claude(pane)
   return false
 end
 
+-- Beads detection
+local function detect_beads(pane)
+  local cwd = pane:get_current_working_dir()
+  if not cwd then
+    return false
+  end
+
+  local beads_db = cwd.file_path .. '/.beads/beads.db'
+  local file = io.open(beads_db, 'r')
+  if file then
+    file:close()
+    return true
+  end
+  return false
+end
+
 -- SSH component builder
 local function get_ssh_component()
   return " 🔐 SSH"
@@ -95,6 +111,60 @@ local function get_claude_component(pane)
   return table.concat(parts, " | ")
 end
 
+-- Beads component builder
+local function get_beads_component(pane)
+  local cwd = pane:get_current_working_dir()
+  if not cwd then
+    return nil
+  end
+
+  local beads_db = cwd.file_path .. '/.beads/beads.db'
+
+  -- Query total open tasks (not deleted, not closed)
+  local count_query = string.format(
+    'sqlite3 "%s" "SELECT COUNT(*) FROM issues WHERE deleted_at IS NULL AND status != \'closed\';" 2>/dev/null',
+    beads_db
+  )
+  local count_handle = io.popen(count_query)
+  local count_str = count_handle:read("*a"):gsub("%s+", "")
+  count_handle:close()
+  local count = tonumber(count_str) or 0
+
+  -- Don't show module if count is 0
+  if count == 0 then
+    return nil
+  end
+
+  local parts = {}
+
+  -- Show task count
+  table.insert(parts, string.format("📋 %d task%s", count, count == 1 and "" or "s"))
+
+  -- Query for in_progress tasks (active tasks) - show most recently updated
+  local active_query = string.format(
+    'sqlite3 "%s" "SELECT id, title FROM issues WHERE deleted_at IS NULL AND status = \'in_progress\' ORDER BY updated_at DESC LIMIT 1;" 2>/dev/null',
+    beads_db
+  )
+  local active_handle = io.popen(active_query)
+  local active_result = active_handle:read("*a")
+  active_handle:close()
+
+  if active_result and active_result:match("%S") then
+    local task_id, task_title = active_result:match("([^|]+)|(.+)")
+    if task_id and task_title then
+      -- Extract short ID (last 3 chars) and truncate title if too long
+      local short_id = task_id:match("-([^-]+)$") or task_id
+      local display_title = task_title:gsub("^%s+", ""):gsub("%s+$", "")
+      if #display_title > 40 then
+        display_title = display_title:sub(1, 37) .. "..."
+      end
+      table.insert(parts, string.format("🔄 %s: %s", short_id, display_title))
+    end
+  end
+
+  return table.concat(parts, " | ")
+end
+
 -- Main status bar update handler
 wezterm.on("update-right-status", function(window, pane)
   local components = {}
@@ -106,6 +176,13 @@ wezterm.on("update-right-status", function(window, pane)
 
   if detect_claude(pane) then
     table.insert(components, get_claude_component(pane))
+  end
+
+  if detect_beads(pane) then
+    local beads_component = get_beads_component(pane)
+    if beads_component then
+      table.insert(components, beads_component)
+    end
   end
 
   -- Build status display
