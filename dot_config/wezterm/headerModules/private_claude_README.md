@@ -43,21 +43,25 @@ These files:
 
 ### Background Scripts
 
-The shell integration uses these scripts to track Claude activity:
+The shell integration uses these scripts to track Claude activity. These are registered as hooks in `~/.claude/settings.json`:
 
-1. **[`scripts/executable_wezterm-claude-activity-hook`](../../../scripts/executable_wezterm-claude-activity-hook)**
-   - Monitors Claude Code session files for activity
-   - Updates `CLAUDE_ACTIVITY` user variable with current operation
-
-2. **[`scripts/executable_wezterm-claude-cleanup-hook`](../../../scripts/executable_wezterm-claude-cleanup-hook)**
-   - Cleans up marker files when session ends
-   - Resets user variables
-
-3. **[`scripts/executable_wezterm-claude-session-hook`](../../../scripts/executable_wezterm-claude-session-hook)**
+1. **[`scripts/executable_wezterm-claude-session-hook`](../../../scripts/executable_wezterm-claude-session-hook)**
+   - **Registered:** [`settings.json:33`](../../../.claude/settings.json#L33) (SessionStart hook)
    - Manages session lifecycle
    - Initializes tracking for new sessions
 
+2. **[`scripts/executable_wezterm-claude-activity-hook`](../../../scripts/executable_wezterm-claude-activity-hook)**
+   - **Registered:** [`settings.json:37,48,59,70`](../../../.claude/settings.json#L37) (SessionStart, UserPromptSubmit, PostToolUse, Stop hooks)
+   - Monitors Claude Code session files for activity
+   - Updates `CLAUDE_ACTIVITY` user variable with current operation
+
+3. **[`scripts/executable_wezterm-claude-cleanup-hook`](../../../scripts/executable_wezterm-claude-cleanup-hook)**
+   - **Registered:** [`settings.json:81`](../../../.claude/settings.json#L81) (SessionEnd hook)
+   - Cleans up marker files when session ends
+   - Resets user variables
+
 4. **[`scripts/executable_wezterm-claude-summarize`](../../../scripts/executable_wezterm-claude-summarize)**
+   - Helper script (called by activity hook)
    - Generates human-readable activity summaries
    - Formats session slug for display
 
