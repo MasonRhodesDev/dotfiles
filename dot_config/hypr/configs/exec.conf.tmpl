@@ -18,10 +18,8 @@ exec-once=udiskie
 exec-once=hyprls
 exec-once=swaybg -i $WALLPAPER_PATH -m fill
 
-# Generate material you colors from wallpaper
-exec-once=matugen image $WALLPAPER_PATH -m dark
-
-exec-once = /home/mason/scripts/hyprland-theme-toggle/theme-restore.sh >/dev/null 2>&1
+# Restore saved theme using lmtt
+exec-once = lmtt switch $(cat ~/.cache/lmtt/theme_state 2>/dev/null || echo "dark")
 
 # Update hyprpanel wallpaper config and launch
 #exec=sed -i "s|\"wallpaper.image\": \".*\"|\"wallpaper.image\": \"$WALLPAPER_PATH\"|" ~/.config/hyprpanel/config.json && uwsm app -- hyprpanel
