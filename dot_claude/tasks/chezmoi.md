@@ -2,8 +2,10 @@
 
 ## Safety Rules
 
-- NEVER use `chezmoi apply` (overwrites local changes)
-- NEVER use `--force` flags (bypasses safety)
+- `chezmoi apply` is safe - it will show conflicts and prompt for resolution
+- NEVER use `--force` flags (e.g., `chezmoi apply --force`) - this bypasses safety checks and overwrites files
+- Use `chezmoi diff` to preview changes (compares rendered templates with target files)
+- Use `chezmoi apply --dry-run` to see what would be applied without actually applying
 - Use `chezmoi add` to save local changes TO tracking
 - See `~/.local/share/chezmoi/CLAUDE.md` for repo-specific commands and structure
 - Primary branch: `personal-pc`

@@ -68,6 +68,20 @@ priority = 3
   [common.shell_tools.arch]
   aur_packages = ["oh-my-posh-bin"]
 
+[common.beads]
+description = "Beads - AI-native issue tracking CLI"
+install_level = "user"
+priority = 4
+  [common.beads.fedora]
+  packages = []
+  install_command = "curl -sSL https://raw.githubusercontent.com/steveyegge/beads/main/scripts/install.sh | bash"
+  verify_command = "bd --version"
+
+  [common.beads.arch]
+  packages = []
+  install_command = "curl -sSL https://raw.githubusercontent.com/steveyegge/beads/main/scripts/install.sh | bash"
+  verify_command = "bd --version"
+
 [common.node_tooling]
 description = "Node.js and JavaScript development"
 install_level = "user"

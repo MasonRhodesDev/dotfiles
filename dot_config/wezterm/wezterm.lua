@@ -33,30 +33,46 @@ else
   wezterm.log_info("wezterm.plugin API unavailable; skipping plugins")
 end
 
--- Show status bar with SSH indicator only during SSH sessions
-wezterm.on("update-right-status", function(window, pane)
-  local process = pane:get_foreground_process_name() or ""
-  local is_ssh = process:match("ssh$") or pane:get_domain_name():match("^SSH:")
+-- Load header module system
+local header_loader = require('headerModulesLoader')
+local header_modules = header_loader.load_modules()
 
+-- Main status bar update handler
+wezterm.on("update-right-status", function(window, pane)
+  local components = header_loader.collect_components(header_modules, window, pane)
+
+  -- Build status display
   local overrides = window:get_config_overrides() or {}
-  if is_ssh then
+
+  if #components > 0 then
+    -- Show tab bar and status when any indicator is active
     overrides.enable_tab_bar = true
-    window:set_left_status(wezterm.format({ { Text = " 🔐 SSH" } }))
+    window:set_left_status(wezterm.format({
+      { Text = table.concat(components, " | ") }
+    }))
   else
+    -- Hide tab bar when no indicators are active
     overrides.enable_tab_bar = false
     window:set_left_status("")
   end
+
   window:set_config_overrides(overrides)
 end)
 
 -- Handle user variable changes from nvim for config overrides
 wezterm.on('user-var-changed', function(window, pane, name, value)
-  if not wezterm_config_nvim or not wezterm_config_nvim.override_user_var then
-    return
+  -- Handle nvim config overrides
+  if wezterm_config_nvim and wezterm_config_nvim.override_user_var then
+    local overrides = window:get_config_overrides() or {}
+    overrides = wezterm_config_nvim.override_user_var(overrides, name, value)
+    window:set_config_overrides(overrides)
   end
-  local overrides = window:get_config_overrides() or {}
-  overrides = wezterm_config_nvim.override_user_var(overrides, name, value)
-  window:set_config_overrides(overrides)
+
+  -- Handle Claude activity updates - force status bar refresh
+  if name == "CLAUDE_ACTIVITY" then
+    -- Trigger a status update by emitting update-right-status
+    window:perform_action(wezterm.action.EmitEvent("update-right-status"), pane)
+  end
 end)
 
 -- Load dynamic colors from lmtt (Linux Matugen Theme Toggle)

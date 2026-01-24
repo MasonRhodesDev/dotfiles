@@ -1,0 +1,129 @@
+#!/usr/bin/env bash
+# Hook for updating WezTerm pane activity on task changes
+# Fires on: SessionStart, UserPromptSubmit, PostToolUse
+# Updates activity only when tasks change (not real-time)
+
+INPUT=$(cat)
+
+# Extract data from JSON
+if command -v jq >/dev/null 2>&1; then
+    SESSION_ID=$(echo "$INPUT" | jq -r '.session_id')
+    HOOK_EVENT=$(echo "$INPUT" | jq -r '.hook_event_name')
+    TRANSCRIPT_PATH=$(echo "$INPUT" | jq -r '.transcript_path')
+else
+    SESSION_ID=$(echo "$INPUT" | grep -o '"session_id":"[^"]*"' | cut -d'"' -f4)
+    HOOK_EVENT=$(echo "$INPUT" | grep -o '"hook_event_name":"[^"]*"' | cut -d'"' -f4)
+    TRANSCRIPT_PATH=$(echo "$INPUT" | grep -o '"transcript_path":"[^"]*"' | cut -d'"' -f4)
+fi
+
+# Only proceed if in WezTerm
+[[ -z "$WEZTERM_PANE" ]] && echo "{}" && exit 0
+
+# Get correlation file
+CORRELATION_DIR="/tmp/claude-wezterm"
+CORRELATION_FILE="$CORRELATION_DIR/$SESSION_ID.pane"
+
+# Source correlation file (created by SessionStart hook)
+if [[ ! -f "$CORRELATION_FILE" ]]; then
+    echo "{}"
+    exit 0
+fi
+
+source "$CORRELATION_FILE"
+
+# Verify we have required data
+if [[ -z "$WEZTERM_PANE" ]] || [[ -z "$TTY_DEVICE" ]]; then
+    echo "{}"
+    exit 0
+fi
+
+# Function to send activity to specific pane
+send_activity() {
+    local activity="$1"
+    local encoded=$(echo -n "$activity" | base64)
+    printf '\033]1337;SetUserVar=CLAUDE_ACTIVITY=%s\007' "$encoded" > "$TTY_DEVICE" 2>/dev/null
+}
+
+# Function to extract conversation summary from transcript
+extract_conversation_summary() {
+    local transcript="$1"
+
+    # Use Claude Code to generate a concise summary
+    local summary=$(/home/mason/scripts/wezterm-claude-summarize "$transcript" 2>/dev/null)
+
+    if [[ -n "$summary" ]] && [[ "$summary" != "In conversation" ]]; then
+        echo "$summary"
+    else
+        echo "In conversation"
+    fi
+}
+
+# Extract activity based on hook type
+case "$HOOK_EVENT" in
+    SessionStart)
+        # Check if this is a post-compact session start
+        if command -v jq >/dev/null 2>&1; then
+            SOURCE=$(echo "$INPUT" | jq -r '.source' 2>/dev/null)
+        else
+            SOURCE=$(echo "$INPUT" | grep -o '"source":"[^"]*"' | cut -d'"' -f4)
+        fi
+
+        if [[ "$SOURCE" == "compact" ]]; then
+            # Post-compaction - extract the new summary
+            ACTIVITY=$(extract_conversation_summary "$TRANSCRIPT_PATH")
+        else
+            # Initial session start - get first user message
+            if command -v jq >/dev/null 2>&1 && [[ -f "$TRANSCRIPT_PATH" ]]; then
+                ACTIVITY=$(jq -r 'select(.type=="user") | .message.content[]? | select(.type=="text") | .text' "$TRANSCRIPT_PATH" 2>/dev/null | head -1 | head -c 60)
+            fi
+            [[ -z "$ACTIVITY" ]] && ACTIVITY="Starting session"
+        fi
+        ;;
+
+    UserPromptSubmit)
+        # Get user's new prompt
+        if command -v jq >/dev/null 2>&1; then
+            ACTIVITY=$(echo "$INPUT" | jq -r '.prompt' 2>/dev/null | head -c 60)
+        else
+            ACTIVITY=$(echo "$INPUT" | grep -o '"prompt":"[^"]*"' | cut -d'"' -f4 | head -c 60)
+        fi
+        [[ -z "$ACTIVITY" ]] && ACTIVITY="New task"
+        ;;
+
+    Stop)
+        # Claude finished responding, waiting for input - show conversation summary
+        ACTIVITY=$(extract_conversation_summary "$TRANSCRIPT_PATH")
+        ;;
+
+    PostToolUse)
+        # Get tool name for activity
+        if command -v jq >/dev/null 2>&1; then
+            TOOL=$(echo "$INPUT" | jq -r '.tool_name' 2>/dev/null)
+        else
+            TOOL=$(echo "$INPUT" | grep -o '"tool_name":"[^"]*"' | cut -d'"' -f4)
+        fi
+
+        # Map tool to activity description
+        case "$TOOL" in
+            Bash) ACTIVITY="Running command" ;;
+            Read) ACTIVITY="Reading files" ;;
+            Write) ACTIVITY="Writing files" ;;
+            Edit) ACTIVITY="Editing code" ;;
+            Grep|Glob) ACTIVITY="Searching codebase" ;;
+            Task) ACTIVITY="Running agent" ;;
+            WebFetch|WebSearch) ACTIVITY="Searching web" ;;
+            *) ACTIVITY="Working on task" ;;
+        esac
+        ;;
+
+    *)
+        # Unknown hook, no update needed
+        echo "{}"
+        exit 0
+        ;;
+esac
+
+# Send activity update to pane
+send_activity "$ACTIVITY"
+
+echo '{"status": "success"}'
