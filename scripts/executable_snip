@@ -1,8 +1,9 @@
 #!/bin/bash
 # FAST: grim → PPM (uncompressed) → satty (HW accel) → clipboard
+# Config: ~/.config/satty/config.toml
 
-grim -g "$(slurp -d)" -t ppm - | \
-  satty --filename - \
-        --copy-command "wl-copy" \
-        --early-exit \
-        --output-filename ~/Pictures/Screenshots/$(date +%Y%m%d-%H%M%S).png
+# Pre-create screenshot directory to avoid any mkdir overhead
+mkdir -p ~/Pictures/Screenshots
+
+# Optimized pipeline: uncompressed PPM format, config-driven satty
+grim -g "$(slurp -d)" -t ppm - | satty --filename -

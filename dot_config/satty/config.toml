@@ -1,0 +1,25 @@
+# Satty configuration - optimized for instant startup
+
+[general]
+# Exit immediately after copy action for instant feel
+early-exit = true
+
+# Copy to clipboard
+copy-command = "wl-copy"
+
+# Output filename pattern
+output-filename = "~/Pictures/Screenshots/%Y%m%d-%H%M%S.png"
+
+# Reduce initial render complexity
+default-hide-toolbars = true
+corner-roundness = 0  # Disable rounded corners for faster rendering
+annotation-size-factor = 1.0
+
+# Skip notification overhead
+disable-notifications = true
+
+# Start with pointer for fastest initial load
+initial-tool = "pointer"
+
+# Performance tweaks
+brush-smooth-history-size = 0  # Disable smoothing for instant response
