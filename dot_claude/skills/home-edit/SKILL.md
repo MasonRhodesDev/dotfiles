@@ -8,6 +8,9 @@ hooks:
         - type: command
           command: "chezmoi managed"
           once: true
+  Stop:
+    - type: command
+      command: "chezmoi verify"
 ---
 
 # Home Directory File Editing
