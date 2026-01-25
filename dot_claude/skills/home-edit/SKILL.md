@@ -1,6 +1,13 @@
 ---
 name: home-edit
 description: Use this skill when editing files in the home directory (~/) or .config directory. Syncs chezmoi repository (work-pc/personal-pc), checks management status, and routes edits to the correct location. ALWAYS sync and check chezmoi before editing.
+hooks:
+  PreToolUse:
+    - matcher: "Bash|Read|Edit|Write"
+      hooks:
+        - type: command
+          command: "chezmoi managed"
+          once: true
 ---
 
 # Home Directory File Editing
