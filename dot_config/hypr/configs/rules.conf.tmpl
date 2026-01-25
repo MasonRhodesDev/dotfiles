@@ -43,8 +43,6 @@ windowrule = match:class ^(steam)$, no_initial_focus on
 windowrule = match:class ^(steam)$, focus_on_activate off
 # Prevent 5x5 spawn bug for empty title steam windows
 windowrule = match:title ^()$, match:class ^(steam)$, stay_focused on, min_size 1 1
-# Disable all styling for Steam notification popups
-windowrule = match:title ^(notificationtoasts_), match:class ^(steam)$, no_anim on, no_shadow on, no_blur on, border_size 0, rounding 0
 
 {{ if not .is_work }}
 # Steam client windows (main client, friends list, settings, etc.) start on workspace 4
