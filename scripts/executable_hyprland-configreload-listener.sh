@@ -1,12 +1,14 @@
 #!/bin/bash
-# Hyprland config reload listener
-# Monitors Hyprland IPC for configreloaded events and restarts waybar
-# Prevents waybar freeze from hyprctl reload (https://github.com/Alexays/Waybar/issues/4451)
+# Hyprland event listener
+# Monitors Hyprland IPC for various events:
+# - configreloaded: restarts waybar (prevents freeze from hyprctl reload)
+# - monitor changes: sets XWayland primary to ultrawide
 
 set -euo pipefail
 
 SCRIPT_NAME=$(basename "$0")
 LOCKFILE="/tmp/${SCRIPT_NAME}.lock"
+XWAYLAND_PRIMARY_SCRIPT="$HOME/.config/hypr/scripts/set-xwayland-primary.sh"
 
 cleanup() {
     rm -f "$LOCKFILE"
@@ -24,7 +26,7 @@ fi
 echo $$ > "$LOCKFILE"
 trap cleanup EXIT INT TERM
 
-echo "Starting Hyprland config reload listener (PID: $$)"
+echo "Starting Hyprland event listener (PID: $$)"
 
 # Check Hyprland is running
 if [[ -z "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]]; then
@@ -40,11 +42,23 @@ fi
 
 echo "Monitoring Hyprland events via $socket_path"
 
-# Listen for configreloaded events
+# Set XWayland primary on startup
+if [[ -x "$XWAYLAND_PRIMARY_SCRIPT" ]]; then
+    (sleep 2 && "$XWAYLAND_PRIMARY_SCRIPT") &
+fi
+
+# Listen for Hyprland events
 socat -U - "UNIX-CONNECT:$socket_path" | while IFS= read -r line; do
-    if [[ "$line" == "configreloaded>>" ]]; then
-        echo "$(date '+%Y-%m-%d %H:%M:%S') - Detected configreloaded event"
-        echo "$(date '+%Y-%m-%d %H:%M:%S') - Restarting waybar in 1 second..."
-        (sleep 1 && systemctl --user restart waybar) &
-    fi
+    case "$line" in
+        "configreloaded>>")
+            echo "$(date '+%Y-%m-%d %H:%M:%S') - Config reloaded, restarting waybar..."
+            (sleep 1 && systemctl --user restart waybar) &
+            ;;
+        monitoradded\>\>*|monitorremoved\>\>*|monitoraddedv2\>\>*)
+            echo "$(date '+%Y-%m-%d %H:%M:%S') - Monitor change: $line"
+            if [[ -x "$XWAYLAND_PRIMARY_SCRIPT" ]]; then
+                (sleep 1 && "$XWAYLAND_PRIMARY_SCRIPT") &
+            fi
+            ;;
+    esac
 done
