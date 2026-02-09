@@ -1,5 +1,5 @@
 [Unit]
-Description=Hyprland config reload listener for waybar restart
+Description=Hyprland event listener (config reload, monitor changes)
 After=graphical-session.target waybar.service
 PartOf=graphical-session.target
 
