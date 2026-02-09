@@ -138,10 +138,10 @@ main() {
     fi
     
     echo "Monitoring events via $socket_path"
-    
+
     # Process initial state after socket connection is confirmed
     process_state
-    
+
     # Enhanced cleanup function
     cleanup() {
         echo "Cleaning up..."
