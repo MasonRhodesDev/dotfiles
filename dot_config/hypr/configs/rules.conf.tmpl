@@ -33,6 +33,9 @@ windowrule = match:class ^(wofi)$, float on, opacity 0.99999 0.99999, center on,
 # pavucontrol rules
 windowrule = match:class ^(org.pulseaudio.pavucontrol)$, float on, center on, size 1000 600, stay_focused on, pin on
 
+# Satty screenshot annotation - always on top
+windowrule = match:class ^(com.gabm.satty)$, float on, pin on, center on, stay_focused on
+
 # Android Emulator
 windowrule = match:class ^(Emulator)$, float on
 
@@ -44,14 +47,5 @@ windowrule = match:class ^(steam)$, focus_on_activate off
 # Prevent 5x5 spawn bug for empty title steam windows
 windowrule = match:title ^()$, match:class ^(steam)$, stay_focused on, min_size 1 1
 
-{{ if not .is_work }}
-# Steam client windows (main client, friends list, settings, etc.) start on workspace 4
-windowrule = match:class ^(steam)$, workspace 4 silent
 
-#gamescope
-# Steam games only on workspace 7
-workspace=7, border:false, rounding:false
-windowrule = match:class ^(gamescope)$, workspace 7
-windowrule = match:class ^(steam_app_\d+)$, workspace 7
-{{ end }}
 
