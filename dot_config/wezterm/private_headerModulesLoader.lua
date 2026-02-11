@@ -18,8 +18,9 @@ function M.load_modules()
 
   for _, file in ipairs(files) do
     if file:match("%.lua$") then
-      local module_name = file:match("^(.+)%.lua$")
-      local module_path = modules_dir .. '/' .. file
+      local basename = file:match("([^/]+)$") or file
+      local module_name = basename:match("^(.+)%.lua$")
+      local module_path = file
 
       local ok, module = pcall(dofile, module_path)
       if ok and module then

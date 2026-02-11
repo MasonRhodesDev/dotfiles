@@ -27,14 +27,23 @@ return {
   get_component = function(pane, data)
     local parts = {}
 
-    -- Get activity from user variable
+    -- Get activity and model from user variables
     local user_vars = pane:get_user_vars()
     local activity = user_vars.CLAUDE_ACTIVITY or ""
+    local model = user_vars.CLAUDE_MODEL or ""
+
+    -- Build label: "Claude" or "Claude (opus)"
+    local label = "Claude"
+    if model ~= "" then
+      -- Extract short name: "claude-opus-4-6" → "opus", "sonnet" → "sonnet"
+      local short = model:match("opus") or model:match("sonnet") or model:match("haiku") or model
+      label = "Claude (" .. short .. ")"
+    end
 
     if activity ~= "" then
-      table.insert(parts, " 🤖 " .. activity)
+      table.insert(parts, " 🤖 " .. label .. " | " .. activity)
     else
-      table.insert(parts, " 🤖 Claude")
+      table.insert(parts, " 🤖 " .. label)
     end
 
     -- Add working directory
