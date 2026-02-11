@@ -69,7 +69,7 @@ wezterm.on('user-var-changed', function(window, pane, name, value)
   end
 
   -- Handle Claude activity updates - force status bar refresh
-  if name == "CLAUDE_ACTIVITY" then
+  if name == "CLAUDE_ACTIVE" or name == "CLAUDE_ACTIVITY" or name == "CLAUDE_MODEL" then
     -- Trigger a status update by emitting update-right-status
     window:perform_action(wezterm.action.EmitEvent("update-right-status"), pane)
   end

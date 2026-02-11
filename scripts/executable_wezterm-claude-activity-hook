@@ -44,6 +44,17 @@ send_activity() {
     printf '\033]1337;SetUserVar=CLAUDE_ACTIVITY=%s\007' "$encoded" > "$TTY_DEVICE" 2>/dev/null
 }
 
+# Function to send model info to specific pane
+send_model() {
+    local settings="$HOME/.claude/settings.json"
+    if [[ -f "$settings" ]] && command -v jq >/dev/null 2>&1; then
+        local model=$(jq -r '.model // empty' "$settings" 2>/dev/null)
+        if [[ -n "$model" ]]; then
+            printf '\033]1337;SetUserVar=CLAUDE_MODEL=%s\007' "$(echo -n "$model" | base64)" > "$TTY_DEVICE" 2>/dev/null
+        fi
+    fi
+}
+
 # Function to extract conversation summary from transcript
 extract_conversation_summary() {
     local transcript="$1"
@@ -81,6 +92,9 @@ case "$HOOK_EVENT" in
         ;;
 
     UserPromptSubmit)
+        # Refresh model in case user changed it with /model
+        send_model
+
         # Get user's new prompt
         if command -v jq >/dev/null 2>&1; then
             ACTIVITY=$(echo "$INPUT" | jq -r '.prompt' 2>/dev/null | head -c 60)
