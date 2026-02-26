@@ -1,8 +1,22 @@
 #!/bin/bash
-# FAST: grim → PPM (uncompressed) → satty (HW accel) → clipboard
+# Freeze screen → select region → capture → annotate → clipboard
+# hyprpicker -r -z creates a freeze overlay that doesn't block slurp pointer input
 
-grim -g "$(slurp -d)" -t ppm - | \
-  satty --filename - \
-        --copy-command "wl-copy" \
-        --early-exit \
-        --output-filename ~/Pictures/Screenshots/$(date +%Y%m%d-%H%M%S).png
+hyprpicker -r -z &
+FREEZE_PID=$!
+sleep 0.2
+
+TMPFILE=$(mktemp /tmp/snip-XXXXXX.ppm)
+grim -g "$(slurp -d)" -t ppm "$TMPFILE" 2>/dev/null
+GRIM_STATUS=$?
+
+kill $FREEZE_PID 2>/dev/null
+
+[ $GRIM_STATUS -ne 0 ] && { rm -f "$TMPFILE"; exit 1; }
+
+satty --filename "$TMPFILE" \
+      --copy-command "wl-copy" \
+      --early-exit \
+      --output-filename ~/Pictures/Screenshots/$(date +%Y%m%d-%H%M%S).png
+
+rm -f "$TMPFILE"
