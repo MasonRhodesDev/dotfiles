@@ -1,0 +1,5 @@
+{{- if .is_work }}
+# Datadog API Keys (from Secret Service)
+set -gx DD_API_KEY (secret-tool lookup service datadog type api-key 2>/dev/null; or echo "")
+set -gx DD_APP_KEY (secret-tool lookup service datadog type app-key 2>/dev/null; or echo "")
+{{- end }}
