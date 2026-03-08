@@ -11,7 +11,6 @@
             "pulseaudio",
             "tray",
             "custom/updates",
-            "custom/idle-inhibitor",
             "clock",
             "custom/notification",
             "battery"
@@ -179,13 +178,6 @@
         "tray": {
             "icon-size": 18,
             "spacing": 6
-        },
-        "custom/idle-inhibitor": {
-            "format": "{}",
-            "return-type": "json",
-            "exec": "$HOME/.config/waybar/scripts/logind-idle-monitor.sh",
-            "on-click": "logind-idle-control toggle",
-            "escape": false
         },
         "custom/screen-recorder": {
             "format": "{}",
