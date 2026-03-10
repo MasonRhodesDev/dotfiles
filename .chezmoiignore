@@ -31,3 +31,8 @@ CLAUDE.md
 
 # Git configuration (stays in repo)
 .gitattributes
+
+# Work-only: Claude templates (ticket creation, etc.)
+{{ if not .is_work }}
+.claude/templates
+{{ end }}

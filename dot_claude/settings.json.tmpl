@@ -1,0 +1,168 @@
+{
+  "permissions": {
+    "allow": [
+      "Grep",
+      "Glob",
+      "Read",
+      "BashOutput",
+      "Bash(systemctl:*)",
+      "Bash(journalctl:*)",
+      "Bash(hyprctl clients:*)",
+      "Skill(chezmoi)",
+      "Bash(fc-match:*)",
+      "Skill(skill-creator)",
+      "Bash(find .:*)",
+      "Bash(find ./:*)",
+      "Bash(coredumpctl list:*)",
+      "Bash(wezterm --version:*)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "Bash(chezmoi source-path:*)",
+      "WebFetch(domain:www.chezmoi.io)",
+      "Bash(chezmoi help:*)",
+      "Bash(chezmoi doctor:*)",
+      "Bash(python3:*)",
+      "Bash(yq eval:*)",
+      "Bash(./run-tests.sh:*)",
+      "Bash(cat:*)",
+      "WebFetch(domain:issues.chromium.org)",
+      "WebFetch(domain:ts-morph.com)",
+      "Bash(llama --version:*)",
+      "Bash(llama --help:*)",
+      "Bash(ollama:*)",
+      "Bash(chezmoi diff:*)",
+      "Bash(chezmoi status:*)",
+      "Bash(xargs stat:*)",
+      "Bash(ping:*)",
+      "Bash(time nslookup:*)",
+      "Bash(mtr:*)",
+      "Bash(traceroute:*)",
+      "Bash(dmesg:*)",
+      "WebFetch(domain:stackoverflow.com)",
+      "Skill(plan)",
+      "WebFetch(domain:code.visualstudio.com)",
+      "WebFetch(domain:marketplace.visualstudio.com)",
+      "WebFetch(domain:docs.datadoghq.com)",
+      "WebFetch(domain:www.datadoghq.com)",
+      "WebFetch(domain:zed.dev)",
+      "WebFetch(domain:developer.rippling.com)",
+      "WebFetch(domain:ohmyposh.dev)",
+      "WebFetch(domain:docs.maxio.com)",
+      "WebFetch(domain:docs.stripe.com)",
+      "WebFetch(domain:maxio-chargify.zendesk.com)",
+      "WebFetch(domain:developers.maxio.com)",
+      "WebFetch(domain:community.frame.work)",
+      "WebFetch(domain:www.pcworld.com)",
+      "WebFetch(domain:www.servethehome.com)",
+      "WebFetch(domain:www.amazon.com)",
+      "WebFetch(domain:wezterm.org)",
+      "Bash(jj log:*)",
+      "Bash(jj op log:*)",
+      "WebFetch(domain:developers.notion.com)",
+      "mcp__notion__notion-search",
+      "mcp__slack__conversations_search_messages",
+      "mcp__notion__notion-fetch",
+      "mcp__notion__notion-get-comments",
+      "WebFetch(domain:help.marker.io)",
+      "Bash(gh api:*)",
+      "Bash(grep:*)",
+      "Bash(xargs basename:*)",
+      "Bash(git -C /tmp/stardust-repos/stardust-builder-front-end log --oneline -10)",
+      "Bash(gh repo list:*)",
+      "Bash(pnpm install:*)",
+      "Bash(pnpm test:unit:*)",
+      "Bash(while read link)",
+      "Bash(do [ -f \"$link.md\" ])",
+      "Bash(echo:*)",
+      "Bash(done)",
+      "Bash(find:*)"
+    ],
+{{- if .is_work }}
+    "deny": [
+      "mcp__plugin_Notion_notion__*",
+      "mcp__datadog__*"
+    ],
+{{- end }}
+    "ask": [
+      "*"
+    ],
+    "defaultMode": "plan"
+  },
+  "model": "opus",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/mason/scripts/wezterm-claude-session-hook"
+          },
+          {
+            "type": "command",
+            "command": "/home/mason/scripts/wezterm-claude-activity-hook"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/mason/scripts/wezterm-claude-activity-hook"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/mason/scripts/wezterm-claude-activity-hook"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/mason/scripts/wezterm-claude-activity-hook"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/mason/scripts/wezterm-claude-cleanup-hook"
+          }
+        ]
+      }
+    ]
+  },
+{{- if .is_work }}
+  "enabledPlugins": {
+    "Notion@claude-plugins-official": true,
+    "rust-analyzer-lsp@claude-plugins-official": true,
+    "atlassian@claude-plugins-official": true,
+    "slack@claude-plugins-official": true
+  },
+{{- else }}
+  "enabledPlugins": {
+    "rust-analyzer-lsp@claude-plugins-official": true
+  },
+{{- end }}
+  "alwaysThinkingEnabled": true,
+  "skipDangerousModePermissionPrompt": true,
+  "mcpServers": {}
+}
