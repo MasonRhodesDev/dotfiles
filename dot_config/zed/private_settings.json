@@ -8,7 +8,11 @@
 // command palette (cmd-shift-p / ctrl-shift-p)
 {
   "git_panel": {
-    "sort_by_path": true
+    "sort_by_path": true,
+    "commit_model": {
+      "provider": "anthropic",
+      "model": "claude-haiku-4-5-latest"
+    }
   },
   "icon_theme": "Material Icon Theme",
   "agent": {
