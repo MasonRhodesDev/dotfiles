@@ -1,0 +1,8 @@
+name = "fish-signal"
+description = "Signal running fish shells to reload colors"
+binary = "fish"
+priority = 200
+
+[reload]
+command = "pkill -USR1 fish"
+timeout = 5000
