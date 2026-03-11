@@ -19,8 +19,8 @@ exec-once=hyprls
 exec-once=hyprlauncher -d
 exec-once=swaybg -i $WALLPAPER_PATH -m fill
 
-# Restore saved theme using lmtt
-exec-once = lmtt switch $(cat ~/.cache/lmtt/theme_state 2>/dev/null || echo "dark")
+# Initialize theme on login
+exec-once = lmtt switch dark
 
 # Update hyprpanel wallpaper config and launch
 #exec=sed -i "s|\"wallpaper.image\": \".*\"|\"wallpaper.image\": \"$WALLPAPER_PATH\"|" ~/.config/hyprpanel/config.json && uwsm app -- hyprpanel
