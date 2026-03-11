@@ -39,3 +39,12 @@ Single branch `main`. Chezmoi auto-commits and auto-pushes via git (`autoCommit=
 ## Template Variables
 
 Access with `{{ .variable }}` syntax. Check available data with `chezmoi data`.
+
+## greetd Config (external)
+
+greetd config has been extracted to its own repo: https://github.com/MasonRhodesDev/greetd-config
+
+- Location: `/opt/greetd-config` (owned `root:opt`)
+- Install: `sudo /opt/greetd-config/install.sh`
+- Update: `sudo /opt/greetd-config/install.sh --update`
+- Static files are symlinked into `/etc/greetd/` — edits in the repo take effect immediately

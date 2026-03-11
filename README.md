@@ -167,6 +167,22 @@ systemctl --user status chezmoi-daemon
 - [Neovim Setup](docs/NEOVIM-SETUP.md)
 - [Chezmoi Workflow](docs/CHEZMOI-WORKFLOW.md)
 
+## greetd Login Manager
+
+The greetd configuration has been extracted to its own standalone repo:
+
+**[MasonRhodesDev/greetd-config](https://github.com/MasonRhodesDev/greetd-config)** — cloned to `/opt/greetd-config`
+
+```bash
+# First install
+sudo /opt/greetd-config/install.sh
+
+# Update (uses saved options)
+sudo /opt/greetd-config/install.sh --update
+```
+
+Static config files are symlinked from the repo into `/etc/greetd/`, so edits in `/opt/greetd-config/` take effect immediately without re-running the installer.
+
 ## 🤝 Contributing
 
 1. Fork the repository
