@@ -37,6 +37,6 @@ All built from source at `~/repos/hypr/deps/` and installed to `/usr/local/`.
 
 | Name | Version | Commit | Source |
 |------|---------|--------|--------|
-| lmtt | 0.1.0 | a8e7462 | git@github.com:MasonRhodesDev/linux-multi-theme-toggle.git |
+| lmtt | 0.1.0 | 7adc359 | git@github.com:MasonRhodesDev/linux-multi-theme-toggle.git |
 | voice-dictation | 0.1.0 | 1a6720e | git@github.com:MasonRhodesDev/wayland-voice-dictation.git |
 | logind-idle-control | 0.1.0 | 93a50bf | git@github.com:MasonRhodesDev/logind-idle-control.git |
