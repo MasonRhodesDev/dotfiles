@@ -47,5 +47,14 @@ windowrule = match:class ^(steam)$, focus_on_activate off
 # Prevent 5x5 spawn bug for empty title steam windows
 windowrule = match:title ^()$, match:class ^(steam)$, stay_focused on, min_size 1 1
 
+{{ if not .is_work }}
+# Game rules (personal PC only)
+# Gamescope and Steam games on workspace 7
+workspace = 7, border:false, rounding:false
+windowrule = match:class ^(gamescope)$, workspace 7
+windowrule = match:class ^(steam_app_\d+)$, workspace 7
 
+# Steam game performance and idle inhibit
+windowrule = match:class ^(steam_app_\d+)$, fullscreen on, immediate on, opacity 1.0 override, no_blur on, idle_inhibit always
+{{ end }}
 
