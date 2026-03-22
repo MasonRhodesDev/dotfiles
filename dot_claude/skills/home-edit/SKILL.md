@@ -48,29 +48,22 @@ hostname
 cd ~/.local/share/chezmoi
 
 # Fetch remote changes
-jj git fetch
-
-# Check current bookmark
-jj log -r @ --no-graph
+git fetch origin
 ```
 
 **Determine the correct branch based on hostname:**
-- `mason-work` → use `work-pc` bookmark
-- `mason-desktop` or other → use `personal-pc` bookmark
+- `mason-work` → use `work-pc` branch
+- `mason-desktop` or other → use `personal-pc` branch
 
 **Check if you need to sync:**
 ```bash
-# Check if local bookmark is behind origin
-jj log -r "bookmark_name@origin"
+# Check if local branch is behind origin
+git log --oneline HEAD..origin/branch_name
 ```
 
 **If origin has changes, merge them:**
 ```bash
-# Merge origin into local bookmark
-jj new bookmark_name "bookmark_name@origin" -m "Merge remote changes from bookmark_name"
-
-# Update bookmark to point to the merge
-jj bookmark set bookmark_name -r @
+git merge origin/branch_name
 ```
 
 **Important:** Always complete this sync step BEFORE checking chezmoi managed status or making edits. This ensures you're working with the latest configuration.
@@ -100,11 +93,12 @@ chezmoi managed | grep -F "path/to/file"
    - Keep all `{{ .variable }}` template variables
    - Merge the desired changes INTO the template structure
 5. Changes take effect immediately (chezmoi reads from filesystem)
-6. Commit changes using `jj` (not git):
+6. Commit changes using git:
    ```bash
    cd ~/.local/share/chezmoi
-   jj status
-   jj commit -m "Update configuration"
+   git status
+   git add -A
+   git commit -m "Update configuration"
    ```
 
 #### If File is NOT Managed:
@@ -169,12 +163,12 @@ monitor=eDP-1,1920x1080@60,0x0,1
 
 ## Version Control
 
-The chezmoi repository uses **jj** (Jujutsu), not git:
+The chezmoi repository uses **git**:
 ```bash
 cd ~/.local/share/chezmoi
-jj status              # Check working copy state
-jj commit -m "msg"     # Commit changes
-jj log                 # View history
+git status             # Check working copy state
+git add -A && git commit -m "msg"  # Commit changes
+git log                # View history
 ```
 
 See `~/CLAUDE_HOME.md` for dual-trunk workflow details.
@@ -197,7 +191,7 @@ See `~/CLAUDE_HOME.md` for dual-trunk workflow details.
 - Preserve template logic when editing `.tmpl` files
 - Merge changes INTO templates, don't replace them
 - Edit source files for managed files
-- Commit changes with `jj`
+- Commit changes with `git`
 - Verify with `chezmoi diff`
 
 ## Quick Reference
@@ -206,10 +200,9 @@ See `~/CLAUDE_HOME.md` for dual-trunk workflow details.
 # STEP 0: Always sync first
 hostname  # Determine work-pc or personal-pc
 cd ~/.local/share/chezmoi
-jj git fetch
-jj log -r @ --no-graph  # Check current position
-# If origin has changes: jj new bookmark_name "bookmark_name@origin" -m "Merge remote"
-# Then: jj bookmark set bookmark_name -r @
+git fetch origin
+git log --oneline HEAD..origin/branch_name  # Check if behind
+# If origin has changes: git merge origin/branch_name
 
 # Check if file is managed
 chezmoi managed | grep -F "path/to/file"
@@ -230,7 +223,7 @@ cd ~/.local/share/chezmoi
 chezmoi diff ~/path/to/file
 
 # Commit
-jj commit -m "Update file"
+git add -A && git commit -m "Update file"
 ```
 
 ## Common Files That ARE Managed
