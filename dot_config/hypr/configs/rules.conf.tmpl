@@ -40,8 +40,8 @@ windowrule = match:class ^(com.gabm.satty)$, float on, pin on, center on, stay_f
 windowrule = match:class ^(Emulator)$, float on
 
 # Steam rules
-# Window sizing handled by steam-window-manager.sh script
 # Prevent non-game Steam windows from stealing focus
+windowrule = match:class ^(steam)$, workspace special:magic silent
 windowrule = match:class ^(steam)$, no_initial_focus on
 windowrule = match:class ^(steam)$, focus_on_activate off
 # Prevent 5x5 spawn bug for empty title steam windows
@@ -51,10 +51,10 @@ windowrule = match:title ^()$, match:class ^(steam)$, stay_focused on, min_size 
 # Game rules (personal PC only)
 # Gamescope and Steam games on workspace 7
 workspace = 7, border:false, rounding:false
-windowrule = match:class ^(gamescope)$, workspace 7
-windowrule = match:class ^(steam_app_\d+)$, workspace 7
+windowrule = match:class ^(gamescope)$, workspace 7 silent, no_initial_focus on, focus_on_activate off
+windowrule = match:class ^(steam_app_\d+)$, workspace 7 silent, no_initial_focus on, focus_on_activate off
 
 # Steam game performance and idle inhibit
-windowrule = match:class ^(steam_app_\d+)$, fullscreen on, immediate on, opacity 1.0 override, no_blur on, idle_inhibit always
+windowrule = match:class ^(steam_app_\d+)$, immediate on, opacity 1.0 override, no_blur on, idle_inhibit always
 {{ end }}
 
