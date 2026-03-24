@@ -23,12 +23,12 @@ description = "Essential system utilities"
 install_level = "system"
 priority = 2
   [common.core_utils.fedora]
-  packages = ["vim", "curl", "git", "jq", "thunar", "solaar", "wireplumber", "NetworkManager", "go", "gcc-go", "keychain", "powerline-fonts", "fira-code-fonts", "google-roboto-fonts", "google-roboto-condensed-fonts", "google-roboto-slab-fonts", "piper", "headsetcontrol", "direnv"]
+  packages = ["vim", "curl", "git", "jq", "solaar", "wireplumber", "NetworkManager", "go", "gcc-go", "keychain", "powerline-fonts", "fira-code-fonts", "google-roboto-fonts", "google-roboto-condensed-fonts", "google-roboto-slab-fonts", "piper", "headsetcontrol", "direnv"]
   repos = ["copr:solopasha/hyprland"]
   min_version = "40"
 
   [common.core_utils.arch]
-  packages = ["vim", "curl", "git", "jq", "thunar", "wireplumber", "networkmanager", "go", "keychain", "direnv"]
+  packages = ["vim", "curl", "git", "jq", "wireplumber", "networkmanager", "go", "keychain", "direnv"]
   aur_packages = ["solaar", "ttf-fira-code", "piper", "headsetcontrol"]
 
 [common.fonts.lilex]
@@ -96,6 +96,74 @@ depends_on = ["core_utils"]
   [common.node_tooling.arch]
   aur_packages = ["fnm-bin", "bun-bin"]
 
+[common.cargo_tools]
+description = "Rust cargo utilities and tools"
+install_level = "user"
+priority = 4
+  [common.cargo_tools.fedora]
+  packages = ["cargo"]
+  cargo_packages = ["wayfreeze", "wayshot"]
+
+  [common.cargo_tools.arch]
+  packages = ["cargo"]
+  cargo_packages = ["wayfreeze", "wayshot"]
+
+[common.logind_idle_control]
+description = "System idle control for wayland/logind"
+install_level = "user"
+priority = 4
+  [common.logind_idle_control.fedora]
+  packages = ["make", "gcc", "gcc-c++", "automake", "autoconf", "pkg-config", "cargo"]
+
+  [[common.logind_idle_control.fedora.git_repos]]
+  url = "https://github.com/MasonRhodesDev/logind-idle-control.git"
+  install_dir = "~/repos/logind-idle-control"
+  update_strategy = "pull"
+  build_steps = [
+    "make install"
+  ]
+
+  [common.logind_idle_control.arch]
+  packages = ["cargo"]
+  makedepends = ["base-devel"]
+
+  [[common.logind_idle_control.arch.git_repos]]
+  url = "https://github.com/MasonRhodesDev/logind-idle-control.git"
+  install_dir = "~/repos/logind-idle-control"
+  update_strategy = "pull"
+  build_steps = [
+    "make install"
+  ]
+
+[common.voice_dictation]
+description = "Wayland voice dictation tool"
+install_level = "user"
+priority = 4
+  [common.voice_dictation.fedora]
+  packages = ["cargo", "gtk4-devel"]
+
+  [[common.voice_dictation.fedora.git_repos]]
+  url = "https://github.com/MasonRhodesDev/wayland-voice-dictation.git"
+  install_dir = "~/repos/wayland-voice-dictation"
+  update_strategy = "pull"
+  build_steps = [
+    "cargo build --release",
+    "sudo install -Dm 755 target/release/voice-dictation /usr/local/bin/voice-dictation"
+  ]
+
+  [common.voice_dictation.arch]
+  packages = ["cargo", "gtk4"]
+  makedepends = ["base-devel"]
+
+  [[common.voice_dictation.arch.git_repos]]
+  url = "https://github.com/MasonRhodesDev/wayland-voice-dictation.git"
+  install_dir = "~/repos/wayland-voice-dictation"
+  update_strategy = "pull"
+  build_steps = [
+    "cargo build --release",
+    "sudo install -Dm 755 target/release/voice-dictation /usr/local/bin/voice-dictation"
+  ]
+
 [common.hyprland]
 description = "Hyprland compositor ecosystem"
 install_level = "system"
@@ -111,6 +179,18 @@ depends_on = ["core_utils"]
   [common.hyprland.arch]
   packages = ["wl-clipboard", "grim", "slurp", "satty", "pavucontrol", "dunst", "waybar", "wofi", "swaybg", "swaync", "swayosd"]
   aur_packages = ["hyprland-git", "hyprlock-git", "hypridle-git", "hyprpicker-git", "hyprcursor-git", "hyprutils-git", "hyprlang-git", "hyprwayland-scanner-git", "xdg-desktop-portal-hyprland-git", "matugen-bin", "greetd-git", "greetd-regreet-git", "hyprpaper-git", "hyprpolkitagent-git", "hyprsunset-git", "hyprsysteminfo-git"]
+
+[common.hyprpwcenter]
+description = "Hyprland password/authentication dialog"
+install_level = "system"
+priority = 5
+  [common.hyprpwcenter.fedora]
+  packages = []
+  repos = ["copr:solopasha/hyprland"]
+  post_install_command = "sudo dnf install -y hyprpwcenter 2>/dev/null || true"
+
+  [common.hyprpwcenter.arch]
+  aur_packages = ["hyprpwcenter-git"]
 
 [common.waybar_workspace_buttons]
 description = "Event-driven Hyprland workspace buttons for Waybar"
