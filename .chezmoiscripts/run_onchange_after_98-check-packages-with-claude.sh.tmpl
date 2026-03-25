@@ -1,0 +1,27 @@
+#!/bin/bash
+# packages.toml hash: {{ include "software_installers/packages.toml" | sha256sum }}
+# Elective post-apply package audit via Claude haiku.
+
+[ ! -t 0 ] && exit 0
+
+COOLDOWN_FILE="$HOME/.local/state/chezmoi-installs/last-check-prompt"
+COOLDOWN_SECS=3600
+
+# Check cooldown — don't ask more than once per hour
+if [ -f "$COOLDOWN_FILE" ]; then
+    last=$(cat "$COOLDOWN_FILE")
+    now=$(date +%s)
+    if [ $((now - last)) -lt $COOLDOWN_SECS ]; then
+        exit 0
+    fi
+fi
+
+echo ""
+echo "Run package audit? [y/N]"
+read -r -t 120 response < /dev/tty || response=""
+mkdir -p "$(dirname "$COOLDOWN_FILE")"
+date +%s > "$COOLDOWN_FILE"
+
+[[ "$response" =~ ^[Yy]$ ]] || exit 0
+
+exec python3 "{{ .chezmoi.sourceDir }}/scripts/executable_chezmoi-package-check.py"

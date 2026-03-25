@@ -13,10 +13,10 @@ exec-once = systemctl --user start hyprpolkitagent
 exec-once = /home/mason/.config/hypr/configs/monitors.sh > /home/mason/.config/hypr/logs/monitors.log 2>&1
 
 exec-once=/home/mason/.config/hypr/idle.sh
-exec-once=udiskie
+exec-once = uwsm app -- udiskie
 
 exec-once=hyprls
-exec-once=hyprlauncher -d
+exec-once = uwsm app -- hyprlauncher -d
 exec-once=swaybg -i $WALLPAPER_PATH -m fill
 
 # Initialize theme on login
@@ -33,16 +33,16 @@ exec=/home/mason/.config/hypr/configs/copy-monitor-layout-to-gdm.sh
 # exec=systemctl --user restart waybar
 
 # Notification daemon
-exec-once = swaync
+exec-once = uwsm app -- swaync
 
 {{ if .is_work }}
 # Launch Slack via desktop file
-exec-once = gtk-launch slack
+exec-once = uwsm app -- slack
 {{ end }}
 
 {{ if not .is_work }}
-# Steam window manager
-exec-once = /home/mason/.config/hypr/scripts/steam-window-manager.sh > /tmp/steam-window-manager.log 2>&1
+exec-once = uwsm app -- steam
+exec-once = uwsm app -- discord
 {{ end }}
 
 
