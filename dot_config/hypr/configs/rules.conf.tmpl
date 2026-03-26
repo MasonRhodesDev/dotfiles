@@ -3,6 +3,9 @@
 
 #windowrule = match:class ^(.*)$, move onscreen cursor
 
+# Keep all floating windows above tiled windows
+windowrule = match:float 1, pin on
+
 windowrule = match:title ^(keep.google.com_/)$, tile on
 windowrule = match:class ^(discord)$, workspace special:magic silent
 windowrule = match:class ^(Slack)$, workspace special:magic silent
