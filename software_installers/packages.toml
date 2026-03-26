@@ -292,14 +292,6 @@ version = "latest"
 website = "https://zoom.us/download"
 verify = "flatpak list --app | grep -q us.zoom.Zoom"
 
-[postman]
-description = "Postman API development and testing"
-profile = "work"
-priority = 20
-version = "latest"
-website = "https://www.postman.com/downloads"
-verify = "flatpak list --app | grep -q com.getpostman.Postman"
-
 # ============================================================================
 # PERSONAL — personal machines only
 # ============================================================================
@@ -328,13 +320,3 @@ priority = 24
 version = "latest"
 website = "https://discord.com/download"
 verify = "flatpak list --app | grep -q com.discordapp.Discord"
-
-[emulators]
-description = "PCSX2 PS2 emulator"
-profile = "personal"
-priority = 27
-version = "latest"
-github = "https://github.com/PCSX2/pcsx2"
-website = "https://pcsx2.net"
-verify = "flatpak list --app | grep -q net.pcsx2.PCSX2"
-optional = true
