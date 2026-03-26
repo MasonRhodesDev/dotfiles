@@ -93,13 +93,9 @@ function M.config()
     { "<leader>h", "<cmd>nohlsearch<CR>", desc = "NOHL" },
     { "<leader>v", "<cmd>vsplit<CR>", desc = "Split" },
     { "<leader>b", group = "Buffers" },
-    { "<leader>d", group = "Debug" },
     { "<leader>f", group = "Find" },
     { "<leader>g", group = "Git" },
-    { "<leader>l", group = "LSP" },
     { "<leader>p", group = "Plugins" },
-    { "<leader>t", group = "Test" },
-    { "<leader>a", group = "AI" },
     { "<leader>T", group = "Treesitter" },
   }
 

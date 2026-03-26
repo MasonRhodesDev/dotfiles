@@ -77,18 +77,14 @@
       "Bash(done)",
       "Bash(find:*)"
     ],
-{{- if .is_work }}
     "deny": [
-      "mcp__plugin_Notion_notion__*",
       "mcp__datadog__*"
     ],
-{{- end }}
     "ask": [
       "*"
     ],
     "defaultMode": "plan"
   },
-  "model": "opus",
   "hooks": {
     "SessionStart": [
       {
@@ -150,19 +146,14 @@
       }
     ]
   },
-{{- if .is_work }}
   "enabledPlugins": {
     "Notion@claude-plugins-official": true,
     "rust-analyzer-lsp@claude-plugins-official": true,
     "atlassian@claude-plugins-official": true,
     "slack@claude-plugins-official": true
   },
-{{- else }}
-  "enabledPlugins": {
-    "rust-analyzer-lsp@claude-plugins-official": true
-  },
-{{- end }}
   "alwaysThinkingEnabled": true,
   "skipDangerousModePermissionPrompt": true,
-  "mcpServers": {}
+  "mcpServers": {},
+  "model": "opusplan"
 }

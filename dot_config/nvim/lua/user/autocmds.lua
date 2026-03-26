@@ -54,30 +54,10 @@ vim.api.nvim_create_autocmd({ "TextYankPost" }, {
 })
 
 vim.api.nvim_create_autocmd({ "FileType" }, {
-  pattern = { "gitcommit", "markdown", "NeogitCommitMessage" },
+  pattern = { "gitcommit", "markdown" },
   callback = function()
     vim.opt_local.wrap = true
     vim.opt_local.spell = true
-
-    -- Spell checking keymaps (buffer-local)
-    local opts = { noremap = true, silent = true, buffer = true }
-    vim.keymap.set("n", "gl", "<cmd>lua require('user.lspconfig').diagnostic_with_spell()<CR>", opts)
-    vim.keymap.set("n", "gj", "<cmd>lua require('user.lspconfig').goto_next_spell()<CR>", opts)
-    vim.keymap.set("n", "gk", "<cmd>lua require('user.lspconfig').goto_prev_spell()<CR>", opts)
-  end,
-})
-
-vim.api.nvim_create_autocmd({ "CursorHold" }, {
-  callback = function()
-    local status_ok, luasnip = pcall(require, "luasnip")
-    if not status_ok then
-      return
-    end
-    if luasnip.expand_or_jumpable() then
-      -- ask maintainer for option to make this silent
-      -- luasnip.unlink_current()
-      vim.cmd [[silent! lua require("luasnip").unlink_current()]]
-    end
   end,
 })
 
@@ -129,11 +109,8 @@ vim.api.nvim_create_autocmd("VimEnter", {
 -- Highlight active/inactive windows
 vim.api.nvim_create_autocmd({"WinEnter", "BufEnter"}, {
   callback = function()
-    local ft = vim.bo.filetype
-    if ft ~= "opencode" and ft ~= "claudecode" and ft ~= "opencode_terminal" and ft ~= "opencode_ask" then
-      vim.opt_local.cursorline = true
-      vim.opt_local.relativenumber = true
-    end
+    vim.opt_local.cursorline = true
+    vim.opt_local.relativenumber = true
   end
 })
 
@@ -142,19 +119,6 @@ vim.api.nvim_create_autocmd({"WinLeave", "BufLeave"}, {
     vim.opt_local.cursorline = false
     vim.opt_local.relativenumber = false
   end
-})
-
-vim.api.nvim_create_autocmd({"FileType", "BufEnter"}, {
-  pattern = {"opencode", "claudecode", "opencode_terminal", "opencode_ask"},
-  callback = function()
-    vim.opt_local.number = false
-    vim.opt_local.relativenumber = false
-    vim.opt_local.signcolumn = "no"
-    vim.opt_local.numberwidth = 1
-    vim.opt_local.foldcolumn = "0"
-    vim.opt_local.statuscolumn = ""
-    vim.opt_local.sidescrolloff = 0
-  end,
 })
 
 -- Custom filetype detection for .tmpl files (chezmoi templates)
@@ -252,6 +216,4 @@ vim.api.nvim_create_autocmd({"BufEnter", "BufWinEnter"}, {
   end,
 })
 
--- Note: First buffer syntax highlighting issue was caused by session restoration
--- timing - fixed in session.lua post_restore_cmds instead of here
 
