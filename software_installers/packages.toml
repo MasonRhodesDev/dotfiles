@@ -1,426 +1,322 @@
 # ============================================================================
 # SOFTWARE PACKAGE REGISTRY
 # ============================================================================
-# Centralized package definitions organized by profile type
-# Sections: common (all machines), work (work only), personal (personal only)
+# Declarative manifest. The LLM installer determines how to install each
+# entry for the current OS. Fields:
+#   profile   = common | work | personal
+#   priority  = install order (lower = first)
+#   version   = "latest" or pinned (e.g. "0.11.5")
+#   github    = GitHub repo URL (source of truth for source builds)
+#   website   = project website (optional)
+#   verify    = shell command to confirm installation
+#   depends_on = list of keys that must be installed first
+#   optional  = skip gracefully if unavailable
+# ============================================================================
 
 # ============================================================================
-# COMMON PACKAGES (All Machines - Personal & Work)
+# COMMON — all machines
 # ============================================================================
 
-[common.build_tools]
-description = "Build tools and compilers"
-install_level = "system"
+[build_tools]
+description = "Build tools and compilers (make, gcc, cmake, pkg-config, etc.)"
+profile = "common"
 priority = 1
-  [common.build_tools.fedora]
-  packages = ["make", "gcc", "gcc-c++", "automake", "autoconf", "pkg-config", "dnf-plugins-core"]
+version = "latest"
+verify = "command -v gcc"
 
-  [common.build_tools.arch]
-  packages = ["base-devel"]
-
-[common.core_utils]
-description = "Essential system utilities"
-install_level = "system"
+[core_utils]
+description = "Essential system utilities: curl, git, jq, thunar, wireplumber, NetworkManager, go, keychain, direnv, headsetcontrol"
+profile = "common"
 priority = 2
-  [common.core_utils.fedora]
-  packages = ["vim", "curl", "git", "jq", "thunar", "solaar", "wireplumber", "NetworkManager", "go", "gcc-go", "keychain", "powerline-fonts", "fira-code-fonts", "google-roboto-fonts", "google-roboto-condensed-fonts", "google-roboto-slab-fonts", "piper", "headsetcontrol", "direnv"]
-  repos = ["copr:solopasha/hyprland"]
-  min_version = "40"
+version = "latest"
+verify = "command -v git"
 
-  [common.core_utils.arch]
-  packages = ["vim", "curl", "git", "jq", "thunar", "wireplumber", "networkmanager", "go", "keychain", "direnv"]
-  aur_packages = ["solaar", "ttf-fira-code", "piper", "headsetcontrol"]
+[gnome_keyring]
+description = "GNOME keyring credential manager (provides gnome-keyring-daemon)"
+profile = "common"
+priority = 2
+version = "latest"
+github = "https://gitlab.gnome.org/GNOME/gnome-keyring"
+verify = "command -v gnome-keyring-daemon"
 
-[common.fonts.lilex]
+[terminal]
+description = "Terminal emulators and shell: wezterm, tmux, fish"
+profile = "common"
+priority = 2
+version = "latest"
+github = "https://github.com/wez/wezterm"
+verify = "command -v wezterm"
+
+[fonts_lilex]
 description = "Lilex monospace font for terminal and code editing"
-install_level = "user"
+profile = "common"
 priority = 3
-  [common.fonts.lilex.fedora]
-  packages = []
-  install_command = "mkdir -p ~/.local/share/fonts/Lilex && curl -fLo /tmp/Lilex.zip https://github.com/mishamyrt/Lilex/releases/download/2.621/Lilex.zip && unzip -o /tmp/Lilex.zip -d ~/.local/share/fonts/Lilex '*.ttf' '*.otf' 2>/dev/null || true && rm /tmp/Lilex.zip && fc-cache -fv"
-  verify_command = "fc-list | grep -qi lilex"
+version = "2.621"
+github = "https://github.com/mishamyrt/Lilex"
+verify = "fc-list | grep -qi lilex"
 
-  [common.fonts.lilex.arch]
-  packages = []
-  install_command = "mkdir -p ~/.local/share/fonts/Lilex && curl -fLo /tmp/Lilex.zip https://github.com/mishamyrt/Lilex/releases/download/2.621/Lilex.zip && unzip -o /tmp/Lilex.zip -d ~/.local/share/fonts/Lilex '*.ttf' '*.otf' 2>/dev/null || true && rm /tmp/Lilex.zip && fc-cache -fv"
-  verify_command = "fc-list | grep -qi lilex"
-
-[common.terminal]
-description = "Terminal emulators and shell tools"
-install_level = "system"
-priority = 2
-  [common.terminal.fedora]
-  packages = ["wezterm", "tmux", "fish"]
-
-  [common.terminal.arch]
-  packages = ["tmux", "fish"]
-  aur_packages = ["wezterm-git"]
-
-[common.shell_tools]
-description = "Shell prompt and environment tools"
-install_level = "user"
+[fonts_system]
+description = "System fonts: powerline, fira-code, google-roboto"
+profile = "common"
 priority = 3
-  [common.shell_tools.fedora]
-  packages = []
-  install_command = "curl -s https://ohmyposh.dev/install.sh | bash -s"
-  verify_command = "oh-my-posh --version"
+version = "latest"
+verify = "fc-list | grep -qi roboto"
 
-  [common.shell_tools.arch]
-  aur_packages = ["oh-my-posh-bin"]
+[shell_tools]
+description = "Shell prompt: oh-my-posh"
+profile = "common"
+priority = 3
+version = "latest"
+github = "https://github.com/JanDeDobbeleer/oh-my-posh"
+website = "https://ohmyposh.dev"
+verify = "command -v oh-my-posh"
 
-[common.beads]
-description = "Beads - AI-native issue tracking CLI"
-install_level = "user"
+[node_tooling]
+description = "Node.js toolchain: fnm (version manager) and bun (runtime/bundler)"
+profile = "common"
 priority = 4
-  [common.beads.fedora]
-  packages = []
-  install_command = "curl -sSL https://raw.githubusercontent.com/steveyegge/beads/main/scripts/install.sh | bash"
-  verify_command = "bd --version"
-
-  [common.beads.arch]
-  packages = []
-  install_command = "curl -sSL https://raw.githubusercontent.com/steveyegge/beads/main/scripts/install.sh | bash"
-  verify_command = "bd --version"
-
-[common.node_tooling]
-description = "Node.js and JavaScript development"
-install_level = "user"
-priority = 4
+version = "latest"
+github = "https://github.com/Schniz/fnm"
+website = "https://bun.sh"
+verify = "command -v bun"
 depends_on = ["core_utils"]
-  [common.node_tooling.fedora]
-  packages = ["cargo"]
-  cargo_packages = ["fnm"]
-  install_command = "curl -fsSL https://bun.sh/install | BUN_INSTALL_SKIP_SHELL_UPDATE=1 bash"
-  verify_command = "bun --version"
 
-  [common.node_tooling.arch]
-  aur_packages = ["fnm-bin", "bun-bin"]
+[cargo_tools]
+description = "Rust cargo utilities: cargo-watch, wasm-pack, wayfreeze, wayshot"
+profile = "common"
+priority = 4
+version = "latest"
+github = "https://github.com/rust-lang/cargo"
+verify = "command -v cargo"
 
-[common.hyprland]
-description = "Hyprland compositor ecosystem"
-install_level = "system"
+[lmtt]
+description = "Linux multi-theme toggle — switches light/dark themes across all apps"
+profile = "common"
+priority = 4
+version = "latest"
+github = "https://github.com/MasonRhodesDev/linux-multi-theme-toggle"
+verify = "command -v lmtt"
+
+[logind_idle_control]
+description = "System idle control for Wayland/logind"
+profile = "common"
+priority = 4
+version = "latest"
+github = "https://github.com/MasonRhodesDev/logind-idle-control"
+verify = "command -v logind-idle-control"
+
+[voice_dictation]
+description = "Wayland voice dictation tool"
+profile = "common"
+priority = 4
+version = "latest"
+github = "https://github.com/MasonRhodesDev/wayland-voice-dictation"
+verify = "command -v voice-dictation"
+
+[hyprland]
+description = "Hyprland Wayland compositor and ecosystem: hyprland, hyprlock, hypridle, hyprpicker, hyprcursor, hyprpolkitagent, xdg-desktop-portal-hyprland, waybar, wofi, swaync, swaybg, wl-clipboard, grim, slurp, satty, pavucontrol, dunst, udiskie, uwsm"
+profile = "common"
 priority = 5
+version = "latest"
+github = "https://github.com/hyprwm/Hyprland"
+website = "https://hyprland.org"
+verify = "command -v hyprland"
 depends_on = ["core_utils"]
-  [common.hyprland.fedora]
-  packages = ["hyprcursor", "hyprcursor-devel", "hypridle", "hyprland", "hyprland-devel", "hyprland-protocols-devel", "hyprlang", "hyprlang-devel", "hyprlock", "hyprpicker", "hyprutils", "hyprutils-devel", "hyprwayland-scanner-devel", "xdg-desktop-portal-hyprland", "wofi", "waybar", "dunst", "pavucontrol", "swaybg", "wl-clipboard", "grim", "slurp", "satty"]
-  repos = ["copr:solopasha/hyprland", "copr:heus-sueh/packages"]
-  repo_priorities = { "copr:heus-sueh/packages" = 200 }
-  cargo_packages = ["matugen"]
-  min_version = "40"
 
-  [common.hyprland.arch]
-  packages = ["wl-clipboard", "grim", "slurp", "satty", "pavucontrol", "dunst", "waybar", "wofi", "swaybg", "swaync", "swayosd"]
-  aur_packages = ["hyprland-git", "hyprlock-git", "hypridle-git", "hyprpicker-git", "hyprcursor-git", "hyprutils-git", "hyprlang-git", "hyprwayland-scanner-git", "xdg-desktop-portal-hyprland-git", "matugen-bin", "greetd-git", "greetd-regreet-git", "hyprpaper-git", "hyprpolkitagent-git", "hyprsunset-git", "hyprsysteminfo-git"]
-
-[common.waybar_workspace_buttons]
-description = "Event-driven Hyprland workspace buttons for Waybar"
-install_level = "user"
-priority = 6
+[hyprlauncher]
+description = "Application launcher for Hyprland"
+profile = "common"
+priority = 5
+version = "latest"
+github = "https://github.com/hyprwm/hyprlauncher"
+verify = "command -v hyprlauncher"
 depends_on = ["hyprland"]
-  [common.waybar_workspace_buttons.fedora]
-  packages = ["meson", "ninja-build", "gtk3-devel", "json-glib-devel"]
 
-  [[common.waybar_workspace_buttons.fedora.git_repos]]
-  url = "https://github.com/MasonRhodesDev/waybar-workspace-buttons.git"
-  install_dir = "~/git_installers/waybar-workspace-buttons"
-  update_strategy = "pull"
-  build_steps = [
-    "meson setup build --reconfigure || meson setup build",
-    "ninja -C build",
-    "mkdir -p ~/.config/waybar/cffi",
-    "cp build/workspace_buttons.so ~/.config/waybar/cffi/"
-  ]
+[hyprls]
+description = "Hyprland language server (LSP for hyprland config)"
+profile = "common"
+priority = 5
+version = "latest"
+github = "https://github.com/hyprwm/hyprls"
+verify = "command -v hyprls"
+depends_on = ["hyprland"]
 
-  [common.waybar_workspace_buttons.arch]
-  packages = ["meson", "ninja", "gtk3", "json-glib"]
+[hyprpwcenter]
+description = "Hyprland password/authentication dialog"
+profile = "common"
+priority = 5
+version = "latest"
+github = "https://github.com/hyprwm/hyprpwcenter"
+verify = "command -v hyprpwcenter"
+depends_on = ["hyprland"]
 
-  [[common.waybar_workspace_buttons.arch.git_repos]]
-  url = "https://github.com/MasonRhodesDev/waybar-workspace-buttons.git"
-  install_dir = "~/git_installers/waybar-workspace-buttons"
-  update_strategy = "pull"
-  build_steps = [
-    "meson setup build --reconfigure || meson setup build",
-    "ninja -C build",
-    "mkdir -p ~/.config/waybar/cffi",
-    "cp build/workspace_buttons.so ~/.config/waybar/cffi/"
-  ]
+[matugen]
+description = "Material You color generation for theming"
+profile = "common"
+priority = 5
+version = "latest"
+github = "https://github.com/InioX/matugen"
+verify = "command -v matugen"
 
-[common.browsers]
-install_level = "system"
+[bemoji]
+description = "Emoji picker for Wayland (shell script, no package manager)"
+profile = "common"
+priority = 5
+version = "latest"
+github = "https://github.com/marty-oehme/bemoji"
+verify = "command -v bemoji"
+
+[waybar_workspace_buttons]
+description = "Event-driven Hyprland workspace buttons for Waybar (custom CFFI plugin)"
+profile = "common"
+priority = 6
+version = "latest"
+github = "https://github.com/MasonRhodesDev/waybar-workspace-buttons"
+verify = "test -f ~/.config/waybar/cffi/workspace_buttons.so"
+depends_on = ["hyprland"]
+
+[browsers]
+description = "Web browsers: chromium (default) and firefox"
+profile = "common"
 priority = 7
-description = "Web browsers"
-  [common.browsers.fedora]
-  packages = ["vivaldi-stable"]
-  repos = ["https://repo.vivaldi.com/archive/vivaldi-fedora.repo"]
-  min_package_version = "7.7"
-  verify_command = "rpm -q --queryformat '%{VERSION}' vivaldi-stable | grep -E '^(7\\.[7-9]|[8-9]\\.)'"
-  default_browser = "vivaldi-stable.desktop"
-  profiles = ["personal"]
-  extensions = ["bitwarden"]
+version = "latest"
+website = "https://www.chromium.org"
+verify = "command -v chromium"
+default_browser = "chromium"
+extensions = ["bitwarden"]
 
-  [common.browsers.arch]
-  aur_packages = ["vivaldi"]
-  min_package_version = "7.7"
-  verify_command = "pacman -Q vivaldi | awk '{print $2}' | grep -E '^(7\\.[7-9]|[8-9]\\.)'"
-  default_browser = "vivaldi-stable.desktop"
-  profiles = ["personal"]
-  extensions = ["bitwarden"]
-
-[common.ide]
-install_level = "user"
+[btop]
+description = "Resource monitor"
+profile = "common"
 priority = 7
-description = "Integrated development environments"
-  [common.ide.fedora]
-  packages = []
-  install_command = "curl -LO https://github.com/neovim/neovim/releases/download/v0.11.5/nvim-linux-x86_64.tar.gz && tar xzf nvim-linux-x86_64.tar.gz && rm -rf ~/.local/nvim-linux-x86_64 && mv nvim-linux-x86_64 ~/.local/ && mkdir -p ~/.local/bin && ln -sf ~/.local/nvim-linux-x86_64/bin/nvim ~/.local/bin/nvim && rm nvim-linux-x86_64.tar.gz"
-  verify_command = "~/.local/bin/nvim --version | head -1 | grep 'v0.11.5'"
+version = "latest"
+github = "https://github.com/aristocratos/btop"
+verify = "command -v btop"
 
-  [common.ide.arch]
-  packages = []
-  install_command = "curl -LO https://github.com/neovim/neovim/releases/download/v0.11.5/nvim-linux-x86_64.tar.gz && tar xzf nvim-linux-x86_64.tar.gz && rm -rf ~/.local/nvim-linux-x86_64 && mv nvim-linux-x86_64 ~/.local/ && mkdir -p ~/.local/bin && ln -sf ~/.local/nvim-linux-x86_64/bin/nvim ~/.local/bin/nvim && rm nvim-linux-x86_64.tar.gz"
-  verify_command = "~/.local/bin/nvim --version | head -1 | grep 'v0.11.5'"
+[zed]
+description = "Zed code editor"
+profile = "common"
+priority = 7
+version = "latest"
+github = "https://github.com/zed-industries/zed"
+website = "https://zed.dev"
+verify = "command -v zed"
 
-[common.astal]
-install_level = "system"
-priority = 8
-description = "Astal library for widget toolkits"
-  [common.astal.fedora]
-  packages = ["meson", "vala", "valadoc", "gobject-introspection-devel", "wayland-protocols-devel", "gtk3-devel", "gtk-layer-shell-devel", "gtk4-devel", "gtk4-layer-shell-devel"]
+[neovim]
+description = "Neovim text editor"
+profile = "common"
+priority = 7
+version = "0.11.5"
+github = "https://github.com/neovim/neovim"
+website = "https://neovim.io"
+verify = "~/.local/bin/nvim --version | head -1 | grep 'v0.11'"
 
-  [[common.astal.fedora.git_repos]]
-  url = "https://github.com/aylur/astal.git"
-  install_dir = "~/git_installers/astal/astal"
-  update_strategy = "pull"
-  build_steps = [
-    "cd lib/astal/io && rm -rf build && meson setup build && sudo meson install -C build",
-    "cd ../../gtk3 && rm -rf build && meson setup build && sudo meson install -C build",
-    "cd ../gtk4 && rm -rf build && meson setup build && sudo meson install -C build"
-  ]
-
-  [common.astal.arch]
-  aur_packages = ["libastal-meta"]
-
-[common.gimp]
+[gimp]
 description = "Image editing and manipulation"
-install_level = "system"
+profile = "common"
 priority = 9
-  [common.gimp.fedora]
-  packages = ["gimp"]
+version = "latest"
+github = "https://gitlab.gnome.org/GNOME/gimp"
+website = "https://www.gimp.org"
+verify = "command -v gimp"
 
-  [common.gimp.arch]
-  packages = ["gimp"]
-
-[common.python_dev]
-description = "Python development environment"
-install_level = "system"
-priority = 9
-disabled = true
-  [common.python_dev.fedora]
-  packages = ["python3", "python3-pip", "python3-virtualenv", "pipx"]
-
-  [common.python_dev.arch]
-  packages = ["python", "python-pip"]
-  aur_packages = ["python310", "pywal-git"]
-
-[common.rust_dev]
-description = "Rust development toolchain"
-install_level = "system"
-priority = 10
-optional = true
-  [common.rust_dev.fedora]
-  packages = []
-
-  [common.rust_dev.arch]
-  packages = []
-
-[common.nix]
-description = "Nix package manager"
-install_level = "system"
+[nix]
+description = "Nix package manager (used as fallback for unavailable packages)"
+profile = "common"
 priority = 11
-  [common.nix.fedora]
-  packages = []
-  install_command = "sh <(curl -L https://nixos.org/nix/install) --daemon"
-  verify_command = "nix --version"
+version = "latest"
+website = "https://nixos.org"
+verify = "command -v nix"
 
-  [common.nix.arch]
-  packages = ["nix"]
-
-[common.arch_utilities]
-description = "Arch-specific package management utilities"
-install_level = "system"
+[arch_utilities]
+description = "Arch-specific package management utilities: paru (AUR helper), downgrade"
+profile = "common"
 priority = 12
-  [common.arch_utilities.fedora]
-  packages = []
-
-  [common.arch_utilities.arch]
-  aur_packages = ["downgrade", "paru"]
+version = "latest"
+github = "https://github.com/Morganamilo/paru"
+verify = "command -v paru"
+optional = true
 
 # ============================================================================
-# WORK-ONLY PACKAGES
+# WORK — work machines only
 # ============================================================================
 
-[work.docker]
-install_level = "system"
+[docker]
+description = "Docker container runtime and orchestration tools"
+profile = "work"
 priority = 11
-conflicts = ["podman", "moby-engine", "docker-cli"]
-description = "Container runtime and orchestration"
+version = "latest"
+github = "https://github.com/docker/docker-ce"
+website = "https://docs.docker.com"
+verify = "command -v docker"
 depends_on = ["build_tools"]
-pre_install_command = "sudo dnf remove -y moby-engine docker-cli 2>/dev/null || true"
-  [work.docker.fedora]
-  packages = ["docker-ce", "docker-ce-cli", "containerd.io", "docker-buildx-plugin", "docker-compose-plugin"]
-  repos = ["https://download.docker.com/linux/fedora/docker-ce.repo"]
-  services = ["docker", "containerd"]
-  user_groups = ["docker"]
-  
-  [work.docker.arch]
-  packages = ["docker", "docker-compose"]
-  services = ["docker", "containerd"]
-  user_groups = ["docker"]
 
-[work.mongodb]
-install_level = "system"
+[mongodb]
+description = "MongoDB database server and mongosh shell"
+profile = "work"
 priority = 12
-description = "MongoDB database and tools"
 version = "8.0"
-  [work.mongodb.fedora]
-  packages = ["mongodb-org", "mongodb-mongosh"]
-  repos = ["https://repo.mongodb.org/yum/redhat/9/mongodb-org/8.0/x86_64/"]
-  repo_config = """
-[mongodb-org-8.0]
-name=MongoDB Repository
-baseurl=https://repo.mongodb.org/yum/redhat/9/mongodb-org/8.0/x86_64/
-gpgcheck=1
-enabled=1
-gpgkey=https://pgp.mongodb.com/server-8.0.asc
-"""
-  services = ["mongod"]
-  post_install_command = "mongosh --eval \"rs.initiate({_id: 'rs0', members: [{_id: 0, host: 'localhost:27017'}]})\""
-  post_install_check = "mongosh --quiet --eval 'rs.status()'"
+website = "https://www.mongodb.com"
+verify = "command -v mongosh"
 
-  [work.mongodb.arch]
-  aur_packages = ["mongodb-bin", "mongodb-tools-bin", "mongodb-compass"]
-  services = ["mongodb"]
-  post_install_command = "mongosh --eval \"rs.initiate({_id: 'rs0', members: [{_id: 0, host: 'localhost:27017'}]})\""
-  post_install_check = "mongosh --quiet --eval 'rs.status()'"
-
-[work.aws_tools]
-description = "AWS development and deployment tools"
-install_level = "user"
+[aws_tools]
+description = "AWS CLI v2 and developer tools"
+profile = "work"
 priority = 13
-  [work.aws_tools.fedora]
-  packages = ["awscli2"]
-  
-  [work.aws_tools.arch]
-  packages = ["aws-cli-v2"]
-  aur_packages = ["aws-session-manager-plugin"]
+version = "latest"
+github = "https://github.com/aws/aws-cli"
+website = "https://aws.amazon.com/cli"
+verify = "command -v aws"
 
-[work.vpn_tools]
-description = "VPN and secure connectivity"
-install_level = "system"
+[vpn_tools]
+description = "Pritunl VPN client"
+profile = "work"
 priority = 14
-  [work.vpn_tools.fedora]
-  packages = ["pritunl-client-electron"]
-  repos = ["https://repo.pritunl.com/stable/yum/fedora/41/"]
-  repo_config = """
-[pritunl]
-name=Pritunl Stable Repository
-baseurl=https://repo.pritunl.com/stable/yum/fedora/41/
-gpgcheck=1
-enabled=1
-gpgkey=https://raw.githubusercontent.com/pritunl/pritunl-client-electron/master/release_signing.asc
-"""
+version = "latest"
+website = "https://client.pritunl.com"
+verify = "command -v pritunl-client"
 
-  [work.vpn_tools.arch]
-  aur_packages = ["pritunl-client-electron"]
-
-[work.slack]
-description = "Team communication"
-install_level = "system"
+[slack]
+description = "Slack team communication"
+profile = "work"
 priority = 18
-  [work.slack.fedora]
-  packages = ["slack"]
-  
-  [work.slack.arch]
-  aur_packages = ["slack-desktop"]
+version = "latest"
+website = "https://slack.com/downloads/linux"
+verify = "command -v slack"
 
-[work.zoom]
-description = "Video conferencing"
-install_level = "system"
+[zoom]
+description = "Zoom video conferencing"
+profile = "work"
 priority = 19
-  [work.zoom.fedora]
-  flatpak = ["us.zoom.Zoom"]
-
-  [work.zoom.arch]
-  aur_packages = ["zoom"]
-
-[work.postman]
-description = "API development and testing"
-install_level = "user"
-priority = 20
-  [work.postman.fedora]
-  flatpak = ["com.getpostman.Postman"]
-
-  [work.postman.arch]
-  aur_packages = ["postman-bin"]
-
-[work.browsers]
-description = "Work browser profile configuration"
-install_level = "system"
-priority = 21
-  [work.browsers.fedora]
-  profiles = ["work", "personal"]
-  extensions = ["bitwarden"]
-
-  [work.browsers.arch]
-  profiles = ["work", "personal"]
-  extensions = ["bitwarden"]
+version = "latest"
+website = "https://zoom.us/download"
+verify = "flatpak list --app | grep -q us.zoom.Zoom"
 
 # ============================================================================
-# PERSONAL-ONLY PACKAGES
+# PERSONAL — personal machines only
 # ============================================================================
 
-[personal.gaming]
-install_level = "system"
+[gaming]
+description = "Gaming platforms: steam, lutris, gamemode"
+profile = "personal"
 priority = 21
-description = "Gaming platforms and tools"
-  [personal.gaming.fedora]
-  packages = ["steam", "lutris", "gamemode"]
+version = "latest"
+website = "https://store.steampowered.com"
+verify = "command -v steam"
 
-  [personal.gaming.arch]
-  packages = ["steam", "lutris"]
-  aur_packages = ["gamemode-git", "proton-ge-custom-bin", "minecraft-launcher", "emulationstation-de", "emudeck-bin"]
-  multilib = true
-
-[personal.printing]
-install_level = "system"
+[printing]
+description = "3D printing slicer: OrcaSlicer"
+profile = "personal"
 priority = 22
-description = "3D printing tools and slicers"
+version = "latest"
+github = "https://github.com/SoftFever/OrcaSlicer"
+verify = "command -v orca-slicer"
 optional = true
-  [personal.printing.fedora]
-  packages = []
 
-  [personal.printing.arch]
-  aur_packages = ["orca-slicer-git"]
-
-[personal.social]
-install_level = "user"
+[social]
+description = "Discord communication app"
+profile = "personal"
 priority = 24
-description = "Communication and social apps"
-  [personal.social.fedora]
-  packages = []
-  flatpak = ["com.discordapp.Discord"]
-
-  [personal.social.arch]
-  aur_packages = ["discord"]
-
-
-[personal.emulators]
-description = "PS2 game emulation"
-install_level = "user"
-priority = 27
-optional = true
-  [personal.emulators.fedora]
-  flatpak = ["net.pcsx2.PCSX2"]
-
-  [personal.emulators.arch]
-  packages = ["pcsx2"]
+version = "latest"
+website = "https://discord.com/download"
+verify = "flatpak list --app | grep -q com.discordapp.Discord"

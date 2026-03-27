@@ -27,14 +27,6 @@ keymap("v", ">", ">gv", opts) -- Indent right and stay in visual mode
 -- Paste without losing clipboard content
 keymap("x", "p", [["_dP]]) -- Paste over selection without yanking replaced text
 
--- Right-click context menu for LSP
-vim.cmd [[:amenu 10.100 mousemenu.Goto\ Definition <cmd>lua vim.lsp.buf.definition()<CR>]]
-vim.cmd [[:amenu 10.110 mousemenu.References <cmd>lua vim.lsp.buf.references()<CR>]]
--- vim.cmd [[:amenu 10.120 mousemenu.-sep- *]]
-
-vim.keymap.set("n", "<RightMouse>", "<cmd>:popup mousemenu<CR>") -- Right-click shows context menu
-vim.keymap.set("n", "<Tab>", "<cmd>:popup mousemenu<CR>") -- Tab shows context menu
-
 -- more good
 keymap({ "n", "o", "x" }, "<s-h>", "^", opts) -- Shift+h: Go to first non-blank character
 keymap({ "n", "o", "x" }, "<s-l>", "g_", opts) -- Shift+l: Go to last non-blank character

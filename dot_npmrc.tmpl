@@ -1,11 +1,2 @@
-init-author-name={{ .identity.name }}
-{{- if .is_work }}
-init-author-email={{ .identity.email_work }}
-{{- else }}
-init-author-email={{ .identity.email_personal }}
-{{- end }}
-{{- if env "GITHUB_NPM_TOKEN" }}
-always-auth=true
-@thecvlb:registry=https://npm.pkg.github.com
-//npm.pkg.github.com/:_authToken={{ env "GITHUB_NPM_TOKEN" }}
-{{- end }}
+init-author-name=Mason Rhodes
+init-author-email=mason@lifemd.com

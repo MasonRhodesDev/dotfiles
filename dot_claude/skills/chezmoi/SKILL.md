@@ -15,15 +15,53 @@ Use this skill when the user needs to:
 
 ## CRITICAL SAFETY RULES
 
-⚠️ **NEVER use these dangerous commands:**
+⚠️ **NEVER use these dangerous commands without explicit user confirmation:**
 - `chezmoi apply` - Overwrites local changes with stored config (destructive!)
-- `chezmoi apply --force` - Bypasses safety checks
+- `chezmoi apply --force` - Bypasses safety checks and destroys local changes silently
 - Any command with `--force` flag
 
 ✅ **Safe workflow:**
 - `chezmoi add <file>` - Add local changes TO chezmoi tracking
 - `chezmoi diff` - Compare tracked config with local files
 - `chezmoi status` - Show files needing updates
+
+## MANDATORY: Pull and Apply Workflow
+
+When the user asks to pull and apply chezmoi (or any equivalent), ALWAYS follow this sequence. **Do not skip steps.**
+
+### Step 1 — Check status
+```bash
+chezmoi status
+```
+Note any `MM` files (local changes that will be overwritten) and `DA` files (local files that will be deleted).
+
+### Step 2 — If any MM or DA files exist, run full diff BEFORE pulling
+```bash
+chezmoi diff
+```
+Show this diff to the user and **explicitly warn** which local changes will be lost. Ask for confirmation before proceeding.
+
+If there are no `MM` or `DA` files, you may proceed without confirmation.
+
+### Step 3 — Pull
+```bash
+chezmoi git pull
+```
+
+### Step 4 — Show what the pull changed
+```bash
+chezmoi diff
+```
+Show the user what will be applied from the pull.
+
+### Step 5 — Get explicit confirmation before applying
+Tell the user exactly what will be overwritten and ask them to confirm. Do not apply until confirmed.
+
+### Step 6 — Apply
+```bash
+chezmoi apply
+```
+Only use `--force` if chezmoi prompts interactively and cannot proceed otherwise, AND the user has already confirmed in Step 5.
 
 ## Common Commands
 
