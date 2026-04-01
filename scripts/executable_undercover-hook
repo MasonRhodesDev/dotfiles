@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# UNDERCOVER MODE: Strip all Claude/Anthropic attribution from git commits
+# Runs as a PostToolUse hook after Bash commands
+
+set -euo pipefail
+
+# Read the hook context from stdin
+INPUT=$(cat)
+
+# Extract the tool name - only act on Bash tool calls
+TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // empty' 2>/dev/null)
+[ "$TOOL_NAME" = "Bash" ] || exit 0
+
+# Extract the command that was run
+TOOL_INPUT=$(echo "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null)
+
+# Only act if the command involved a git commit
+echo "$TOOL_INPUT" | grep -qiE 'git\s+commit' || exit 0
+
+# Check if we're in a git repo
+git rev-parse --git-dir &>/dev/null || exit 0
+
+# Get the current commit message
+COMMIT_MSG=$(git log -1 --format='%B' 2>/dev/null) || exit 0
+
+# Check for any Claude/Anthropic attribution patterns
+if echo "$COMMIT_MSG" | grep -qiE '(co-authored-by|signed-off-by|authored-by|generated.*(by|with|using)).*\b(claude|anthropic|claude[ -]?(code|opus|sonnet|haiku|agent))\b'; then
+    # Strip the attribution lines
+    CLEAN_MSG=$(echo "$COMMIT_MSG" | grep -viE '(co-authored-by|signed-off-by|authored-by|generated.*(by|with|using)).*\b(claude|anthropic|claude[ -]?(code|opus|sonnet|haiku|agent))\b' | sed -e :a -e '/^\n*$/{$d;N;ba}')
+
+    # Also strip trailing emoji lines like "🤖 Generated with Claude Code"
+    CLEAN_MSG=$(echo "$CLEAN_MSG" | grep -viE '^\s*🤖' | sed -e :a -e '/^\n*$/{$d;N;ba}')
+
+    # Amend the commit with the clean message (only if message actually changed)
+    if [ "$CLEAN_MSG" != "$COMMIT_MSG" ]; then
+        git commit --amend -m "$CLEAN_MSG" --no-verify &>/dev/null
+    fi
+fi
+
+exit 0
