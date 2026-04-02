@@ -2,21 +2,47 @@
 # Freeze screen → select region → capture → annotate → clipboard
 # hyprpicker -r -z creates a freeze overlay that doesn't block slurp pointer input
 
+FREEZE_PID=
+TMPFILE=
+
+cleanup() {
+    if [[ -n "$FREEZE_PID" ]]; then
+        kill "$FREEZE_PID" 2>/dev/null || true
+        wait "$FREEZE_PID" 2>/dev/null || true
+        FREEZE_PID=
+    fi
+
+    if [[ -n "$TMPFILE" ]]; then
+        rm -f "$TMPFILE"
+    fi
+}
+
+trap cleanup EXIT INT TERM HUP
+
 hyprpicker -r -z &
 FREEZE_PID=$!
 sleep 0.2
 
+SELECTION=$(slurp -d 2>/dev/null)
+SLURP_STATUS=$?
+
+cleanup
+
+[ $SLURP_STATUS -ne 0 ] && exit 1
+[ -z "$SELECTION" ] && exit 1
+
 TMPFILE=$(mktemp /tmp/snip-XXXXXX.ppm)
-grim -g "$(slurp -d)" -t ppm "$TMPFILE" 2>/dev/null
+grim -g "$SELECTION" -t ppm "$TMPFILE" 2>/dev/null
 GRIM_STATUS=$?
 
-kill $FREEZE_PID 2>/dev/null
-
 [ $GRIM_STATUS -ne 0 ] && { rm -f "$TMPFILE"; exit 1; }
+
+OUTPUT_FILE="$HOME/Pictures/Screenshots/$(date +%Y%m%d-%H%M%S).png"
 
 satty --filename "$TMPFILE" \
       --copy-command "wl-copy" \
       --early-exit \
-      --output-filename ~/Pictures/Screenshots/$(date +%Y%m%d-%H%M%S).png
+      --output-filename "$OUTPUT_FILE"
 
 rm -f "$TMPFILE"
+TMPFILE=
