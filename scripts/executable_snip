@@ -5,9 +5,30 @@
 FREEZE_PID=
 TMPFILE=
 
+stop_freeze_pid() {
+    local pid="$1"
+
+    [[ -z "$pid" ]] && return
+
+    kill "$pid" 2>/dev/null || true
+    sleep 0.1
+
+    if kill -0 "$pid" 2>/dev/null; then
+        kill -9 "$pid" 2>/dev/null || true
+    fi
+}
+
+clear_stale_freeze() {
+    local pid
+
+    while read -r pid; do
+        stop_freeze_pid "$pid"
+    done < <(pgrep -x -f 'hyprpicker -r -z' 2>/dev/null || true)
+}
+
 cleanup() {
     if [[ -n "$FREEZE_PID" ]]; then
-        kill "$FREEZE_PID" 2>/dev/null || true
+        stop_freeze_pid "$FREEZE_PID"
         wait "$FREEZE_PID" 2>/dev/null || true
         FREEZE_PID=
     fi
@@ -18,6 +39,8 @@ cleanup() {
 }
 
 trap cleanup EXIT INT TERM HUP
+
+clear_stale_freeze
 
 hyprpicker -r -z &
 FREEZE_PID=$!
