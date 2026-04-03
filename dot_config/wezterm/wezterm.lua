@@ -8,6 +8,7 @@ config.automatically_reload_config = true
 config.enable_wayland = true
 config.front_end = "OpenGL"
 config.exit_behavior = "CloseOnCleanExit"
+config.notification_handling = "NeverShow"
 config.skip_close_confirmation_for_processes_named = {}
 
 -- Minimal status bar: hide tabs but keep status area for SSH indicator
