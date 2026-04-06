@@ -57,8 +57,9 @@ windowrule = match:class ^(steam_app_\d+)$, workspace 7 silent, no_initial_focus
 # Godot-based Steam games (e.g. Slay the Spire 2) set their own window class instead of steam_app_*
 windowrule = match:title ^(Godot)$, workspace 7 silent, no_initial_focus on, focus_on_activate off
 
-# Steam game performance and idle inhibit
-windowrule = match:class ^(steam_app_\d+)$, immediate on, opacity 1.0 override, no_blur on, idle_inhibit always
-windowrule = match:title ^(Godot)$, immediate on, opacity 1.0 override, no_blur on, idle_inhibit always
+# Steam game performance and idle inhibit - unpin so fullscreen keybind works
+windowrule = match:class ^(steam_app_\d+)$, immediate on, opacity 1.0 override, no_blur on, idle_inhibit always, pin off
+windowrule = match:class ^(gamescope)$, pin off
+windowrule = match:title ^(Godot)$, immediate on, opacity 1.0 override, no_blur on, idle_inhibit always, pin off
 {{ end }}
 
