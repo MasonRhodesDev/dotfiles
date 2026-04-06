@@ -1,0 +1,38 @@
+#!/bin/bash
+# Quick help for screenshot tools
+
+echo "📸 SCREENSHOT TOOLS HELP"
+echo "========================"
+echo
+echo "🚀 FAST ANNOTATION: snip-swappy"
+echo "   Usage: snip-swappy"
+echo "   After annotation: Ctrl+C to copy AND quit ⭐"
+echo
+echo "⚡ INSTANT CAPTURE: snip-instant" 
+echo "   Usage: snip-instant (no annotation, immediate clipboard)"
+echo
+echo "🔧 OPTIMIZED SATTY: snip-turbo"
+echo "   Usage: snip-turbo (faster satty with all optimizations)"
+echo
+echo "📊 PERFORMANCE TEST: screenshot-benchmark"
+echo "   Usage: screenshot-benchmark (compare all tools)"
+echo
+echo "🎨 SWAPPY ANNOTATION TOOLS:"
+echo "   b - Brush (freehand), t - Text, r - Rectangle, a - Arrow"
+echo "   c - Circle/Ellipse, d - Blur/Censor"
+echo "   f - Toggle fill, R/G/B/C - Colors, +/- - Size"
+echo ""
+echo "📋 SWAPPY SHORTCUTS:"
+echo "   Ctrl+C - Copy to clipboard AND quit ⭐"
+echo "   Ctrl+S - Save to file, Ctrl+Z - Undo, Ctrl+Y - Redo"
+echo "   Escape - Manual quit"
+echo
+echo "🎯 RECOMMENDED WORKFLOW:"
+echo "   1. Run: snip-swappy"
+echo "   2. Select region with mouse"
+echo "   3. Annotate as needed"
+echo "   4. Ctrl+C to copy AND quit ⭐"
+echo "   5. Paste anywhere!"
+echo
+echo "📁 All tools available in: ~/scripts/"
+echo "📖 Full shortcut reference: ~/scripts/swappy-shortcuts.md"echo "🎨 Complete tools guide: ~/scripts/swappy-tools-guide.md"
