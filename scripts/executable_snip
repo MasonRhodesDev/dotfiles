@@ -1,71 +1,34 @@
 #!/bin/bash
-# Freeze screen → select region → capture → annotate → clipboard
-# hyprpicker -r -z creates a freeze overlay that doesn't block slurp pointer input
+# Ultra-fast screenshot with swappy annotation
 
-FREEZE_PID=
-TMPFILE=
-
-stop_freeze_pid() {
-    local pid="$1"
-
-    [[ -z "$pid" ]] && return
-
-    kill "$pid" 2>/dev/null || true
-    sleep 0.1
-
-    if kill -0 "$pid" 2>/dev/null; then
-        kill -9 "$pid" 2>/dev/null || true
-    fi
-}
-
-clear_stale_freeze() {
-    local pid
-
-    while read -r pid; do
-        stop_freeze_pid "$pid"
-    done < <(pgrep -x -f 'hyprpicker -r -z' 2>/dev/null || true)
-}
-
-cleanup() {
-    if [[ -n "$FREEZE_PID" ]]; then
-        stop_freeze_pid "$FREEZE_PID"
-        wait "$FREEZE_PID" 2>/dev/null || true
-        FREEZE_PID=
-    fi
-
-    if [[ -n "$TMPFILE" ]]; then
-        rm -f "$TMPFILE"
-    fi
-}
-
-trap cleanup EXIT INT TERM HUP
-
-clear_stale_freeze
-
+# Quick screen freeze and selection
 hyprpicker -r -z &
 FREEZE_PID=$!
-sleep 0.2
+sleep 0.02
 
 SELECTION=$(slurp -d 2>/dev/null)
-SLURP_STATUS=$?
+kill "$FREEZE_PID" 2>/dev/null || true
 
-cleanup
-
-[ $SLURP_STATUS -ne 0 ] && exit 1
+[ $? -ne 0 ] && exit 1
 [ -z "$SELECTION" ] && exit 1
 
-TMPFILE=$(mktemp /tmp/snip-XXXXXX.ppm)
-grim -g "$SELECTION" -t ppm "$TMPFILE" 2>/dev/null
-GRIM_STATUS=$?
+# Create swappy config for optimization
+mkdir -p ~/.config/swappy
+cat > ~/.config/swappy/config << 'EOF'
+[Default]
+save_dir=$HOME/Pictures/Screenshots
+save_filename_format=swappy-%Y%m%d-%H%M%S.png
+show_panel=false
+line_size=5
+text_size=20
+text_font=sans-serif
+paint_mode=brush
+early_exit=true
+fill_shape=false
+auto_save=false
+EOF
 
-[ $GRIM_STATUS -ne 0 ] && { rm -f "$TMPFILE"; exit 1; }
+# Launch swappy with the screenshot - user will Ctrl+C to copy when ready
+grim -g "$SELECTION" - | swappy -f -
 
-OUTPUT_FILE="$HOME/Pictures/Screenshots/$(date +%Y%m%d-%H%M%S).png"
-
-satty --filename "$TMPFILE" \
-      --copy-command "wl-copy" \
-      --early-exit \
-      --output-filename "$OUTPUT_FILE"
-
-rm -f "$TMPFILE"
-TMPFILE=
+echo "💡 Swappy shortcuts: Ctrl+C (copy & quit), Ctrl+S (save), Escape (manual quit)"
