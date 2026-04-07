@@ -1,0 +1,4 @@
+[Icon Theme]
+Name=hicolor
+Comment=User hicolor overrides
+Directories=16x16/apps,32x32/apps,48x48/apps,64x64/apps,128x128/apps,256x256/apps,512x512/apps,1024x1024/apps,scalable/apps
