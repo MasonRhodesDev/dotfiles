@@ -1,5 +1,5 @@
 #!/bin/bash
-# Ultra-fast screenshot with satty annotation
+# Ultra-fast screenshot with swappy annotation
 
 # Quick screen freeze and selection
 hyprpicker -r -z &
@@ -13,12 +13,23 @@ kill "$FREEZE_PID" 2>/dev/null || true
 [ $SLURP_EXIT -ne 0 ] && exit 1
 [ -z "$SELECTION" ] && exit 1
 
-mkdir -p ~/Pictures/Screenshots
+# Create swappy config for optimization
+mkdir -p ~/.config/swappy
+cat > ~/.config/swappy/config << EOF
+[Default]
+save_dir=$HOME/Pictures/Screenshots
+save_filename_format=swappy-%Y%m%d-%H%M%S.png
+show_panel=true
+line_size=5
+text_size=20
+text_font=sans-serif
+paint_mode=brush
+early_exit=true
+fill_shape=false
+auto_save=false
+EOF
 
-# Launch satty with the screenshot
-grim -g "$SELECTION" - | satty \
-    --filename - \
-    --output-filename "~/Pictures/Screenshots/snip-%Y-%m-%d_%H-%M-%S.png" \
-    --early-exit \
-    --copy-command wl-copy \
-    --initial-tool brush
+# Launch swappy with the screenshot - user will Ctrl+C to copy when ready
+grim -g "$SELECTION" - | swappy -f -
+
+echo "💡 Swappy shortcuts: Ctrl+C (copy & quit), Ctrl+S (save), Escape (manual quit)"
