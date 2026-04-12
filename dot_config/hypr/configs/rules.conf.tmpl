@@ -61,5 +61,8 @@ windowrule = match:title ^(Godot)$, workspace 7 silent, no_initial_focus on, foc
 windowrule = match:class ^(steam_app_\d+)$, immediate on, opacity 1.0 override, no_blur on, idle_inhibit always, pin off
 windowrule = match:class ^(gamescope)$, pin off
 windowrule = match:title ^(Godot)$, immediate on, opacity 1.0 override, no_blur on, idle_inhibit always, pin off
+
+# Minecraft (standalone launcher, not steam_app_*)
+windowrule = match:class ^(Minecraft.*)$, pin off, immediate on, idle_inhibit always
 {{ end }}
 
