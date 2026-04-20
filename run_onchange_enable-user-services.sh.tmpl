@@ -1,0 +1,25 @@
+#!/bin/bash
+# Managed by chezmoi — re-runs when any tracked service file changes.
+#
+# Service checksums (do not edit — used to detect changes):
+# hyprlauncher: {{ include "dot_config/systemd/user/hyprlauncher.service" | sha256sum }}
+# udiskie:      {{ include "dot_config/systemd/user/udiskie.service" | sha256sum }}
+# swaybg:       {{ include "dot_config/systemd/user/swaybg.service" | sha256sum }}
+
+set -euo pipefail
+
+systemctl --user daemon-reload
+
+# Upstream services that ship disabled — enable them
+for svc in hypridle swaync hyprpolkitagent; do
+    systemctl --user enable "$svc" 2>/dev/null || true
+done
+
+# All managed daemons
+SERVICES=(hypridle swaync hyprpolkitagent hyprlauncher udiskie swaybg)
+
+for svc in "${SERVICES[@]}"; do
+    echo "→ $svc"
+    systemctl --user enable "$svc" 2>/dev/null || true
+    systemctl --user restart "$svc" || true
+done
