@@ -5,6 +5,7 @@
 # hyprlauncher: {{ include "dot_config/systemd/user/hyprlauncher.service" | sha256sum }}
 # udiskie:      {{ include "dot_config/systemd/user/udiskie.service" | sha256sum }}
 # swaybg:       {{ include "dot_config/systemd/user/swaybg.service" | sha256sum }}
+# api-keys:     {{ include "dot_config/systemd/user/api-keys.service" | sha256sum }}
 
 set -euo pipefail
 
@@ -16,7 +17,7 @@ for svc in hypridle swaync hyprpolkitagent; do
 done
 
 # All managed daemons
-SERVICES=(hypridle swaync hyprpolkitagent hyprlauncher udiskie swaybg)
+SERVICES=(hypridle swaync hyprpolkitagent hyprlauncher udiskie swaybg api-keys)
 
 for svc in "${SERVICES[@]}"; do
     echo "→ $svc"
