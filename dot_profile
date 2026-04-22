@@ -1,3 +1,10 @@
 PATH="$HOME/.local/bin:$PATH"
 export npm_config_prefix="$HOME/.local"
 . "$HOME/.cargo/env"
+
+# Session env vars (GNOME Keyring bucket: service=session-env). Loaded here
+# so any sh/bash/zsh login shell (SSH, TTY, ...) gets them. Fish is covered
+# separately by ~/.config/fish/conf.d/api-keys.fish.
+if command -v list-session-env >/dev/null 2>&1; then
+    eval "$(list-session-env | sed 's/^/export /')"
+fi
