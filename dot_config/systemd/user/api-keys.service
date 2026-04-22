@@ -1,0 +1,16 @@
+[Unit]
+Description=Import API keys from GNOME Keyring into systemd user environment
+# Keyring must be up (and unlocked by PAM at login) before we can read it.
+After=gnome-keyring-daemon.service
+Wants=gnome-keyring-daemon.service
+# Run before the graphical session so GUI apps launched by uwsm/Hyprland
+# inherit the variables.
+Before=graphical-session-pre.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=%h/.local/bin/import-api-keys
+
+[Install]
+WantedBy=graphical-session-pre.target

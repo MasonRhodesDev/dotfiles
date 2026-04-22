@@ -1,0 +1,9 @@
+#!/bin/sh
+# Thin wrapper around slack-mcp-server (korotovsky/slack-mcp-server).
+# Pulls the Slack user OAuth token from the GNOME Keyring at runtime so no
+# secret ever lands in ~/.claude.json or any other MCP config file.
+
+exec env \
+  SLACK_MCP_XOXP_TOKEN="$(secret-tool lookup service openclaw account SLACK_USER_TOKEN)" \
+  SLACK_MCP_ADD_MESSAGE_TOOL="${SLACK_MCP_ADD_MESSAGE_TOOL:-true}" \
+  npx -y slack-mcp-server@latest "$@"
