@@ -1,41 +1,20 @@
 #!/bin/sh
-# Enumerate every entry in the GNOME Keyring under service=session-env and
-# inject each into the systemd --user environment. The entry's LABEL becomes
-# the env var name; the stored secret becomes its value.
+# Import everything from the session-env keyring bucket into the
+# systemd --user environment so GUI apps launched under Hyprland/uwsm
+# inherit the vars.
 #
-# Add a new var to the bucket with:
-#   printf '%s' "value" | secret-tool store \
-#       --label=MY_VAR_NAME service session-env account MY_VAR_NAME
-#
-# The account attribute is set for symmetry with ad-hoc `secret-tool lookup`
-# calls (e.g. from fish), but the import uses `label` because piped output
-# from secret-tool search omits `attribute.*` lines.
+# Enumeration is delegated to `list-session-env`; see that script for
+# the bucket convention.
 
 set -eu
 
-out=$(secret-tool search --all service session-env 2>/dev/null || true)
-if [ -z "$out" ]; then
-    echo "no entries under service=session-env; nothing to import" >&2
-    exit 0
-fi
-
-# `secret-tool search --all` output (when piped) looks like:
-#   [/<collection>/<id>]
-#   label = MY_VAR
-#   secret = <value>
-#   created = ...
-#   modified = ...
-printf '%s\n' "$out" | awk '
-    /^\[/      { if (name && value) print name "=" value; name=""; value=""; next }
-    /^label = / { name  = substr($0, 9);  next }
-    /^secret = / { value = substr($0, 10); next }
-    END { if (name && value) print name "=" value }
-' | while IFS= read -r kv; do
-    k=${kv%%=*}
-    v=${kv#*=}
-    if [ -z "$k" ] || [ -z "$v" ]; then
+list-session-env | while IFS= read -r kv; do
+    [ -n "$kv" ] || continue
+    name=${kv%%=*}
+    value=${kv#*=}
+    if [ -z "$name" ] || [ -z "$value" ]; then
         continue
     fi
-    systemctl --user set-environment "$k=$v"
-    echo "set  $k" >&2
+    systemctl --user set-environment "$name=$value"
+    echo "set  $name" >&2
 done
