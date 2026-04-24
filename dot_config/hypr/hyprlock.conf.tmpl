@@ -114,3 +114,18 @@ input-field {
     halign = center
     valign = center
 }
+
+# Phone unlock button
+label {
+    text = cmd[update:1000] ~/.local/bin/pcbu-phone-status.sh
+    font_size = 14
+    font_family = Noto Sans
+    color = $primary
+    halign = center
+    valign = center
+    position = 0, -200
+    shadow_passes = 2
+    shadow_size = 2
+    shadow_color = rgba(0, 0, 0, 0.5)
+    onclick = ~/.local/bin/pcbu-phone-unlock.sh
+}
