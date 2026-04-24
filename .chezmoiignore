@@ -32,6 +32,10 @@ CLAUDE.md
 # Git configuration (stays in repo)
 .gitattributes
 
+# btop rewrites its own config on startup (version line, boolean casing) so
+# tracking it just produces churn we'd never apply back.
+.config/btop/btop.conf
+
 # Work-only: Claude templates (ticket creation, etc.)
 {{ if not .is_work }}
 .claude/templates
