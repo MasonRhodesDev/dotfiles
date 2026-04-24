@@ -7,7 +7,17 @@
 // custom settings, run `zed: open default settings` from the
 // command palette (cmd-shift-p / ctrl-shift-p)
 {
+  "project_panel": {
+    "dock": "left"
+  },
+  "outline_panel": {
+    "dock": "left"
+  },
+  "collaboration_panel": {
+    "dock": "left"
+  },
   "git_panel": {
+    "dock": "left",
     "sort_by_path": true,
     "commit_model": {
       "provider": "anthropic",
@@ -16,6 +26,7 @@
   },
   "icon_theme": "Material Icon Theme",
   "agent": {
+    "dock": "right",
     "always_allow_tool_actions": true,
     "default_model": {
       "provider": "anthropic",
