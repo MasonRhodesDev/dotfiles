@@ -39,6 +39,7 @@ MONITORS_CONF = Path.home() / ".config/hypr/configs/monitors.conf"
 HYPRIDLE_LOG = Path.home() / ".config/hypr/logs/hypridle.log"
 GRACE_SECONDS = 30
 INHIBIT_POLL_SECONDS = 2
+RECONCILE_SECONDS = 5
 
 # WHO names that always hold logind inhibitors and don't represent real user
 # intent to keep the system awake. Anything else with what=idle|sleep mode=block
@@ -91,6 +92,7 @@ class Context:
     logind_inhibitor: bool = False
     wayland_inhibitor: bool = False
     timer_task: asyncio.Task | None = None
+    state: "State | None" = None  # set by dispatcher; readable by reconciler
 
     @property
     def inhibitor(self) -> bool:
@@ -204,56 +206,39 @@ def _on_enter_suspending(ctx: Context, fx: Effectors) -> None:
 
 # -------- Layer 3b: pure transition function --------
 
-def next_state(state: State, ev: EventKind, ctx: Context) -> State | None:
-    """Pure state transition. No I/O, no side-effects."""
-    closed_target = (
-        State.DOCKED if ctx.ext_mon_count >= 1
-        else State.DEFERRED if ctx.inhibitor
-        else State.COUNTDOWN
-    )
+def desired_state(state: State, ev: EventKind, ctx: Context) -> State | None:
+    """Pure: pick the correct state from the (lid, ext_mon, inhibitor) snapshot.
 
-    if state is State.LID_OPEN:
-        if ev is EventKind.LID_CLOSE:
-            return closed_target
-        return None
+    Most events are computed from world state — they don't have unique transitions,
+    they just shift ctx and we re-derive. Only TIMER_EXPIRED (COUNTDOWN→SUSPENDING)
+    and RESUMED (SUSPENDING→back-to-world) are handled specially.
 
-    if state is State.DOCKED:
-        if ev is EventKind.LID_OPEN:
-            return State.LID_OPEN
-        if ev is EventKind.MONITOR_REMOVED and ctx.ext_mon_count == 0:
-            return State.DEFERRED if ctx.inhibitor else State.COUNTDOWN
-        return None
+    Returns the state we should be in, or None if the event is ignored.
+    """
+    if ev is EventKind.TIMER_EXPIRED:
+        return State.SUSPENDING if state is State.COUNTDOWN else None
 
-    if state is State.DEFERRED:
-        if ev is EventKind.LID_OPEN:
-            return State.LID_OPEN
-        if ev is EventKind.MONITOR_ADDED:
-            return State.DOCKED
-        if ev is EventKind.INHIBITOR_OFF and not ctx.inhibitor:
-            return State.COUNTDOWN
-        return None
+    if ev is EventKind.RESUMED:
+        return _world_state(ctx) if state is State.SUSPENDING else None
 
-    if state is State.COUNTDOWN:
-        if ev is EventKind.LID_OPEN:
-            return State.LID_OPEN
-        if ev is EventKind.MONITOR_ADDED:
-            return State.DOCKED
-        if ev is EventKind.INHIBITOR_ON:
-            return State.DEFERRED
-        if ev is EventKind.TIMER_EXPIRED:
-            return State.SUSPENDING
-        return None
-
+    # SUSPENDING is sticky for any non-RESUMED event (we're sleeping; ignore).
     if state is State.SUSPENDING:
-        if ev is EventKind.RESUMED:
-            return _resumed_target(ctx)
         return None
 
-    return None
+    target = _world_state(ctx)
+
+    # Suppress spurious COUNTDOWN→COUNTDOWN re-entries that would reset the
+    # 30s timer. If we're already counting down and only a MONITOR_ADDED-but-
+    # count-still-zero event fires (e.g. hyprctl reload re-emitting events),
+    # nothing changed — stay put.
+    if target is state:
+        return None
+
+    return target
 
 
-def _resumed_target(ctx: Context) -> State:
-    """After wake, pick the state that matches the current world snapshot."""
+def _world_state(ctx: Context) -> State:
+    """The state we should be in given (lid, ext_mon, inhibitor) right now."""
     if not ctx.lid_closed:
         return State.LID_OPEN
     if ctx.ext_mon_count >= 1:
@@ -435,6 +420,64 @@ async def inhibitor_poller(queue: asyncio.Queue, ctx: Context, manager_iface) ->
         await asyncio.sleep(INHIBIT_POLL_SECONDS)
 
 
+async def reconciler(ctx: Context, fx: Effectors, manager_iface) -> None:
+    """Every RECONCILE_SECONDS, re-snapshot the world and re-assert invariants.
+
+    Two jobs:
+      1. Refresh ctx from authoritative sources (logind LidClosed, hyprctl
+         monitor count, inhibitors). Events can be missed (Hyprland restart,
+         missed signal). The reconciler keeps ctx honest.
+      2. Re-assert the eDP invariant for the current state. If something
+         outside the FSM (e.g. hyprctl reload triggered by another tool, a
+         third-party DPMS hook) flipped the eDP state away from what our state
+         demands, re-apply on_enter.
+
+    Hard invariant: eDP is ENABLED iff state is LID_OPEN.
+    """
+    while True:
+        await asyncio.sleep(RECONCILE_SECONDS)
+        try:
+            real_lid = await manager_iface.get_lid_closed()
+            real_ext = _hyprctl_ext_monitor_count()
+            real_logind_inh = await _logind_real_inhibitor_active(manager_iface)
+            real_wayland_inh = _wayland_inhibitor_active()
+        except Exception as e:
+            LOG.warning("reconciler snapshot failed: %s", e)
+            continue
+
+        drift = []
+        if real_lid != ctx.lid_closed:
+            drift.append(f"lid_closed {ctx.lid_closed}->{real_lid}")
+            ctx.lid_closed = real_lid
+        if real_ext != ctx.ext_mon_count:
+            drift.append(f"ext_mon {ctx.ext_mon_count}->{real_ext}")
+            ctx.ext_mon_count = real_ext
+        if real_logind_inh != ctx.logind_inhibitor:
+            drift.append(f"logind_inh {ctx.logind_inhibitor}->{real_logind_inh}")
+            ctx.logind_inhibitor = real_logind_inh
+        if real_wayland_inh != ctx.wayland_inhibitor:
+            drift.append(f"wayland_inh {ctx.wayland_inhibitor}->{real_wayland_inh}")
+            ctx.wayland_inhibitor = real_wayland_inh
+
+        if drift:
+            LOG.warning("reconciler ctx drift: %s", "; ".join(drift))
+
+        if ctx.state is None or ctx.state is State.SUSPENDING:
+            continue
+
+        # Re-enforce the eDP invariant.
+        edp_disabled = _edp_is_disabled()
+        should_be_enabled = ctx.state is State.LID_OPEN
+        if edp_disabled is None:
+            continue
+        if should_be_enabled and edp_disabled:
+            LOG.warning("reconciler: state=%s but eDP disabled — re-enabling", ctx.state.value)
+            fx.set_edp(True)
+        elif (not should_be_enabled) and (not edp_disabled):
+            LOG.warning("reconciler: state=%s but eDP enabled — re-disabling", ctx.state.value)
+            fx.set_edp(False)
+
+
 async def setup_logind_watchers(bus: MessageBus, manager_iface, queue: asyncio.Queue):
     """Subscribe to logind LidClosed PropertiesChanged + PrepareForSleep signals.
 
@@ -469,6 +512,7 @@ async def setup_logind_watchers(bus: MessageBus, manager_iface, queue: asyncio.Q
 
 async def dispatcher(queue: asyncio.Queue, ctx: Context, fx: Effectors, initial: State) -> None:
     state = initial
+    ctx.state = state
     LOG.info("initial state: %s (ext_mon=%d, inhibitor=%s)",
              state.value, ctx.ext_mon_count, ctx.inhibitor)
     await on_enter(state, ctx, fx)
@@ -481,10 +525,11 @@ async def dispatcher(queue: asyncio.Queue, ctx: Context, fx: Effectors, initial:
             ctx.lid_closed = True
         elif ev.kind is EventKind.LID_OPEN:
             ctx.lid_closed = False
-        elif ev.kind is EventKind.MONITOR_ADDED:
-            ctx.ext_mon_count += 1
-        elif ev.kind is EventKind.MONITOR_REMOVED:
-            ctx.ext_mon_count = max(0, ctx.ext_mon_count - 1)
+        elif ev.kind in (EventKind.MONITOR_ADDED, EventKind.MONITOR_REMOVED):
+            # Always re-query hyprctl rather than incrementing. `hyprctl reload`
+            # and other Hyprland-internal events can re-emit monitoradded for
+            # already-known monitors, which would corrupt an incremental counter.
+            ctx.ext_mon_count = _hyprctl_ext_monitor_count()
         elif ev.kind is EventKind.INHIBITOR_ON:
             if ev.payload == "logind":
                 ctx.logind_inhibitor = True
@@ -496,7 +541,7 @@ async def dispatcher(queue: asyncio.Queue, ctx: Context, fx: Effectors, initial:
             elif ev.payload == "wayland":
                 ctx.wayland_inhibitor = False
 
-        new = next_state(state, ev.kind, ctx)
+        new = desired_state(state, ev.kind, ctx)
         if new is None or new is state:
             LOG.debug("ignored: %s in %s (ext_mon=%d, inhibitor=%s)",
                       ev.kind.value, state.value, ctx.ext_mon_count, ctx.inhibitor)
@@ -505,6 +550,7 @@ async def dispatcher(queue: asyncio.Queue, ctx: Context, fx: Effectors, initial:
         LOG.info("STATE: %s -> %s (event=%s, ext_mon=%d, inhibitor=%s)",
                  state.value, new.value, ev.kind.value, ctx.ext_mon_count, ctx.inhibitor)
         state = new
+        ctx.state = state
         await on_enter(state, ctx, fx)
 
 
@@ -539,12 +585,13 @@ async def main() -> None:
 
     await setup_logind_watchers(bus, manager, queue)
 
-    initial = _resumed_target(ctx)
+    initial = _world_state(ctx)
 
     await asyncio.gather(
         dispatcher(queue, ctx, fx, initial),
         hypr_socket_reader(queue, ctx),
         inhibitor_poller(queue, ctx, manager),
+        reconciler(ctx, fx, manager),
     )
 
 
