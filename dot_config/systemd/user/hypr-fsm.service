@@ -1,0 +1,16 @@
+[Unit]
+Description=Hyprland lid / monitor / suspend state machine
+After=graphical-session.target
+PartOf=graphical-session.target
+Requisite=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 %h/.config/hypr/configs/lid-fsm.py
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=graphical-session.target
