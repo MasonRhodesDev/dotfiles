@@ -77,6 +77,7 @@ class EventKind(Enum):
     INHIBITOR_OFF = "InhibitorOff"
     TIMER_EXPIRED = "TimerExpired"
     RESUMED = "Resumed"
+    RECONCILE = "Reconcile"  # synthesized when external action may have flipped eDP
 
 
 @dataclass
@@ -382,6 +383,12 @@ def _parse_hypr_event(line: str) -> Event | None:
         name = line.split(">>", 1)[1]
         if not name.startswith("eDP"):
             return Event(EventKind.MONITOR_REMOVED, payload=name)
+    elif line.startswith("configreloaded"):
+        # `hyprctl reload` re-applies monitors.conf, which silently re-enables
+        # eDP-2 even if our state demands it stay disabled. Treat as a prompt
+        # to reconcile — the reconciler periodic tick would catch this within
+        # 5s, but we want zero visible drift.
+        return Event(EventKind.RECONCILE, payload="configreloaded")
     return None
 
 
@@ -519,6 +526,17 @@ async def dispatcher(queue: asyncio.Queue, ctx: Context, fx: Effectors, initial:
 
     while True:
         ev: Event = await queue.get()
+
+        # RECONCILE is a synthetic event: don't transition, just re-apply the
+        # current state's on_enter so external mutations (e.g. configreloaded
+        # re-enabling eDP) are corrected immediately rather than after the
+        # 5s reconciler tick.
+        if ev.kind is EventKind.RECONCILE:
+            if state is not State.SUSPENDING:
+                LOG.info("RECONCILE (%s): re-asserting %s",
+                         ev.payload, state.value)
+                await on_enter(state, ctx, fx)
+            continue
 
         # Update context from event before consulting transition table.
         if ev.kind is EventKind.LID_CLOSE:
