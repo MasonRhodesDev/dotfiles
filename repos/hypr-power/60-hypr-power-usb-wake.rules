@@ -1,0 +1,17 @@
+# /etc/udev/rules.d/60-hypr-power-usb-wake.rules
+#
+# Make USB input devices wake-capable as soon as they're plugged in. Together
+# with the systemd-sleep hook (`hypr-power sleep-hook`), this guarantees that
+# `/sys/<device>/power/wakeup` is "enabled" on every relevant device:
+#   - the udev rule covers initial enumeration and hotplug
+#   - the sleep hook covers the case where the kernel resets state on resume
+
+# All USB hubs (bDeviceClass 09). Wake signals propagate through the hub
+# chain, so every hub between the device and the controller must be enabled.
+ACTION=="add", SUBSYSTEM=="usb", ATTR{bDeviceClass}=="09", RUN+="/bin/sh -c 'echo enabled > /sys$devpath/power/wakeup'"
+
+# ZSA Voyager (keyboard).
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="3297", ATTR{idProduct}=="1977", RUN+="/bin/sh -c 'echo enabled > /sys$devpath/power/wakeup'"
+
+# Logitech Lightspeed (mouse receiver).
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="046d", ATTR{idProduct}=="c539", RUN+="/bin/sh -c 'echo enabled > /sys$devpath/power/wakeup'"
