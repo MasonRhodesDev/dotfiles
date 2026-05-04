@@ -33,7 +33,7 @@
             "exec-if": "which hyprnotice-ctl",
             "exec": "count=$(hyprnotice-ctl list 2>/dev/null | grep -cE '^\\[(visible|inbox)\\]' || echo 0); if [ \"$count\" -gt 0 ]; then printf '{\"text\":\"%s\",\"alt\":\"new\",\"tooltip\":\"%s notification(s)\"}\\n' \"$count\" \"$count\"; else printf '{\"text\":\"\",\"alt\":\"none\",\"tooltip\":\"No notifications\"}\\n'; fi",
             "interval": 2,
-            "on-click": "{{ .chezmoi.homeDir }}/.config/hypr/scripts/notification-picker.sh",
+            "on-click": "~/.config/hypr/scripts/notification-picker.sh",
             "on-click-right": "hyprnotice-ctl dismiss-all",
             "escape": true
         },
