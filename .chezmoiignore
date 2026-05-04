@@ -36,6 +36,10 @@ CLAUDE.md
 # tracking it just produces churn we'd never apply back.
 .config/btop/btop.conf
 
+# hyprstate manages this symlink at runtime based on connected monitors.
+# Tracking it would pin the wrong profile on other machines.
+.config/hypr/profiles/.active.conf
+
 # Work-only: Claude templates (ticket creation, etc.)
 {{ if not .is_work }}
 .claude/templates
