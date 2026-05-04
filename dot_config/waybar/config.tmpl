@@ -12,7 +12,7 @@
             "tray",
             "custom/updates",
             "clock",
-            "custom/notification",
+            "custom/notifications",
             "battery"
         ],
 
@@ -22,24 +22,19 @@
             "all-outputs": false,
             "show-empty": false
         },
-        "custom/notification": {
+        "custom/notifications": {
             "tooltip": true,
             "format": "{} {icon}",
             "format-icons": {
-                "notification": "<span foreground='red'><sup></sup></span>",
-                "none": "",
-                "dnd-notification": "<span foreground='red'><sup></sup></span>",
-                "dnd-none": "",
-                "inhibited-notification": "<span foreground='red'><sup></sup></span>",
-                "inhibited-none": "",
-                "dnd-inhibited-notification": "<span foreground='red'><sup></sup></span>",
-                "dnd-inhibited-none": ""
+                "new": "<span foreground='red'><sup></sup></span>",
+                "none": ""
             },
             "return-type": "json",
-            "exec-if": "which swaync-client",
-            "exec": "timeout 5 swaync-client -swb",
-            "on-click": "swaync-client -t -sw",
-            "on-click-right": "swaync-client -d -sw",
+            "exec-if": "which hyprnotice-ctl",
+            "exec": "count=$(hyprnotice-ctl list 2>/dev/null | grep -cE '^\\[(visible|inbox)\\]' || echo 0); if [ \"$count\" -gt 0 ]; then printf '{\"text\":\"%s\",\"alt\":\"new\",\"tooltip\":\"%s notification(s)\"}\\n' \"$count\" \"$count\"; else printf '{\"text\":\"\",\"alt\":\"none\",\"tooltip\":\"No notifications\"}\\n'; fi",
+            "interval": 2,
+            "on-click": "{{ .chezmoi.homeDir }}/.config/hypr/scripts/notification-picker.sh",
+            "on-click-right": "hyprnotice-ctl dismiss-all",
             "escape": true
         },
         "clock": {
