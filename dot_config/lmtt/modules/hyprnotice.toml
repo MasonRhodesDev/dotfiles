@@ -1,0 +1,13 @@
+# hyprnotice notification daemon. The daemon reads ~/.config/matugen/lmtt-colors.css
+# directly (which lmtt's own [templates.colors] / Waybar module already
+# regenerates on every theme switch), so this module's only job is to nudge
+# hyprnotice to reload via SIGHUP.
+
+name = "hyprnotice"
+description = "Reload hyprnotice on theme switch"
+binary = "hyprnotice"
+priority = 100
+
+[script]
+path = "~/.config/lmtt/scripts/hyprnotice-reload.sh"
+timeout = 3000
