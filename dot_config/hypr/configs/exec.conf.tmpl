@@ -16,6 +16,9 @@ exec-once=sleep 1 & dbus-update-activation-environment --systemd WAYLAND_DISPLAY
 # Initialize theme on login
 exec-once = lmtt switch dark
 
+# Notification daemon: hyprnotice runs as a systemd user service
+# (~/.config/systemd/user/hyprnotice.service), so no exec-once needed here.
+
 # Update hyprpanel wallpaper config and launch
 #exec=sed -i "s|\"wallpaper.image\": \".*\"|\"wallpaper.image\": \"$WALLPAPER_PATH\"|" ~/.config/hyprpanel/config.json && uwsm app -- hyprpanel
 
