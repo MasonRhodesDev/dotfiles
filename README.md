@@ -8,7 +8,7 @@ A comprehensive dotfiles repository for Hyprland/Wayland desktop environments on
 - **🚀 Automated Setup** - Complete system installation from fresh Fedora install
 - **⚙️ Hyprland Desktop** - Modern Wayland compositor with optimized keybindings
 - **🔧 Development Ready** - Pre-configured Neovim, terminals, and development tools
-- **📱 Modern UI** - AGS widgets, waybar, swaync notifications, and more
+- **📱 Modern UI** - waybar, hyprnotice notifications (custom Hyprland-native daemon), and more
 - **🔄 Template System** - Dynamic configs with chezmoi templates
 
 ## 🚀 Quick Start
@@ -54,7 +54,7 @@ chezmoi apply
 │   ├── hypr/               # Hyprland compositor config
 │   ├── nvim/               # Neovim configuration
 │   ├── waybar/             # Status bar configuration
-│   ├── swaync/             # Notification daemon
+│   ├── hypr/profiles/      # Monitor profiles consumed by hyprstate
 │   ├── matugen/            # Theme generation templates
 │   └── ...
 ├── dot_local/bin/          # Local executables
@@ -99,7 +99,7 @@ See [docs/THEME-SYSTEM.md](docs/THEME-SYSTEM.md) for detailed documentation.
 | **Shell** | Bash + Oh My Posh | `~/.bashrc`, `~/.bashrc.d/` |
 | **Status Bar** | Waybar | `~/.config/waybar/` |
 | **Launcher** | Wofi | `~/.config/wofi/` |
-| **Notifications** | SwayNC | `~/.config/swaync/` |
+| **Notifications** | hyprnotice | `~/.config/hypr/hyprnotice.conf`, daemon at `~/repos/hyprnotice` |
 | **File Manager** | Nautilus | GTK-themed |
 | **System Monitor** | Btop | `~/.config/btop/` |
 

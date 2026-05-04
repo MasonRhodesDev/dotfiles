@@ -163,8 +163,7 @@ windowrule = center, ^(pavucontrol)$
 # Layerrules for special windows
 layerrule = blur, waybar
 layerrule = blur, wofi
-layerrule = blur, swaync-control-center
-layerrule = ignorezero, swaync-control-center
+layerrule = blur, hyprnotice
 ```
 
 ## Startup Applications
@@ -182,7 +181,7 @@ exec-once = dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CUR
 
 # Background services
 exec-once = waybar
-exec-once = swaync
+# hyprnotice runs as a systemd user service (no exec-once needed)
 exec-once = swayosd-server
 exec-once = hyprpaper
 
@@ -417,11 +416,11 @@ Hyprland provides workspace and window information to waybar:
 
 SwayNC integrates with Hyprland for notifications:
 ```bash
-# Show notification center
-binds = Super, N, exec, swaync-client -t -sw
+# Open notification inbox picker (wofi)
+binds = Super, N, exec, ~/.config/hypr/scripts/notification-picker.sh
 
-# Dismiss notifications
-binds = Super+Shift, N, exec, swaync-client -d -sw
+# Dismiss every notification
+binds = Super+Shift, N, exec, hyprnotice-ctl dismiss-all
 ```
 
 ### Application Launcher
@@ -467,7 +466,7 @@ hyprctl clients
 
 # Manually start applications
 waybar &
-swaync &
+systemctl --user start hyprnotice.service
 ```
 
 ### Performance Optimization

@@ -158,7 +158,7 @@ config.keys = {
       end
     end),
   },
-  -- Disable Super+N to let Hyprland handle it for swaync
+  -- Disable Super+N to let Hyprland handle it (hyprnotice inbox picker)
   {
     key = 'n',
     mods = 'SUPER',
