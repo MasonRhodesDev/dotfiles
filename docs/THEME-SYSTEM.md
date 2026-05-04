@@ -23,7 +23,7 @@ scripts/hyprland-theme-toggle/
     ├── hyprpanel.sh                    # System panel
     ├── nvim.sh                         # Neovim editor
     ├── qt.sh                           # Qt applications
-    ├── swaync.sh                       # Notifications
+    ├── hyprnotice.sh                   # Notifications (lmtt module: SIGHUPs hyprnotice)
     ├── tmux.sh                         # Terminal multiplexer
     ├── waybar.sh                       # Status bar
     ├── wezterm.sh                      # Terminal
@@ -316,7 +316,7 @@ cp ~/.config/matugen/colors.json ~/.config/matugen/theme-cache.json
 | Waybar | `~/.config/waybar/style.css` | `matugen/templates/waybar.css` |
 | Wezterm | `~/.wezterm.lua` | `matugen/templates/wezterm.lua` |
 | Wofi | `~/.config/wofi/style.css` | `matugen/templates/wofi.css` |
-| SwayNC | `~/.config/swaync/style.css` | Generated |
+| hyprnotice | reads `~/.config/matugen/lmtt-colors.css` directly + SIGHUP | n/a |
 | Neovim | `~/.config/nvim/colors/theme.vim` | Generated |
 
 ### Backup and Restore

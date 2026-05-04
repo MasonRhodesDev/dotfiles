@@ -241,8 +241,9 @@ MANIFEST ENTRY KEYS:
 
 --- JOB 2: Untracked drift ---
 6. Cross-reference config dirs + hypr apps + flatpaks + cargo tools against manifest entry keys.
-7. Config dir name maps to entry key (btop→btop, swaync→part of hyprland, zed→zed, etc.).
-8. SKIP: sub-binaries bundled with tracked entries (e.g. swaync-client is part of hyprland entry).
+7. Config dir name maps to entry key (btop→btop, zed→zed, etc.). hyprnotice is its own
+   tracked entry installed via the run_once_after_31-install-hyprnotice.sh chezmoi script.
+8. SKIP: sub-binaries bundled with tracked entries (e.g. hyprnotice-ctl is part of the hyprnotice install).
 9. Flatpak: flag only if app ID doesn't appear in any verify field in the manifest.
 10. Cargo: flag only if crate name doesn't match any manifest key or appear in any description.
 11. Use ONE Bash call to confirm a flagged item is actually installed before reporting it.

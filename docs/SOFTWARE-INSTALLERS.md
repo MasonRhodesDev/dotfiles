@@ -154,7 +154,7 @@ sudo dnf install -y \
     hyprland \
     hyprlock hypridle hyprpicker \
     waybar wofi \
-    swaync swayosd \
+    swayosd \
     xdg-desktop-portal-hyprland \
     wl-clipboard grim slurp \
     matugen
@@ -166,7 +166,7 @@ sudo dnf install -y \
 sudo pacman -S --noconfirm \
     hyprland \
     waybar wofi \
-    dunst pavucontrol \
+    pavucontrol \
     xdg-desktop-portal-hyprland \
     wl-clipboard grim slurp
 
@@ -177,8 +177,10 @@ yay -S --noconfirm \
     hyprpicker-git \
     swaybg-git \
     matugen \
-    swaync-git \
     swayosd-git
+
+# hyprnotice (notifications) builds from source via the chezmoi
+# run_once script — no package needed.
 ```
 
 ### 04_git_based.sh - Repository Software
