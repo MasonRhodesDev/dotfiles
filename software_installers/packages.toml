@@ -114,7 +114,7 @@ github = "https://github.com/MasonRhodesDev/wayland-voice-dictation"
 verify = "command -v voice-dictation"
 
 [hyprland]
-description = "Hyprland Wayland compositor and ecosystem: hyprland, hyprlock, hypridle, hyprpicker, hyprcursor, hyprpolkitagent, xdg-desktop-portal-hyprland, waybar, wofi, swaync, swaybg, wl-clipboard, grim, slurp, satty, pavucontrol, dunst, udiskie, uwsm"
+description = "Hyprland Wayland compositor and ecosystem: hyprland, hyprlock, hypridle, hyprpicker, hyprcursor, hyprpolkitagent, xdg-desktop-portal-hyprland, waybar, wofi, swaybg, wl-clipboard, grim, slurp, satty, pavucontrol, udiskie, uwsm. (Notifications via hyprnotice, installed separately by .chezmoiscripts/run_once_after_31-install-hyprnotice.sh.)"
 profile = "common"
 priority = 5
 version = "latest"
