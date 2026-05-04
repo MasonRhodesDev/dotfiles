@@ -171,7 +171,7 @@ tooltip {
 }
 
 /* Notification module - matches workspace styling */
-#custom-notification {
+#custom-notifications {
     padding: 0px 4px;
     border-radius: 8px;
     color: alpha(@accent, 0.4);
@@ -181,15 +181,12 @@ tooltip {
     outline: none;
 }
 
-#custom-notification:hover {
+#custom-notifications:hover {
     background-color: alpha(@accent, 0.3);
     box-shadow: none;
 }
 
-#custom-notification.notification,
-#custom-notification.dnd-notification,
-#custom-notification.inhibited-notification,
-#custom-notification.dnd-inhibited-notification {
+#custom-notifications.new {
     color: @accent;
     background-color: alpha(@accent, 0.1);
 }
