@@ -1,18 +1,18 @@
 #!/bin/bash
-# Clone and install hypr-power on a fresh machine.
-# Source: https://github.com/MasonRhodesDev/hypr-power
+# Clone and install hyprstate on a fresh machine.
+# Source: https://github.com/MasonRhodesDev/hyprstate
 # Idempotent — safe to re-run.
 
 set -euo pipefail
 
-REPO_URL="git@github.com:MasonRhodesDev/hypr-power.git"
-INSTALL_DIR="$HOME/repos/hypr-power"
+REPO_URL="git@github.com:MasonRhodesDev/hyprstate.git"
+INSTALL_DIR="$HOME/repos/hyprstate"
 
-echo "=== hypr-power: clone + install ==="
+echo "=== hyprstate: clone + install ==="
 
 # Already running? Done.
-if systemctl --user is-active hypr-power.service >/dev/null 2>&1; then
-    echo "hypr-power.service already active — skipping"
+if systemctl --user is-active hyprstate.service >/dev/null 2>&1; then
+    echo "hyprstate.service already active — skipping"
     exit 0
 fi
 
@@ -27,6 +27,6 @@ else
 fi
 
 # Run installer (handles symlinks, systemd unit, udev rule, migrations from
-# any predecessor stack).
+# any predecessor stack — including the old hypr-power name).
 cd "$INSTALL_DIR"
 ./install.sh
