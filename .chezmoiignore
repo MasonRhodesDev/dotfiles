@@ -40,6 +40,10 @@ CLAUDE.md
 # Tracking it would pin the wrong profile on other machines.
 .config/hypr/profiles/.active.conf
 
+# lmtt regenerates this on every theme switch from the embedded template in
+# .config/lmtt/modules/mako.toml — that .toml is the source of truth.
+.config/mako/config
+
 # Work-only: Claude templates (ticket creation, etc.)
 {{ if not .is_work }}
 .claude/templates
