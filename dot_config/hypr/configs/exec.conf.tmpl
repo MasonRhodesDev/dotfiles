@@ -9,7 +9,9 @@ exec-once = dbus-update-activation-environment --all
 exec-once=sleep 1 & dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP
 # gnome-keyring: PAM handles all components now (socket activation masked)
 # exec-once = gnome-keyring-daemon --start --components=ssh
-exec-once = /home/mason/.config/hypr/configs/monitors.sh > /home/mason/.config/hypr/logs/monitors.log 2>&1
+# Lid / monitor / profile handling runs as a systemd user service:
+#   systemctl --user status hyprstate.service
+# (Source: /home/mason/repos/hyprstate)
 
 # Initialize theme on login
 exec-once = lmtt switch dark
