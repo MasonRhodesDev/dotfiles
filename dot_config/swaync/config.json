@@ -29,7 +29,7 @@
   "script-fail-notify": true,
   "scripts": {
     "slack-focus": {
-      "exec": "hyprctl dispatch focuswindow '^(Slack)$'",
+      "exec": "hyprctl dispatch focuswindow class:slack",
       "app-name": "[Ss]lack",
       "run-on": "action"
     }
