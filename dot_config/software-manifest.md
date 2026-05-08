@@ -30,7 +30,7 @@ All built from source at `~/repos/hypr/deps/` and installed to `/usr/local/`.
 
 **Fix:** Early return in the constructor when the name starts with `/` — check if the file exists and use it directly, bypassing theme lookup.
 
-**Check on update:** No longer relevant — hyprlauncher was removed in favor of fuzzel. This patch may still matter for other hyprtoolkit consumers (e.g. hyprnotice). Related: [hyprwm/hyprlauncher#132](https://github.com/hyprwm/hyprlauncher/issues/132)
+**Check on update:** No longer relevant — hyprlauncher was removed in favor of fuzzel. Related: [hyprwm/hyprlauncher#132](https://github.com/hyprwm/hyprlauncher/issues/132)
 
 ## Custom Tools
 

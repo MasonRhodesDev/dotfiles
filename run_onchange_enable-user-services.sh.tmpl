@@ -13,12 +13,12 @@ systemctl --user daemon-reload
 # Upstream services that ship disabled — enable them.
 # (swaync removed; we use hyprnotice instead. hyprnotice's install.sh
 # enables its own user unit, so it doesn't appear in either list here.)
-for svc in hypridle hyprpolkitagent; do
+for svc in hypridle hyprpolkitagent swaync; do
     systemctl --user enable "$svc" 2>/dev/null || true
 done
 
 # All managed daemons
-SERVICES=(hypridle hyprpolkitagent udiskie swaybg api-keys)
+SERVICES=(hypridle hyprpolkitagent swaync udiskie swaybg api-keys)
 
 for svc in "${SERVICES[@]}"; do
     echo "→ $svc"

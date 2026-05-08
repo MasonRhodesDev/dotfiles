@@ -1,0 +1,14 @@
+# swaync notification daemon.
+# Reloads CSS + config on theme switch so the palette stays in sync.
+# NOTE: The style.css currently hard-codes colors. A future improvement is to
+# migrate it to @import ~/.config/matugen/lmtt-colors.css and reference CSS
+# variables via @define-color so swaync auto-themes.
+
+name = "swaync"
+description = "Reload swaync on theme switch"
+binary = "swaync"
+priority = 100
+
+[script]
+path = "~/.config/lmtt/scripts/swaync-reload.sh"
+timeout = 3000
