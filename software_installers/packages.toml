@@ -123,15 +123,6 @@ website = "https://hyprland.org"
 verify = "command -v hyprland"
 depends_on = ["core_utils"]
 
-[hyprlauncher]
-description = "Application launcher for Hyprland"
-profile = "common"
-priority = 5
-version = "latest"
-github = "https://github.com/hyprwm/hyprlauncher"
-verify = "command -v hyprlauncher"
-depends_on = ["hyprland"]
-
 [hyprls]
 description = "Hyprland language server (LSP for hyprland config)"
 profile = "common"

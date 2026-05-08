@@ -2,7 +2,6 @@
 # Managed by chezmoi — re-runs when any tracked service file changes.
 #
 # Service checksums (do not edit — used to detect changes):
-# hyprlauncher: {{ include "dot_config/systemd/user/hyprlauncher.service" | sha256sum }}
 # udiskie:      {{ include "dot_config/systemd/user/udiskie.service" | sha256sum }}
 # swaybg:       {{ include "dot_config/systemd/user/swaybg.service" | sha256sum }}
 # api-keys:     {{ include "dot_config/systemd/user/api-keys.service" | sha256sum }}
@@ -19,7 +18,7 @@ for svc in hypridle hyprpolkitagent; do
 done
 
 # All managed daemons
-SERVICES=(hypridle hyprpolkitagent hyprlauncher udiskie swaybg api-keys)
+SERVICES=(hypridle hyprpolkitagent udiskie swaybg api-keys)
 
 for svc in "${SERVICES[@]}"; do
     echo "→ $svc"

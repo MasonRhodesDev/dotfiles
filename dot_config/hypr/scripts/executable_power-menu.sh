@@ -1,5 +1,5 @@
 #!/bin/bash
-selection=$(hyprlauncher -o "Logout,Reboot,Shutdown,Suspend")
+selection=$(printf 'Logout\nReboot\nShutdown\nSuspend' | fuzzel --dmenu --prompt 'Power: ')
 
 case "$selection" in
     Logout)   hyprshutdown ;;

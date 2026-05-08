@@ -10,7 +10,6 @@ All built from source at `~/repos/hypr/deps/` and installed to `/usr/local/`.
 |------|---------|--------|--------|
 | Hyprland | 0.54.2 | 59f9f268 (v0.54.2) | git@github.com:hyprwm/Hyprland.git |
 | hyprtoolkit | 0.5.3 | 9af245a (main) | git@github.com:hyprwm/hyprtoolkit.git |
-| hyprlauncher | 0.1.5 | 114828a (main) | git@github.com:hyprwm/hyprlauncher.git |
 | aquamarine | 0.10.0 | a20a0e6 (v0.10.0) | git@github.com:hyprwm/aquamarine.git |
 | hyprcursor | 0.1.13 | 44e91d4 (v0.1.13) | git@github.com:hyprwm/hyprcursor.git |
 | hyprgraphics | 0.5.0 | 4af02a3 (v0.5.0) | git@github.com:hyprwm/hyprgraphics.git |
@@ -31,7 +30,7 @@ All built from source at `~/repos/hypr/deps/` and installed to `/usr/local/`.
 
 **Fix:** Early return in the constructor when the name starts with `/` — check if the file exists and use it directly, bypassing theme lookup.
 
-**Check on update:** This may be fixed upstream in future hyprtoolkit releases. Test by searching Slack in hyprlauncher after updating — if the icon shows without this patch, it's been fixed upstream. Related: [hyprwm/hyprlauncher#132](https://github.com/hyprwm/hyprlauncher/issues/132)
+**Check on update:** No longer relevant — hyprlauncher was removed in favor of fuzzel. This patch may still matter for other hyprtoolkit consumers (e.g. hyprnotice). Related: [hyprwm/hyprlauncher#132](https://github.com/hyprwm/hyprlauncher/issues/132)
 
 ## Custom Tools
 
