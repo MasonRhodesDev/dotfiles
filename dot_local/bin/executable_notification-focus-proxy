@@ -1,60 +1,78 @@
 #!/usr/bin/env python3
 """notification-focus-proxy
 
-Bring the sending app of a clicked notification to focus, generically.
+Bridge the gap between the XDG Desktop Notifications spec and Wayland apps
+that don't properly consume activation tokens.
 
-Listens on the session bus as a monitor for org.freedesktop.Notifications
-traffic. Correlates:
+Per the spec (https://specifications.freedesktop.org/notification/latest-single/),
+when the user clicks a notification, the daemon emits:
 
-    Notify (method call, serial S) →   stores sender identity
-    method return (reply_serial S)  →   learns notification id for that sender
-    ActionInvoked(id, key) (signal) →   runs focus-sender with stored identity
-    NotificationClosed(id, reason)  →   drops the mapping
+    ActivationToken (UINT32 id, STRING token)   — xdg-activation token
+    ActionInvoked   (UINT32 id, STRING key)     — key = "default" for body click
 
-On ActionInvoked we exec ~/.config/swaync/scripts/focus-sender.sh with
-SWAYNC_APP_NAME and SWAYNC_DESKTOP_ENTRY env vars set, which already knows
-how to find+raise the matching Hyprland window (handling special workspaces).
+The sender app is expected to consume the ActivationToken and call
+xdg_activation_v1.activate() to receive focus. Electron apps (Slack,
+Discord, …) frequently fail to do this on Wayland. So we do it ourselves:
+when we see an ActionInvoked, we look up the notification's sender identity
+and `hyprctl dispatch focuswindow` the matching client.
 
-This intentionally does NOT consume the action — the originating app still
-receives ActionInvoked on the bus and can route to the correct conversation/
-thread/issue as usual. We're purely additive.
+Implementation: parse `dbus-monitor` text output. Simpler and more reliable
+than GDBus monitor mode in Python.
 """
 
 from __future__ import annotations
 
 import logging
 import os
+import re
 import subprocess
 import sys
-from typing import Optional
-
-import gi
-
-gi.require_version("Gio", "2.0")
-gi.require_version("GLib", "2.0")
-from gi.repository import Gio, GLib  # noqa: E402
 
 FOCUS_SCRIPT = os.path.expanduser("~/.config/swaync/scripts/focus-sender.sh")
 
 log = logging.getLogger("notification-focus-proxy")
 
-# Pending Notify calls awaiting their reply (serial → identity dict).
-pending: dict[int, dict] = {}
-# Active notifications (id → identity dict).
-active: dict[int, dict] = {}
+# dbus-monitor line formats we care about. We split messages on header lines
+# and collect body lines until the next header.
+HEADER_RE = re.compile(
+    r"^(?P<kind>method call|method return|signal|error)\s+time=\S+"
+    r".*?(?:\s+serial=(?P<serial>\d+))"
+    r"(?:\s+reply_serial=(?P<reply_serial>\d+))?"
+    r"(?:.*?\s+interface=(?P<interface>\S+?);)?"
+    r"(?:.*?\s+member=(?P<member>\S+))?"
+)
+STRING_RE = re.compile(r'^\s+string\s+"(.*)"\s*$')
+VARIANT_STRING_RE = re.compile(r'^\s+variant\s+string\s+"(.*)"\s*$')
+UINT32_RE = re.compile(r"^\s+uint32\s+(\d+)\s*$")
 
 
-def _extract_identity(body: GLib.Variant) -> dict:
-    """Pull app_name + desktop-entry out of a Notify method-call body."""
-    try:
-        unpacked = body.unpack()
-        app_name = unpacked[0] if len(unpacked) > 0 else None
-        hints = unpacked[6] if len(unpacked) > 6 else {}
-        desktop_entry = hints.get("desktop-entry") if isinstance(hints, dict) else None
-    except Exception as e:  # pragma: no cover
-        log.warning("failed to parse Notify body: %s", e)
-        app_name = desktop_entry = None
-    return {"app_name": app_name or "", "desktop_entry": desktop_entry or ""}
+def _parse_notify_body(lines: list[str]) -> dict:
+    """Extract app_name + desktop-entry hint from a Notify call body."""
+    result = {"app_name": "", "desktop_entry": ""}
+    # First top-level string is app_name.
+    for line in lines:
+        m = STRING_RE.match(line)
+        if m:
+            result["app_name"] = m.group(1)
+            break
+    # Find `string "desktop-entry"` followed by `variant string "..."`.
+    for i, line in enumerate(lines):
+        m = STRING_RE.match(line)
+        if m and m.group(1) == "desktop-entry":
+            for j in range(i + 1, min(i + 4, len(lines))):
+                v = VARIANT_STRING_RE.match(lines[j])
+                if v:
+                    result["desktop_entry"] = v.group(1)
+                    return result
+    return result
+
+
+def _first_uint32(lines: list[str]) -> int | None:
+    for line in lines:
+        m = UINT32_RE.match(line)
+        if m:
+            return int(m.group(1))
+    return None
 
 
 def _fire_focus(identity: dict) -> None:
@@ -84,104 +102,108 @@ def _fire_focus(identity: dict) -> None:
         log.error("failed to spawn focus script: %s", e)
 
 
-def _on_message(
-    conn: Gio.DBusConnection, message: Gio.DBusMessage, incoming: bool
-) -> Optional[Gio.DBusMessage]:
-    """Filter callback for every message on the bus."""
-    log.debug("FILTER called incoming=%s", incoming)
-    try:
-        iface = message.get_interface() or ""
-        member = message.get_member() or ""
-        mtype = message.get_message_type()
-        log.debug(
-            "msg: incoming=%s type=%s iface=%s member=%s",
-            incoming, mtype, iface, member,
-        )
-        if iface != "org.freedesktop.Notifications":
-            return message
-
-        if (
-            mtype == Gio.DBusMessageType.METHOD_CALL
-            and member == "Notify"
-        ):
-            body = message.get_body()
-            serial = message.get_serial()
-            identity = _extract_identity(body)
-            log.info("Notify serial=%s identity=%s", serial, identity)
-            pending[serial] = identity
-
-        elif mtype == Gio.DBusMessageType.METHOD_RETURN:
-            reply_serial = message.get_reply_serial()
-            log.debug("METHOD_RETURN reply_serial=%s pending=%s", reply_serial, list(pending.keys()))
-            identity = pending.pop(reply_serial, None)
-            if identity is not None:
-                try:
-                    notif_id = message.get_body().unpack()[0]
-                except Exception as e:
-                    log.warning("failed to parse Notify reply: %s", e)
-                    notif_id = None
-                if isinstance(notif_id, int):
-                    active[notif_id] = identity
-                    log.info("tracked id=%s %s", notif_id, identity)
-
-        elif mtype == Gio.DBusMessageType.SIGNAL and member == "ActionInvoked":
-            try:
-                notif_id, _key = message.get_body().unpack()[:2]
-            except Exception:
-                notif_id = None
-            log.info("ActionInvoked id=%s tracked=%s", notif_id, notif_id in active)
-            if notif_id in active:
-                _fire_focus(active[notif_id])
-            else:
-                log.debug("ActionInvoked for unknown id=%s; active=%s", notif_id, list(active.keys()))
-
-        elif mtype == Gio.DBusMessageType.SIGNAL and member == "NotificationClosed":
-            try:
-                notif_id = message.get_body().unpack()[0]
-            except Exception:
-                notif_id = None
-            active.pop(notif_id, None)
-
-    except Exception as e:  # pragma: no cover - never let the filter die
-        log.exception("filter error: %s", e)
-
-    # We're a passive observer: always pass the message through unchanged.
-    return message
-
-
 def main() -> int:
     logging.basicConfig(
         level=os.environ.get("LOG_LEVEL", "INFO").upper(),
         format="%(asctime)s %(levelname)s %(message)s",
     )
 
-    bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
-    if bus is None:
-        log.error("could not get session bus")
-        return 1
+    pending: dict[int, dict] = {}   # serial → identity (Notify call in flight)
+    active: dict[int, dict] = {}    # notification id → identity
 
-    # Become a passive monitor for the notification interface.
-    match_rules = ["interface='org.freedesktop.Notifications'"]
-    try:
-        bus.call_sync(
-            "org.freedesktop.DBus",
-            "/org/freedesktop/DBus",
-            "org.freedesktop.DBus.Monitoring",
-            "BecomeMonitor",
-            GLib.Variant("(asu)", (match_rules, 0)),
-            None,
-            Gio.DBusCallFlags.NONE,
-            -1,
-            None,
-        )
-    except GLib.Error as e:
-        log.error("BecomeMonitor failed: %s", e)
-        return 2
+    cmd = ["dbus-monitor", "--session"]
+    log.info("spawning: %s", " ".join(cmd))
+    proc = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        stdin=subprocess.DEVNULL,
+        text=True,
+        bufsize=1,
+    )
+    assert proc.stdout is not None
 
-    bus.add_filter(_on_message)
+    current: dict | None = None
+    body_lines: list[str] = []
+
+    def flush() -> None:
+        nonlocal current, body_lines
+        if current is None:
+            return
+        kind = current["kind"]
+        member = current.get("member") or ""
+        interface = current.get("interface") or ""
+        serial = current.get("serial")
+        reply_serial = current.get("reply_serial")
+
+        try:
+            if kind == "method call" and interface == "org.freedesktop.Notifications" and member == "Notify":
+                identity = _parse_notify_body(body_lines)
+                if serial is not None:
+                    pending[serial] = identity
+                    log.debug("Notify serial=%s identity=%s", serial, identity)
+
+            elif kind == "method return" and reply_serial in pending:
+                identity = pending.pop(reply_serial)
+                notif_id = _first_uint32(body_lines)
+                if notif_id is not None:
+                    active[notif_id] = identity
+                    log.debug("tracked id=%s %s", notif_id, identity)
+
+            elif kind == "signal" and interface == "org.freedesktop.Notifications" and member == "ActionInvoked":
+                notif_id = _first_uint32(body_lines)
+                log.debug("ActionInvoked id=%s active=%s", notif_id, list(active.keys()))
+                if notif_id in active:
+                    _fire_focus(active[notif_id])
+
+            elif kind == "signal" and interface == "org.freedesktop.Notifications" and member == "NotificationClosed":
+                notif_id = _first_uint32(body_lines)
+                if notif_id is not None:
+                    active.pop(notif_id, None)
+
+        except Exception:
+            log.exception("error handling message")
+
+        current = None
+        body_lines = []
+
     log.info("ready; watching org.freedesktop.Notifications")
-    GLib.MainLoop().run()
-    return 0
+    try:
+        for raw in proc.stdout:
+            line = raw.rstrip("\n")
+            if not line:
+                continue
+            header = HEADER_RE.match(line)
+            if header and header.group("kind"):
+                flush()
+                current = {
+                    "kind": header.group("kind"),
+                    "serial": (
+                        int(header.group("serial"))
+                        if header.group("serial") else None
+                    ),
+                    "reply_serial": (
+                        int(header.group("reply_serial"))
+                        if header.group("reply_serial") else None
+                    ),
+                    "interface": header.group("interface"),
+                    "member": header.group("member"),
+                }
+            elif current is not None:
+                body_lines.append(line)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        flush()
+        proc.terminate()
+        try:
+            proc.wait(timeout=2)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+
+    rc = proc.returncode or 0
+    log.warning("dbus-monitor exited with %s", rc)
+    return 1 if rc != 0 else 0
 
 
 if __name__ == "__main__":
