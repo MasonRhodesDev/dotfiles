@@ -26,13 +26,7 @@
   "hide-on-clear": false,
   "hide-on-action": true,
   "hide-on-click": true,
-  "script-fail-notify": true,
-  "scripts": {
-    "focus-sender": {
-      "exec": "~/.config/swaync/scripts/focus-sender.sh",
-      "run-on": "action"
-    }
-  },
+  "script-fail-notify": false,
   "notification-visibility": {
     "osd-volume": {
       "state": "enabled",
@@ -40,18 +34,18 @@
       "override-timeout": 2000
     },
     "osd-brightness": {
-      "state": "enabled", 
+      "state": "enabled",
       "urgency": "Normal",
       "override-timeout": 2000
     },
     "osd-media": {
       "state": "enabled",
-      "urgency": "Normal", 
+      "urgency": "Normal",
       "override-timeout": 2000
     }
   },
   "widgets": [
-    "inhibitors", 
+    "inhibitors",
     "title",
     "dnd",
     "volume",
@@ -82,11 +76,11 @@
       "image-radius": 12
     },
     "volume": {
-      "label": "󰕾",
+      "label": "\udb81\udd7e",
       "show-per-app": true
     },
     "backlight": {
-      "label": "󰃞"
+      "label": "\udb80\udcde"
     }
   }
 }
