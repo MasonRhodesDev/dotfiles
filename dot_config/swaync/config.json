@@ -76,11 +76,11 @@
       "image-radius": 12
     },
     "volume": {
-      "label": "\udb81\udd7e",
+      "label": "󰕾",
       "show-per-app": true
     },
     "backlight": {
-      "label": "\udb80\udcde"
+      "label": "󰃞"
     }
   }
 }
