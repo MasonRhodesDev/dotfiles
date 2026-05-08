@@ -28,9 +28,10 @@
   "hide-on-click": true,
   "script-fail-notify": true,
   "scripts": {
-    "example-script": {
-      "exec": "echo 'Do something...'",
-      "urgency": "Normal"
+    "slack-focus": {
+      "exec": "hyprctl dispatch focuswindow '^(Slack)$'",
+      "app-name": "[Ss]lack",
+      "run-on": "action"
     }
   },
   "notification-visibility": {
