@@ -28,9 +28,8 @@
   "hide-on-click": true,
   "script-fail-notify": true,
   "scripts": {
-    "slack-focus": {
-      "exec": "hyprctl dispatch focuswindow class:slack",
-      "app-name": "[Ss]lack",
+    "focus-sender": {
+      "exec": "~/.config/swaync/scripts/focus-sender.sh",
       "run-on": "action"
     }
   },
