@@ -51,6 +51,11 @@ windowrule = match:class ^(steam)$, match:title ^(Steam)$, workspace special:mag
 # Prevent 5x5 spawn bug for empty title steam windows
 windowrule = match:title ^()$, match:class ^(steam)$, stay_focused on, min_size 1 1
 
+# Zoom annotate_toolbar flickers open/close on hover and steals focus from
+# the Meeting window. Linux Zoom mis-sizes this to ~1500x1670, so hide it
+# completely: float, off-screen, invisible, no focus.
+windowrule = match:class ^(zoom)$, match:title ^(annotate_toolbar)$, float on, size 1 1, move -9999 -9999, opacity 0.0 override 0.0 override, border_size 0, no_blur on, no_shadow on, no_initial_focus on, no_focus on
+
 {{ if not .is_work }}
 # Game rules (personal PC only)
 # Gamescope and Steam games on workspace 7
