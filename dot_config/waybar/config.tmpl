@@ -7,6 +7,7 @@
         "modules-right": [
             "group/expand",
             "bluetooth",
+            "custom/easytether",
             "network",
             "pulseaudio",
             "tray",
@@ -56,6 +57,14 @@
                 "on-click": "shift_up"
             }
         },
+        "custom/easytether": {
+            "exec": "{{ .chezmoi.homeDir }}/.config/waybar/scripts/easytether.sh",
+            "exec-if": "/usr/sbin/ip link show tap-easytether up",
+            "return-type": "json",
+            "interval": 5,
+            "on-click": "pkexec {{ .chezmoi.homeDir }}/scripts/easytether-usb-toggle",
+            "tooltip": true
+        },
         "network": {
             "format-wifi": "󰖩",
             "format-ethernet":"󰈀",
@@ -63,7 +72,7 @@
             "tooltip-format-disconnected": "Error",
             "tooltip-format-wifi": "{essid} ({signalStrength}%) ",
             "tooltip-format-ethernet": "{ifname} 🖧 ",
-            "on-click": "wezterm nmtui"
+            "on-click": "networkmanager-dmenu"
         },
         "bluetooth": {
             "format-on": "󰂯",
