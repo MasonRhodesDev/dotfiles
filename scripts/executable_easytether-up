@@ -1,0 +1,30 @@
+#!/bin/bash
+set -euo pipefail
+
+PIXEL_MAC="${PIXEL_MAC:-0C:C4:13:3E:FF:21}"
+IFACE="tap-easytether"
+DNS_SERVERS=(1.1.1.1 8.8.8.8)
+
+if pgrep -f '(^|/)easytether-bluetooth( |$)' >/dev/null; then
+  echo "easytether-bluetooth already running"
+else
+  echo "starting easytether-bluetooth -> $PIXEL_MAC"
+  sudo easytether-bluetooth -n "$PIXEL_MAC"
+fi
+
+# Wait for the tap interface to appear
+for _ in $(seq 1 10); do
+  ip link show "$IFACE" &>/dev/null && break
+  sleep 0.5
+done
+
+sudo pkill -f "dhclient.*$IFACE" 2>/dev/null || true
+sleep 1
+sudo dhclient -v "$IFACE"
+
+sudo resolvectl dns "$IFACE" "${DNS_SERVERS[@]}"
+sudo resolvectl default-route "$IFACE" yes
+
+echo
+echo "egress: $(curl -s --max-time 8 https://api.ipify.org || echo '<no response>')"
+ip route | grep default

@@ -1,0 +1,131 @@
+#!/bin/bash
+# Toggle EasyTether USB on/off. Run once to fully enable, again to fully disable.
+# Disabling matters because the udev-triggered services interfere with USB
+# devices / networking when not actively tethering.
+set -euo pipefail
+
+RPM_PATH="${EASYTETHER_RPM:-/home/mason/Downloads/easytether-0.8.9-3.fc31.x86_64.rpm}"
+USB_UNIT="easytether-usb@.service"
+TAP_UNIT="tap-easytether.service"
+NM_CONN="tap-easytether"
+
+need_sudo() {
+  if [ "$(id -u)" -ne 0 ]; then SUDO=sudo; else SUDO=; fi
+}
+
+is_installed() { rpm -q easytether &>/dev/null; }
+
+is_masked() {
+  local s1 s2
+  s1=$(systemctl is-enabled "$USB_UNIT" 2>/dev/null || true)
+  s2=$(systemctl is-enabled "$TAP_UNIT" 2>/dev/null || true)
+  [ "$s1" = "masked" ] && [ "$s2" = "masked" ]
+}
+
+install_pkg() {
+  if is_installed; then return; fi
+  if [ ! -f "$RPM_PATH" ]; then
+    echo "easytether not installed and rpm not found at $RPM_PATH" >&2
+    echo "Set EASYTETHER_RPM=/path/to/easytether-*.rpm and retry." >&2
+    exit 1
+  fi
+  echo "Installing $RPM_PATH ..."
+  $SUDO dnf install -y "$RPM_PATH"
+}
+
+enable_tether() {
+  echo ">> Enabling EasyTether USB"
+  install_pkg
+
+  # Remove stale tap interface so easytether-usb can claim it cleanly.
+  # Tell NM to unmanage first to close the autoconnect race window between
+  # conn down and ip link delete.
+  if ip link show tap-easytether &>/dev/null; then
+    echo "-- removing stale tap-easytether interface"
+    $SUDO nmcli device set tap-easytether managed no 2>/dev/null || true
+    $SUDO nmcli conn down "$NM_CONN" 2>/dev/null || true
+    $SUDO ip link delete tap-easytether 2>/dev/null || true
+  fi
+
+  # Force NM to re-read the connection file so autoconnect=no is honored.
+  $SUDO nmcli conn reload 2>/dev/null || true
+
+  echo "-- unmasking units"
+  $SUDO systemctl unmask "$USB_UNIT" "$TAP_UNIT"
+  $SUDO systemctl daemon-reload
+
+  # Clear any previously-failed instances; without this the udev trigger will
+  # silently skip them (systemd won't restart a unit still in failed state).
+  $SUDO systemctl reset-failed 'easytether-usb@*' 2>/dev/null || true
+
+  echo "-- reloading udev rules"
+  $SUDO udevadm control --reload-rules
+  # Only trigger the USB subsystem. The chain runs automatically:
+  # USB udev ADD → easytether-usb@<devpath> starts → creates tap iface →
+  # net udev ADD → tap-easytether.service → nmcli conn up.
+  # --settle waits for all triggered events and their systemd activations to
+  # complete before returning, replacing the old fixed sleep 2.
+  $SUDO udevadm trigger --subsystem-match=usb --action=add --settle
+
+  echo ">> Done. Current state:"
+  systemctl list-units 'easytether-usb@*' "$TAP_UNIT" --all --no-pager || true
+  if ! ip link show tap-easytether &>/dev/null; then
+    echo "   (tap-easytether not up yet — plug in phone with USB tethering enabled)"
+  fi
+}
+
+disable_tether() {
+  echo ">> Disabling EasyTether USB"
+
+  echo "-- taking down NetworkManager connection"
+  $SUDO nmcli conn down "$NM_CONN" 2>/dev/null || true
+
+  # Mask first so udev cannot restart instances during the teardown window.
+  echo "-- masking units so udev cannot restart them"
+  $SUDO systemctl mask "$USB_UNIT" "$TAP_UNIT"
+  $SUDO systemctl daemon-reload
+
+  echo "-- stopping running units"
+  mapfile -t units < <(systemctl list-units 'easytether-usb@*' "$TAP_UNIT" \
+    --all --no-legend --plain --no-pager 2>/dev/null \
+    | awk '$1 != "easytether-usb@.service" {print $1}')
+  if [ "${#units[@]}" -gt 0 ]; then
+    $SUDO systemctl stop "${units[@]}" 2>/dev/null || true
+  fi
+
+  echo "-- killing any leftover easytether-usb processes"
+  $SUDO pkill -f '(^|/)easytether-usb( |$)' 2>/dev/null || true
+
+  echo "-- removing tap interface if present"
+  $SUDO ip link delete tap-easytether 2>/dev/null || true
+
+  echo "-- reloading udev rules"
+  $SUDO udevadm control --reload-rules
+  # Drain any already-queued udev events so they are processed under the new
+  # (masked) ruleset rather than the old one.
+  $SUDO udevadm settle --timeout=5 2>/dev/null || true
+
+  echo ">> Done. EasyTether USB fully disabled."
+}
+
+main() {
+  need_sudo
+  local force="${1:-}"
+  case "$force" in
+    on|enable|up)     enable_tether ;;
+    off|disable|down) disable_tether ;;
+    "")
+      if is_installed && ! is_masked; then
+        disable_tether
+      else
+        enable_tether
+      fi
+      ;;
+    *)
+      echo "usage: $(basename "$0") [on|off]" >&2
+      exit 2
+      ;;
+  esac
+}
+
+main "$@"

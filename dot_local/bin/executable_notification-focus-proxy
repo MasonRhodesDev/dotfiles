@@ -154,12 +154,26 @@ def main() -> int:
                 notif_id = _first_uint32(body_lines)
                 log.debug("ActionInvoked id=%s active=%s", notif_id, list(active.keys()))
                 if notif_id in active:
-                    _fire_focus(active[notif_id])
+                    _fire_focus(active.pop(notif_id))
 
             elif kind == "signal" and interface == "org.freedesktop.Notifications" and member == "NotificationClosed":
-                notif_id = _first_uint32(body_lines)
-                if notif_id is not None:
-                    active.pop(notif_id, None)
+                # Many apps (Slack, Discord, …) don't attach a "default" action
+                # to their notifications, so clicking the body emits only
+                # NotificationClosed(reason=2) — no ActionInvoked. Treat that
+                # like a click if we haven't already fired focus for this id.
+                # reason codes: 1=expired, 2=dismissed by user, 3=CloseNotification,
+                # 4=undefined.
+                ids = [int(m.group(1)) for line in body_lines
+                       for m in [UINT32_RE.match(line)] if m]
+                notif_id = ids[0] if ids else None
+                reason = ids[1] if len(ids) > 1 else None
+                log.debug("NotificationClosed id=%s reason=%s tracked=%s",
+                          notif_id, reason, notif_id in active)
+                if notif_id in active:
+                    if reason == 2:
+                        _fire_focus(active.pop(notif_id))
+                    else:
+                        active.pop(notif_id, None)
 
         except Exception:
             log.exception("error handling message")
