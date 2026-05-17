@@ -1,5 +1,5 @@
 PATH="$HOME/.local/bin:$PATH"
-export npm_config_prefix="$HOME/.local"
+export npm_config_prefix="$HOME/.npm-global"
 . "$HOME/.cargo/env"
 
 # Session env vars (GNOME Keyring bucket: service=session-env). Loaded here
