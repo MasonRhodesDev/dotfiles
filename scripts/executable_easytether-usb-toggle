@@ -4,7 +4,21 @@
 # devices / networking when not actively tethering.
 set -euo pipefail
 
-RPM_PATH="${EASYTETHER_RPM:-/home/mason/Downloads/easytether-0.8.9-3.fc31.x86_64.rpm}"
+SCRIPT_DIR="$(cd "$(dirname "$(realpath "$0")")" && pwd)"
+PKG_PATH="$(compgen -G "$SCRIPT_DIR/easytether-*" 2>/dev/null | grep -E '\.(rpm|pkg\.tar\.(xz|zst))$' | head -n1 || true)"
+
+# Detect distro and set installer + download URL accordingly
+if command -v pacman &>/dev/null; then
+  PKG_URL="http://www.mobile-stream.com/beta/arch/easytether-0.8.9-1-x86_64.pkg.tar.xz"
+  install_cmd() { $SUDO pacman -U --noconfirm "$PKG_PATH"; }
+  is_installed() { pacman -Q easytether &>/dev/null; }
+elif command -v dnf &>/dev/null; then
+  PKG_URL="http://www.mobile-stream.com/beta/fedora/easytether-0.8.9-3.fc31.x86_64.rpm"
+  install_cmd() { $SUDO dnf install -y "$PKG_PATH"; }
+  is_installed() { rpm -q easytether &>/dev/null; }
+else
+  echo "unsupported distro: no pacman or dnf found" >&2; exit 1
+fi
 USB_UNIT="easytether-usb@.service"
 TAP_UNIT="tap-easytether.service"
 NM_CONN="tap-easytether"
@@ -13,9 +27,7 @@ need_sudo() {
   if [ "$(id -u)" -ne 0 ]; then SUDO=sudo; else SUDO=; fi
 }
 
-is_installed() { rpm -q easytether &>/dev/null; }
-
-is_masked() {
+is_masked_units() {
   local s1 s2
   s1=$(systemctl is-enabled "$USB_UNIT" 2>/dev/null || true)
   s2=$(systemctl is-enabled "$TAP_UNIT" 2>/dev/null || true)
@@ -24,13 +36,14 @@ is_masked() {
 
 install_pkg() {
   if is_installed; then return; fi
-  if [ ! -f "$RPM_PATH" ]; then
-    echo "easytether not installed and rpm not found at $RPM_PATH" >&2
-    echo "Set EASYTETHER_RPM=/path/to/easytether-*.rpm and retry." >&2
-    exit 1
+  if [ ! -f "$PKG_PATH" ]; then
+    echo "easytether not installed and no package found in $SCRIPT_DIR" >&2
+    echo "-- downloading from $PKG_URL ..."
+    PKG_PATH="$SCRIPT_DIR/$(basename "$PKG_URL")"
+    curl -fL "$PKG_URL" -o "$PKG_PATH" || { echo "download failed" >&2; exit 1; }
   fi
-  echo "Installing $RPM_PATH ..."
-  $SUDO dnf install -y "$RPM_PATH"
+  echo "Installing $PKG_PATH ..."
+  install_cmd
 }
 
 enable_tether() {
@@ -115,7 +128,7 @@ main() {
     on|enable|up)     enable_tether ;;
     off|disable|down) disable_tether ;;
     "")
-      if is_installed && ! is_masked; then
+      if is_installed && ! is_masked_units; then
         disable_tether
       else
         enable_tether
