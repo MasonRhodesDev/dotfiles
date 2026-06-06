@@ -77,7 +77,9 @@ windowrule = match:class ^(steam_app_\d+)$, immediate on, opacity 1.0 override, 
 windowrule = match:class ^(gamescope)$, pin off
 windowrule = match:title ^(Godot)$, immediate on, opacity 1.0 override, no_blur on, idle_inhibit always, pin off
 
-# Minecraft (standalone launcher, not steam_app_*)
+# Minecraft (Prism Launcher; sets its own class instead of steam_app_*.
+# bp-game-focus.py tracks it via Steam process ancestry)
+windowrule = match:class ^(Minecraft.*)$, workspace 7 silent, no_initial_focus on, focus_on_activate off
 windowrule = match:class ^(Minecraft.*)$, pin off, immediate on, idle_inhibit always
 {{ end }}
 
