@@ -36,7 +36,11 @@ exec-once = uwsm app -- slack
 {{ end }}
 
 {{ if not .is_work }}
-exec-once = uwsm app -- steam
+# -cef-force-glx: avoid CEF EGL init failure on XWayland that makes Steam
+# disable GPU accel for web views ("runtime detect") -> laggy Big Picture/overlay
+exec-once = uwsm app -- steam -cef-force-glx
 exec-once = uwsm app -- discord
+# Big Picture / game focus state machine + gamepad guide button handling
+exec-once = ~/.config/hypr/scripts/bp-game-focus.py
 {{ end }}
 

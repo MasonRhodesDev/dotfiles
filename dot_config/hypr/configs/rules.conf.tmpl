@@ -58,7 +58,14 @@ windowrule = match:class ^(zoom)$, match:title ^(annotate_toolbar)$, float on, s
 
 {{ if not .is_work }}
 # Game rules (personal PC only)
-# Gamescope and Steam games on workspace 7
+# Steam Big Picture: fullscreen on the game workspace. focus_on_activate off so BP
+# can't yank focus back from a game after launching it (scripts/bp-game-focus.py
+# hands focus to the game).
+windowrule = match:class ^(steam)$, match:title ^(Steam Big Picture Mode)$, workspace 7, fullscreen on, focus_on_activate off
+
+# Gamescope and Steam games on workspace 7 without stealing focus, so desktop-mode
+# launches load in the background. scripts/bp-game-focus.py steals focus for them
+# only when Big Picture is the active window.
 workspace = 7, border:false, rounding:false
 windowrule = match:class ^(gamescope)$, workspace 7 silent, no_initial_focus on, focus_on_activate off
 windowrule = match:class ^(steam_app_\d+)$, workspace 7 silent, no_initial_focus on, focus_on_activate off
