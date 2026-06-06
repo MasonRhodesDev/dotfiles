@@ -63,9 +63,42 @@ def active_window() -> dict:
     return json.loads(out) if out.startswith("{") else {}
 
 
-def is_game(cls: str, title: str) -> bool:
-    """Same window set as the game rules in rules.conf."""
-    return cls.startswith("steam_app_") or cls == "gamescope" or title == "Godot"
+LAUNCHER_CLASSES = {"org.prismlauncher.PrismLauncher"}  # Steam-launched, but not games
+
+
+def window_pid(addr: str) -> int | None:
+    return next((c["pid"] for c in clients() if c["address"] == addr), None)
+
+
+def under_steam_launch(pid: int | None) -> bool:
+    """True if the process hangs off Steam's `reaper SteamLaunch AppId=N`
+    wrapper — i.e. Steam launched it (Steam game or non-Steam shortcut).
+    Steam's own UI (steamwebhelper etc.) is a child of steam but never of
+    reaper, so it never matches."""
+    for _ in range(40):  # ancestry depth guard
+        if not pid or pid <= 1:
+            return False
+        try:
+            with open(f"/proc/{pid}/cmdline", "rb") as f:
+                if b"SteamLaunch" in f.read():
+                    return True
+            with open(f"/proc/{pid}/stat") as f:
+                stat = f.read()
+        except OSError:  # process exited mid-walk
+            return False
+        pid = int(stat.rpartition(")")[2].split()[1])  # ppid
+    return False
+
+
+def is_game(cls: str, title: str, pid: int | None = None) -> bool:
+    """Class/title set from the game rules in rules.conf, plus anything whose
+    process tree hangs off Steam's launch reaper (catches native games that
+    set their own window class, e.g. Minecraft via Prism)."""
+    if cls in LAUNCHER_CLASSES or cls == "steam":
+        return False
+    if cls.startswith("steam_app_") or cls == "gamescope" or title == "Godot":
+        return True
+    return under_steam_launch(pid)
 
 
 class SteamSession:
@@ -85,7 +118,7 @@ class SteamSession:
         for c in clients():
             if c["class"] == "steam" and c["title"] == BP_TITLE:
                 self.bp_addr = c["address"]
-            elif is_game(c["class"], c["title"]):
+            elif is_game(c["class"], c["title"], c["pid"]):
                 self.games[c["address"]] = c["class"]
         self.on_active(active_window().get("address"))
         log(f"resync: state={self.state} bp={self.bp_addr} games={list(self.games)}")
@@ -96,7 +129,7 @@ class SteamSession:
         if cls == "steam" and title == BP_TITLE:
             self.bp_addr = addr  # rules.conf already fullscreens it on ws 7
             log(f"BP opened: {addr}")
-        elif is_game(cls, title):
+        elif is_game(cls, title, window_pid(addr)):
             self.games[addr] = cls
             if self.state in (self.BP, self.GAME):
                 log(f"game {cls} opened in {self.state} -> steal focus")
