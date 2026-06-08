@@ -63,6 +63,24 @@ def active_window() -> dict:
     return json.loads(out) if out.startswith("{") else {}
 
 
+def window_workspace(addr: str) -> str | None:
+    return next(
+        (c["workspace"]["name"] for c in clients() if c["address"] == addr), None
+    )
+
+
+def close_special_except(keep: str | None) -> None:
+    """Toggle off any special workspace shown on a monitor, except `keep`.
+    focuswindow switches the base workspace under the target but leaves a
+    special overlay (e.g. special:magic) toggled on top — close it so guiding
+    to a game/BP on a regular workspace actually leaves the special workspace."""
+    for mon in json.loads(hyprctl("monitors", "-j") or "[]"):
+        name = mon.get("specialWorkspace", {}).get("name", "")
+        if name and name != keep:
+            log(f"closing special workspace {name}")
+            hyprctl("dispatch", "togglespecialworkspace", name.removeprefix("special:"))
+
+
 LAUNCHER_CLASSES = {"org.prismlauncher.PrismLauncher"}  # Steam-launched, but not games
 
 
@@ -173,6 +191,7 @@ class SteamSession:
         elif self.bp_addr:
             log("guide -> focus Big Picture")
             hyprctl("dispatch", "focuswindow", f"address:{self.bp_addr}")
+            close_special_except(window_workspace(self.bp_addr))
         else:
             steam = next((c for c in clients() if c["class"] == "steam"), None)
             if steam:
@@ -190,6 +209,7 @@ class SteamSession:
 
     async def focus_fullscreen(self, addr: str) -> None:
         hyprctl("dispatch", "focuswindow", f"address:{addr}")
+        close_special_except(window_workspace(addr))
         await asyncio.sleep(FULLSCREEN_GRACE)
         aw = active_window()
         if aw.get("address") == addr and aw.get("fullscreen") != 2:
