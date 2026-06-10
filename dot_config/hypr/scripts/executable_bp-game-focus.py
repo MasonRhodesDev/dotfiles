@@ -236,10 +236,12 @@ class SteamSession:
         prev = self.state
         if addr and addr == self.bp_addr:
             self.state = self.BP
-            # Deliberately NOT re-fullscreening here: rules.conf fullscreens BP
-            # at map time, and re-asserting on every focus is needless XWayland
-            # resize churn that can crash CEF's GPU process. on_fullscreen still
-            # re-asserts if BP actually leaves fullscreen.
+            # Re-assert fullscreen when BP regains focus (e.g. a fullscreen game
+            # exited — Hyprland allows one fullscreen per workspace, so the game
+            # had un-fullscreened BP). ensure_bp_fullscreen() is a no-op when BP
+            # is already fullscreen, so this only fires when genuinely needed and
+            # isn't the rapid resize churn that crashes CEF's GPU process.
+            self.ensure_bp_fullscreen()
         elif addr in self.games:
             self.state = self.GAME
         else:
