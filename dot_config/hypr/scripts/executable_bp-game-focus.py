@@ -40,6 +40,7 @@ BP_TITLE = "Steam Big Picture Mode"
 BTN_MODE = evdev.ecodes.BTN_MODE  # 316: Xbox guide / PS button
 GUIDE_COOLDOWN = 0.4  # s; dedups physical + Steam-virtual-pad double reports
 FULLSCREEN_GRACE = 0.3  # s; let a game self-fullscreen before we force it
+BP_LAUNCH_TIMEOUT = 20.0  # s; window in which a freshly launched BP gets focused
 
 _log_file = open(LOG_PATH, "w", buffering=1)
 
@@ -127,6 +128,7 @@ class SteamSession:
         self.bp_addr: str | None = None
         self.games: dict[str, str] = {}  # addr -> class, newest last
         self._last_guide = 0.0
+        self._pending_bp = 0.0  # monotonic time of a guide-triggered BP launch
         self.resync()
 
     def resync(self) -> None:
@@ -147,6 +149,10 @@ class SteamSession:
         if cls == "steam" and title == BP_TITLE:
             self.bp_addr = addr  # rules.conf already fullscreens it on ws 7
             log(f"BP opened: {addr}")
+            if time.monotonic() - self._pending_bp < BP_LAUNCH_TIMEOUT:
+                self._pending_bp = 0.0
+                log("guide-launched BP -> focus + close special")
+                asyncio.create_task(self.focus_bp(addr))
         elif is_game(cls, title, window_pid(addr)):
             self.games[addr] = cls
             if self.state in (self.BP, self.GAME):
@@ -190,22 +196,35 @@ class SteamSession:
             asyncio.create_task(self.focus_fullscreen(addr))
         elif self.bp_addr:
             log("guide -> focus Big Picture")
-            hyprctl("dispatch", "focuswindow", f"address:{self.bp_addr}")
-            close_special_except(window_workspace(self.bp_addr))
+            asyncio.create_task(self.focus_bp(self.bp_addr))
         else:
-            steam = next((c for c in clients() if c["class"] == "steam"), None)
-            if steam:
-                log("guide -> focus Steam desktop window")
-                hyprctl("dispatch", "focuswindow", f"address:{steam['address']}")
-            else:
-                log("guide -> no Steam window, launching Big Picture")
-                subprocess.Popen(
-                    ["uwsm", "app", "--", "steam", "steam://open/bigpicture"],
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                )
+            # No game, no BP window. Open Big Picture — never fall back to the
+            # desktop Steam window (it lives on special:magic, so focusing it
+            # would yank us onto the special workspace, the opposite of intent).
+            # steam://open/bigpicture switches a running Steam into BP, or
+            # starts Steam straight into it. on_open focuses it when it appears.
+            log("guide -> launching Big Picture")
+            self._pending_bp = now
+            subprocess.Popen(
+                ["uwsm", "app", "--", "steam", "steam://open/bigpicture"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
 
     # --- actions -----------------------------------------------------------
+
+    async def focus_bp(self, addr: str) -> None:
+        # A freshly launched BP window isn't always mappable the instant the
+        # openwindow event fires; a short grace lets focuswindow land. Retry
+        # once in case the first dispatch raced the map.
+        for delay in (0.0, 0.3):
+            if delay:
+                await asyncio.sleep(delay)
+            hyprctl("dispatch", "focuswindow", f"address:{addr}")
+            if active_window().get("address") == addr:
+                break
+        close_special_except(window_workspace(addr))
+        self.ensure_bp_fullscreen()
 
     async def focus_fullscreen(self, addr: str) -> None:
         hyprctl("dispatch", "focuswindow", f"address:{addr}")
