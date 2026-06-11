@@ -30,11 +30,10 @@ Single branch `main`. Chezmoi auto-commits and auto-pushes via git (`autoCommit=
 
 ## Directory Structure
 
-- `software_installers/` - System setup scripts (`executable_0[3-4]_*.sh`)
-- `scripts/` - Management utilities
-- `scripts/hyprland-theme-toggle/` - Theme switching (`executable_theme-toggle-modular.sh [light|dark]`)
+- `software_installers/packages.toml` - Declarative package registry (repo-only, see docs/SOFTWARE-INSTALLERS.md)
+- `scripts/` - Management utilities (deployed to `~/scripts/`)
 - `dot_config/` → `~/.config/`
-- `lua/user/` - Neovim config (lazy.nvim)
+- Theme switching: `lmtt switch light|dark|toggle` (external tool, see docs/THEME-SYSTEM.md)
 
 ## Template Variables
 
