@@ -5,6 +5,13 @@
 {{- $hostname := .chezmoi.hostname -}}
 {{- $staticHostname := output "sh" "-c" "cat /etc/hostname 2>/dev/null || true" | trim -}}
 {{- if $staticHostname }}{{ $hostname = $staticHostname }}{{ end -}}
+
+{{/* Machine role is DECLARED, not inferred: asked once on the first
+     `chezmoi init` on a new machine, then persisted in the rendered config
+     and reused on every re-init. Hostname only seeds the first-run default.
+     Non-interactive bootstrap:
+       chezmoi init --promptBool "Is this a work machine"=true */}}
+{{- $is_work := promptBoolOnce . "is_work" "Is this a work machine" (eq $hostname "mason-work") -}}
 [edit]
     command="nvim"
 [merge]
@@ -14,12 +21,12 @@
     autoCommit = true
     autoPush = true
 [data]
-    wallpaper = {{ if eq $hostname "mason-work" }}"/home/mason/Pictures/forrest.png"{{ else }}"/home/mason/Pictures/landscape.png"{{ end }}
-    is_work = {{ if eq $hostname "mason-work" }}true{{ else }}false{{ end }}
+    wallpaper = {{ if $is_work }}"/home/mason/Pictures/forrest.png"{{ else }}"/home/mason/Pictures/landscape.png"{{ end }}
+    is_work = {{ $is_work }}
 
 # Profile configuration
 [data.profile]
-    type = {{ if eq $hostname "mason-work" }}"work"{{ else }}"personal"{{ end }}
+    type = {{ if $is_work }}"work"{{ else }}"personal"{{ end }}
 
 # System tracking - updated on each chezmoi apply
 [data.system]
@@ -43,4 +50,4 @@
     name = {{ $bwIdentity := dict }}{{ if lookPath "rbw" }}{{ $bwJson := output "sh" "-c" "~/.local/bin/rbw-fetch-identity 2>/dev/null || echo '{}'" | trim }}{{ if ne $bwJson "{}" }}{{ $bwIdentity = $bwJson | fromJson }}{{ end }}{{ end }}{{ if and (hasKey $bwIdentity "name") (ne (get $bwIdentity "name") "") }}{{ get $bwIdentity "name" | quote }}{{ else }}"User Name"{{ end }}
     email_work = {{ $bwIdentity := dict }}{{ if lookPath "rbw" }}{{ $bwJson := output "sh" "-c" "~/.local/bin/rbw-fetch-identity 2>/dev/null || echo '{}'" | trim }}{{ if ne $bwJson "{}" }}{{ $bwIdentity = $bwJson | fromJson }}{{ end }}{{ end }}{{ if and (hasKey $bwIdentity "email_work") (ne (get $bwIdentity "email_work") "") }}{{ get $bwIdentity "email_work" | quote }}{{ else }}"work@example.com"{{ end }}
     email_personal = {{ $bwIdentity := dict }}{{ if lookPath "rbw" }}{{ $bwJson := output "sh" "-c" "~/.local/bin/rbw-fetch-identity 2>/dev/null || echo '{}'" | trim }}{{ if ne $bwJson "{}" }}{{ $bwIdentity = $bwJson | fromJson }}{{ end }}{{ end }}{{ if and (hasKey $bwIdentity "email_personal") (ne (get $bwIdentity "email_personal") "") }}{{ get $bwIdentity "email_personal" | quote }}{{ else }}"user@example.com"{{ end }}
-    email = {{ $bwIdentity := dict }}{{ if lookPath "rbw" }}{{ $bwJson := output "sh" "-c" "~/.local/bin/rbw-fetch-identity 2>/dev/null || echo '{}'" | trim }}{{ if ne $bwJson "{}" }}{{ $bwIdentity = $bwJson | fromJson }}{{ end }}{{ end }}{{ if eq $hostname "mason-work" }}{{ if and (hasKey $bwIdentity "email_work") (ne (get $bwIdentity "email_work") "") }}{{ get $bwIdentity "email_work" | quote }}{{ else }}"work@example.com"{{ end }}{{ else }}{{ if and (hasKey $bwIdentity "email_personal") (ne (get $bwIdentity "email_personal") "") }}{{ get $bwIdentity "email_personal" | quote }}{{ else }}"user@example.com"{{ end }}{{ end }}
+    email = {{ $bwIdentity := dict }}{{ if lookPath "rbw" }}{{ $bwJson := output "sh" "-c" "~/.local/bin/rbw-fetch-identity 2>/dev/null || echo '{}'" | trim }}{{ if ne $bwJson "{}" }}{{ $bwIdentity = $bwJson | fromJson }}{{ end }}{{ end }}{{ if $is_work }}{{ if and (hasKey $bwIdentity "email_work") (ne (get $bwIdentity "email_work") "") }}{{ get $bwIdentity "email_work" | quote }}{{ else }}"work@example.com"{{ end }}{{ else }}{{ if and (hasKey $bwIdentity "email_personal") (ne (get $bwIdentity "email_personal") "") }}{{ get $bwIdentity "email_personal" | quote }}{{ else }}"user@example.com"{{ end }}{{ end }}
