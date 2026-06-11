@@ -26,6 +26,10 @@ tests/
 AGENTS.md
 CLAUDE.md
 
+# Repo documentation (stays in repo, not deployed to home)
+README.md
+docs/
+
 # Beads issue tracking (stays in repo, not applied to home)
 .beads/
 
