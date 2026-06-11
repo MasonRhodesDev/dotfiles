@@ -1,3 +1,0 @@
-#!/bin/bash
-sudo modprobe -r uvcvideo
-sudo modprobe uvcvideo

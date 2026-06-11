@@ -32,7 +32,7 @@
 - `Ctrl` (hold) - Center shapes from start point
 
 ## 🔥 **Workflow Tips:**
-1. Take screenshot with `snip-swappy`
+1. Take screenshot with `snip`
 2. Draw your annotations
 3. **`Ctrl+C`** to copy AND quit ⭐
 4. Done! 🎯
