@@ -39,6 +39,15 @@ version = "latest"
 github = "https://gitlab.gnome.org/GNOME/gnome-keyring"
 verify = "command -v gnome-keyring-daemon"
 
+[seahorse]
+description = "GUI for the GNOME keyring (inspect/unlock collections, manage stored secrets)"
+profile = "common"
+priority = 3
+version = "latest"
+github = "https://gitlab.gnome.org/GNOME/seahorse"
+depends_on = ["gnome_keyring"]
+verify = "command -v seahorse"
+
 [terminal]
 description = "Terminal emulators and shell: wezterm, tmux, fish"
 profile = "common"
