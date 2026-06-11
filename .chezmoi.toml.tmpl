@@ -41,13 +41,29 @@
 [data.tracking]
     manifest_file = ".system_manifest.json"
 
-# Bitwarden Integration via rbw with Agent Model and Caching
-[data.bitwarden]
-    available = {{ if lookPath "rbw" }}true{{ else }}false{{ end }}
-    source = {{ $bwIdentity := dict }}{{ if lookPath "rbw" }}{{ $bwJson := output "sh" "-c" "~/.local/bin/rbw-fetch-identity 2>/dev/null || echo '{}'" | trim }}{{ if ne $bwJson "{}" }}{{ $bwIdentity = $bwJson | fromJson }}{{ if and (hasKey $bwIdentity "name") (ne (get $bwIdentity "name") "") }}"bitwarden"{{ else }}"hardcoded"{{ end }}{{ else }}"hardcoded"{{ end }}{{ else }}"hardcoded"{{ end }}
+{{/* Identity: prompted ONCE per machine (like is_work) and persisted in this
+     config — real values never live in the public repo. Resolution per field:
+       1. CHEZMOI_IDENTITY_* env var (refresh path: chezmoi-refresh-identity
+          exports fresh values from Bitwarden and re-runs init)
+       2. value already stored in this config (promptStringOnce reuse)
+       3. interactive prompt, default seeded from the Bitwarden `chezmoi-data`
+          note when rbw is installed (rbw pops pinentry to unlock if needed;
+          locked/cancelled/absent -> empty seed, you just type the value)
+     Normal `chezmoi apply` never touches rbw at all. */}}
+{{- $seedName := "" -}}{{- $seedWork := "" -}}{{- $seedPersonal := "" -}}
+{{- if and (lookPath "rbw") (not (hasKey . "identity")) (not (env "CHEZMOI_IDENTITY_NAME")) -}}
+{{-   $seedName = output "sh" "-c" "timeout 60 rbw get --field name chezmoi-data 2>/dev/null || true" | trim -}}
+{{-   if $seedName -}}
+{{-     $seedWork = output "sh" "-c" "timeout 10 rbw get --field email_work chezmoi-data 2>/dev/null || true" | trim -}}
+{{-     $seedPersonal = output "sh" "-c" "timeout 10 rbw get --field email_personal chezmoi-data 2>/dev/null || true" | trim -}}
+{{-   end -}}
+{{- end -}}
+{{- $name := or (env "CHEZMOI_IDENTITY_NAME") (promptStringOnce . "identity.name" "Full name (git author)" $seedName) -}}
+{{- $emailWork := or (env "CHEZMOI_IDENTITY_EMAIL_WORK") (promptStringOnce . "identity.email_work" "Work email" $seedWork) -}}
+{{- $emailPersonal := or (env "CHEZMOI_IDENTITY_EMAIL_PERSONAL") (promptStringOnce . "identity.email_personal" "Personal email" $seedPersonal) -}}
 
 [data.identity]
-    name = {{ $bwIdentity := dict }}{{ if lookPath "rbw" }}{{ $bwJson := output "sh" "-c" "~/.local/bin/rbw-fetch-identity 2>/dev/null || echo '{}'" | trim }}{{ if ne $bwJson "{}" }}{{ $bwIdentity = $bwJson | fromJson }}{{ end }}{{ end }}{{ if and (hasKey $bwIdentity "name") (ne (get $bwIdentity "name") "") }}{{ get $bwIdentity "name" | quote }}{{ else }}"User Name"{{ end }}
-    email_work = {{ $bwIdentity := dict }}{{ if lookPath "rbw" }}{{ $bwJson := output "sh" "-c" "~/.local/bin/rbw-fetch-identity 2>/dev/null || echo '{}'" | trim }}{{ if ne $bwJson "{}" }}{{ $bwIdentity = $bwJson | fromJson }}{{ end }}{{ end }}{{ if and (hasKey $bwIdentity "email_work") (ne (get $bwIdentity "email_work") "") }}{{ get $bwIdentity "email_work" | quote }}{{ else }}"work@example.com"{{ end }}
-    email_personal = {{ $bwIdentity := dict }}{{ if lookPath "rbw" }}{{ $bwJson := output "sh" "-c" "~/.local/bin/rbw-fetch-identity 2>/dev/null || echo '{}'" | trim }}{{ if ne $bwJson "{}" }}{{ $bwIdentity = $bwJson | fromJson }}{{ end }}{{ end }}{{ if and (hasKey $bwIdentity "email_personal") (ne (get $bwIdentity "email_personal") "") }}{{ get $bwIdentity "email_personal" | quote }}{{ else }}"user@example.com"{{ end }}
-    email = {{ $bwIdentity := dict }}{{ if lookPath "rbw" }}{{ $bwJson := output "sh" "-c" "~/.local/bin/rbw-fetch-identity 2>/dev/null || echo '{}'" | trim }}{{ if ne $bwJson "{}" }}{{ $bwIdentity = $bwJson | fromJson }}{{ end }}{{ end }}{{ if $is_work }}{{ if and (hasKey $bwIdentity "email_work") (ne (get $bwIdentity "email_work") "") }}{{ get $bwIdentity "email_work" | quote }}{{ else }}"work@example.com"{{ end }}{{ else }}{{ if and (hasKey $bwIdentity "email_personal") (ne (get $bwIdentity "email_personal") "") }}{{ get $bwIdentity "email_personal" | quote }}{{ else }}"user@example.com"{{ end }}{{ end }}
+    name = {{ $name | quote }}
+    email_work = {{ $emailWork | quote }}
+    email_personal = {{ $emailPersonal | quote }}
+    email = {{ if $is_work }}{{ $emailWork | quote }}{{ else }}{{ $emailPersonal | quote }}{{ end }}
