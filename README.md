@@ -19,17 +19,9 @@ A comprehensive dotfiles repository for Hyprland/Wayland desktop environments on
 # Install chezmoi
 sh -c "$(curl -fsLS get.chezmoi.io)"
 
-# Initialize and apply dotfiles
+# Initialize and apply dotfiles (run_once scripts handle setup: fonts,
+# shell, jq, hyprstate, etc.)
 chezmoi init --apply https://github.com/MasonRhodesDev/dotfiles.git
-
-# Run automated software installation
-for script in ~/.local/share/chezmoi/software_installers/executable_*.sh; do
-    [ -x "$script" ] && "$script"
-done
-
-# Enable chezmoi daemon for auto-sync
-systemctl --user enable chezmoi-daemon.timer
-systemctl --user start chezmoi-daemon.timer
 ```
 
 ### Existing Machine
@@ -49,7 +41,6 @@ chezmoi apply
 
 ```
 .
-├── chezmoi-daemon/           # Background sync service
 ├── dot_config/              # ~/.config applications
 │   ├── hypr/               # Hyprland compositor config
 │   ├── nvim/               # Neovim configuration
@@ -154,9 +145,6 @@ chezmoi status
 
 # See what would be applied
 chezmoi diff
-
-# Monitor real-time changes (daemon)
-systemctl --user status chezmoi-daemon
 ```
 
 ## 📚 Documentation
