@@ -1,0 +1,26 @@
+#!/bin/bash
+# Elective pre-push manifest drift check via Claude haiku.
+
+[ ! -t 0 ] && exit 0
+
+COOLDOWN_FILE="$HOME/.local/state/chezmoi-installs/last-check-prompt"
+COOLDOWN_SECS=3600
+
+# Check cooldown — don't ask more than once per hour
+if [ -f "$COOLDOWN_FILE" ]; then
+    last=$(cat "$COOLDOWN_FILE")
+    now=$(date +%s)
+    if [ $((now - last)) -lt $COOLDOWN_SECS ]; then
+        exit 0
+    fi
+fi
+
+echo ""
+echo "Run manifest drift check? [y/N]"
+read -r -t 120 response < /dev/tty || response=""
+mkdir -p "$(dirname "$COOLDOWN_FILE")"
+date +%s > "$COOLDOWN_FILE"
+
+[[ "$response" =~ ^[Yy]$ ]] || exit 0
+
+python3 "$HOME/.local/share/chezmoi/scripts/executable_chezmoi-package-check.py"

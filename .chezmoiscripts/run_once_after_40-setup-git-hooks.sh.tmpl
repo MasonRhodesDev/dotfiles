@@ -1,0 +1,27 @@
+#!/bin/bash
+# Wire repo-tracked git hooks (.githooks/) and install gitleaks.
+# The pre-commit hook blocks secrets from being committed — critical since
+# this repo is public and chezmoi autoPushes every commit.
+set -euo pipefail
+
+SOURCE_DIR="{{ .chezmoi.sourceDir }}"
+
+git -C "$SOURCE_DIR" config core.hooksPath .githooks
+echo "git hooks: core.hooksPath -> .githooks"
+
+if command -v gitleaks >/dev/null 2>&1; then
+    echo "gitleaks: already installed ($(gitleaks version))"
+    exit 0
+fi
+
+echo "gitleaks: installing latest release to ~/.local/bin ..."
+ver=$(curl -fsSL https://api.github.com/repos/gitleaks/gitleaks/releases/latest \
+    | python3 -c "import json,sys; print(json.load(sys.stdin)['tag_name'])")
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+curl -fsSL -o "$tmp/gitleaks.tar.gz" \
+    "https://github.com/gitleaks/gitleaks/releases/download/${ver}/gitleaks_${ver#v}_linux_x64.tar.gz"
+tar -xzf "$tmp/gitleaks.tar.gz" -C "$tmp" gitleaks
+mkdir -p "$HOME/.local/bin"
+install -m 755 "$tmp/gitleaks" "$HOME/.local/bin/gitleaks"
+echo "gitleaks: installed $ver"

@@ -1,0 +1,17 @@
+# Gitleaks config for the dotfiles repo.
+# The pre-commit hook (.githooks/pre-commit) blocks commits containing
+# secrets — critical because this repo is public and chezmoi autoPushes.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Known false positives"
+paths = [
+  # Work documentation templates contain illustrative curl examples with
+  # placeholder tokens (<token>, truncated eyJh... JWTs) — verified not real.
+  '''dot_claude/templates/.*\.md''',
+  # Deleted local e2e test-VM images used a throwaway ssh test password;
+  # only relevant for full-history scans.
+  '''e2e-testing/infrastructure/packer/.*\.pkr\.hcl''',
+]
