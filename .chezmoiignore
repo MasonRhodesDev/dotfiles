@@ -48,3 +48,19 @@ CLAUDE.md
 {{ if not .is_work }}
 .claude/templates
 {{ end }}
+
+# App-owned settings: Claude Code and Zed rewrite these constantly (model
+# changes, plugin toggles, panel layout), so managing them is perpetual drift.
+.claude/settings.json
+.config/zed/settings.json
+
+# Gaming/Steam: personal machines only. The bp-game-focus.service unit is
+# already gated inside its template; these gate the rest.
+{{ if .is_work }}
+.config/hypr/profiles/lg-tv.conf
+.config/hypr/scripts/bp-game-focus.py
+.config/hypr/scripts/steam-clean-shutdown.sh
+.config/systemd/user/app-.scope.d
+.config/systemd/user/app-.scope.d/**
+.config/systemd/user/steam-clean-shutdown.service
+{{ end }}
