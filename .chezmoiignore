@@ -83,3 +83,6 @@ docs/
 .local/share/applications/slack.desktop
 .local/share/applications/clickup-icon.png
 {{ end }}
+
+# Fresh-machine bootstrap (run from curl, stays in repo)
+bootstrap.sh

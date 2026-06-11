@@ -10,14 +10,18 @@ declarative package registry audited by Claude.
 
 ### Fresh Installation
 
-```bash
-# Install chezmoi
-sh -c "$(curl -fsLS get.chezmoi.io)"
+One command on a virgin machine (installs git/jq/rbw/chezmoi via the package
+manager, walks through Bitwarden login so identity prompts are pre-seeded,
+then runs `chezmoi init --apply`):
 
-# Initialize and apply dotfiles (run_once scripts handle setup: fonts,
-# shell, jq, hyprstate, etc.)
-chezmoi init --apply https://github.com/MasonRhodesDev/dotfiles.git
+```bash
+sh -c "$(curl -fsLS https://raw.githubusercontent.com/MasonRhodesDev/dotfiles/main/bootstrap.sh)"
 ```
+
+Identity (git author name/emails) is prompted once per machine and persisted
+in `~/.config/chezmoi/chezmoi.toml` — like `is_work`, it is never stored in
+this public repo. If the values change in Bitwarden later, run
+`chezmoi-refresh-identity`.
 
 ### Existing Machine
 
