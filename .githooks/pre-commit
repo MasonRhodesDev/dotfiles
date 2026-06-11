@@ -1,0 +1,22 @@
+#!/bin/bash
+# Block commits containing secrets. This repo is PUBLIC and chezmoi
+# auto-pushes, so anything committed is published immediately.
+# Installed via core.hooksPath=.githooks (run_once_after_40-setup-git-hooks.sh).
+
+if ! command -v gitleaks >/dev/null 2>&1; then
+    echo "pre-commit: gitleaks not installed — secret scan SKIPPED." >&2
+    echo "  Install: see .chezmoiscripts/run_once_after_40-setup-git-hooks.sh.tmpl" >&2
+    exit 0
+fi
+
+repo_root="$(git rev-parse --show-toplevel)"
+if ! gitleaks git --staged --no-banner --redact --config "$repo_root/.gitleaks.toml" >/dev/null 2>&1; then
+    echo "" >&2
+    echo "✗ pre-commit: gitleaks found potential secrets in staged changes:" >&2
+    gitleaks git --staged --no-banner --redact --config "$repo_root/.gitleaks.toml" 2>&1 | tail -20 >&2
+    echo "" >&2
+    echo "This repo is public + auto-pushed. Remove the secret, or if it's a" >&2
+    echo "false positive add an allowlist entry to .gitleaks.toml." >&2
+    exit 1
+fi
+exit 0

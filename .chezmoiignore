@@ -30,6 +30,11 @@ CLAUDE.md
 README.md
 docs/
 
+# Repo tooling (stays in repo, not deployed to home)
+.githooks
+.githooks/**
+.gitleaks.toml
+
 # Beads issue tracking (stays in repo, not applied to home)
 .beads/
 
