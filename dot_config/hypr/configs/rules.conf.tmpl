@@ -63,23 +63,18 @@ windowrule = match:class ^(zoom)$, match:title ^(annotate_toolbar)$, float on, s
 # hands focus to the game).
 windowrule = match:class ^(steam)$, match:title ^(Steam Big Picture Mode)$, workspace 7, fullscreen on, focus_on_activate off
 
-# Gamescope and Steam games on workspace 7 without stealing focus, so desktop-mode
-# launches load in the background. scripts/bp-game-focus.py steals focus for them
-# only when Big Picture is the active window.
+# Games on workspace 7 without stealing focus, so desktop-mode launches load in
+# the background. scripts/bp-game-focus.py steals focus for them only when Big
+# Picture is the active window. One consolidated rule per matcher: workspace +
+# focus behavior + performance (immediate/no_blur/idle_inhibit) + pin off so
+# the fullscreen keybind works.
 workspace = 7, border:false, rounding:false
-windowrule = match:class ^(gamescope)$, workspace 7 silent, no_initial_focus on, focus_on_activate off
-windowrule = match:class ^(steam_app_\d+)$, workspace 7 silent, no_initial_focus on, focus_on_activate off
+windowrule = match:class ^(steam_app_\d+)$, workspace 7 silent, no_initial_focus on, focus_on_activate off, immediate on, opacity 1.0 override, no_blur on, idle_inhibit always, pin off
+windowrule = match:class ^(gamescope)$, workspace 7 silent, no_initial_focus on, focus_on_activate off, pin off
 # Godot-based Steam games (e.g. Slay the Spire 2) set their own window class instead of steam_app_*
-windowrule = match:title ^(Godot)$, workspace 7 silent, no_initial_focus on, focus_on_activate off
-
-# Steam game performance and idle inhibit - unpin so fullscreen keybind works
-windowrule = match:class ^(steam_app_\d+)$, immediate on, opacity 1.0 override, no_blur on, idle_inhibit always, pin off
-windowrule = match:class ^(gamescope)$, pin off
-windowrule = match:title ^(Godot)$, immediate on, opacity 1.0 override, no_blur on, idle_inhibit always, pin off
-
+windowrule = match:title ^(Godot)$, workspace 7 silent, no_initial_focus on, focus_on_activate off, immediate on, opacity 1.0 override, no_blur on, idle_inhibit always, pin off
 # Minecraft (Prism Launcher; sets its own class instead of steam_app_*.
 # bp-game-focus.py tracks it via Steam process ancestry)
-windowrule = match:class ^(Minecraft.*)$, workspace 7 silent, no_initial_focus on, focus_on_activate off
-windowrule = match:class ^(Minecraft.*)$, pin off, immediate on, idle_inhibit always
+windowrule = match:class ^(Minecraft.*)$, workspace 7 silent, no_initial_focus on, focus_on_activate off, immediate on, idle_inhibit always, pin off
 {{ end }}
 
