@@ -67,4 +67,14 @@ docs/
 .config/systemd/user/app-.scope.d
 .config/systemd/user/app-.scope.d/**
 .config/systemd/user/steam-clean-shutdown.service
+.config/environment.d/gaming.conf
+.local/bin/steam-set-launch-options
+.local/share/notes
+.local/share/notes/**
+{{ end }}
+
+# Work app entries (easytether stays shared — used on both machines)
+{{ if not .is_work }}
+.local/share/applications/slack.desktop
+.local/share/applications/clickup-icon.png
 {{ end }}
