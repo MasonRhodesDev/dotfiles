@@ -1,0 +1,60 @@
+name: Template render check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  render:
+    name: Render (${{ matrix.profile == 'true' && 'work' || 'personal' }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: ["true", "false"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install chezmoi
+        run: sh -c "$(curl -fsLS get.chezmoi.io)" -- -b "$HOME/.local/bin"
+
+      - name: Render config template
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          chezmoi init --source "$PWD" \
+            --promptBool "Is this a work machine"=${{ matrix.profile }}
+          echo "### Config rendered (is_work=${{ matrix.profile }})" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Render all source templates
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          # status computes the full target state, rendering every template,
+          # .chezmoiignore, and script template — any template error fails here.
+          chezmoi status --source "$PWD" > /dev/null
+          count=$(find . -name '*.tmpl' -not -path './.git/*' | wc -l)
+          echo "✅ All templates rendered cleanly ($count .tmpl files, is_work=${{ matrix.profile }})" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Verify profile gating
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          is_work=$(chezmoi data --source "$PWD" | jq -r .is_work)
+          [ "$is_work" = "${{ matrix.profile }}" ] || { echo "::error::is_work rendered '$is_work', expected '${{ matrix.profile }}'"; exit 1; }
+          echo "✅ is_work=$is_work, profile=$(chezmoi data --source "$PWD" | jq -r .profile.type)" >> "$GITHUB_STEP_SUMMARY"
+
+  gitleaks:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run gitleaks
+        run: |
+          ver=$(curl -fsSL https://api.github.com/repos/gitleaks/gitleaks/releases/latest | jq -r .tag_name)
+          curl -fsSL "https://github.com/gitleaks/gitleaks/releases/download/${ver}/gitleaks_${ver#v}_linux_x64.tar.gz" | tar xz gitleaks
+          ./gitleaks git . --no-banner --redact --config .gitleaks.toml
+          echo "✅ No secrets found in history (gitleaks ${ver})" >> "$GITHUB_STEP_SUMMARY"
