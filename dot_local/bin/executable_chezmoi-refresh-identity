@@ -1,0 +1,31 @@
+#!/bin/bash
+# Re-pull identity (name/emails) from the Bitwarden `chezmoi-data` note and
+# bake it into ~/.config/chezmoi/chezmoi.toml, then re-render dotfiles.
+#
+# Identity is normally prompted once per machine and persisted (see
+# .chezmoi.toml.tmpl) — run this only when the values changed in Bitwarden.
+# rbw pops pinentry to unlock the vault if it's locked.
+set -euo pipefail
+
+command -v rbw >/dev/null || { echo "rbw is not installed" >&2; exit 1; }
+
+echo "Fetching identity from Bitwarden (chezmoi-data)..."
+name=$(rbw get --field name chezmoi-data)
+email_work=$(rbw get --field email_work chezmoi-data)
+email_personal=$(rbw get --field email_personal chezmoi-data)
+
+[ -n "$name" ] || { echo "chezmoi-data note has no 'name' field" >&2; exit 1; }
+
+echo "  name:           $name"
+echo "  email_work:     $email_work"
+echo "  email_personal: $email_personal"
+
+# CHEZMOI_IDENTITY_* wins over the stored promptStringOnce values in the
+# config template, so init re-bakes the fresh values.
+CHEZMOI_IDENTITY_NAME="$name" \
+CHEZMOI_IDENTITY_EMAIL_WORK="$email_work" \
+CHEZMOI_IDENTITY_EMAIL_PERSONAL="$email_personal" \
+    chezmoi init
+
+chezmoi apply
+echo "Identity refreshed and dotfiles re-rendered."
