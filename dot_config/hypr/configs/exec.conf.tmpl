@@ -19,15 +19,9 @@ exec-once = lmtt switch dark
 # Notification daemon: swaync (SwayNotificationCenter) runs as a systemd user service
 # (~/.config/systemd/user/swaync.service, shipped by the package), so no exec-once needed here.
 
-# Update hyprpanel wallpaper config and launch
-#exec=sed -i "s|\"wallpaper.image\": \".*\"|\"wallpaper.image\": \"$WALLPAPER_PATH\"|" ~/.config/hyprpanel/config.json && uwsm app -- hyprpanel
-
 # Input method
 # exec-once = fcitx5
 # exec-once = /usr/libexec/ibus-ui-gtk3 --enable-wayland-im --exec-daemon --daemon-args "--xim --panel disable"
-
-exec=/home/mason/.config/hypr/configs/copy-monitor-layout-to-gdm.sh
-# exec=systemctl --user restart waybar
 
 
 {{ if .is_work }}
