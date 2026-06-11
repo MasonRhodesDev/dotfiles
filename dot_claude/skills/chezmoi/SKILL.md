@@ -5,239 +5,78 @@ description: This skill should be used whenever the user mentions "chezmoi" in a
 
 # Chezmoi Dotfiles Management
 
-## When to Use
-Use this skill when the user needs to:
-- Track configuration file changes with chezmoi
-- Compare local files with chezmoi-managed versions
-- Check chezmoi status or differences
-- Work with chezmoi templates (.tmpl files)
-- Update dotfiles repository
-
 ## CRITICAL SAFETY RULES
 
-⚠️ **NEVER use these dangerous commands without explicit user confirmation:**
-- `chezmoi apply` - Overwrites local changes with stored config (destructive!)
-- `chezmoi apply --force` - Bypasses safety checks and destroys local changes silently
-- Any command with `--force` flag
+⚠️ **NEVER run these without explicit user confirmation:**
+- `chezmoi apply` — overwrites local files with source state (destructive to local edits)
+- Anything with `--force`
 
-✅ **Safe workflow:**
-- `chezmoi add <file>` - Add local changes TO chezmoi tracking
-- `chezmoi diff` - Compare tracked config with local files
-- `chezmoi status` - Show files needing updates
+✅ Safe anytime: `chezmoi add`, `chezmoi diff`, `chezmoi status`, `chezmoi managed`, `chezmoi source-path`, `chezmoi execute-template`.
 
-## MANDATORY: Pull and Apply Workflow
+## Reading `chezmoi diff` — direction matters
 
-When the user asks to pull and apply chezmoi (or any equivalent), ALWAYS follow this sequence. **Do not skip steps.**
+`chezmoi diff` shows the patch that `chezmoi apply` WOULD make:
 
-### Step 1 — Check status
+- **`-` lines = current LOCAL file content** (destination, what you have now)
+- **`+` lines = SOURCE-rendered content** (what apply would write)
+
+So if the user edited a local file and hasn't run `chezmoi add`, their new
+edits appear on `-` lines (apply would remove them). The `-`/`+` symbols show
+direction of apply, NOT chronology. To decide which side is newer, compare
+timestamps:
+
 ```bash
-chezmoi status
+stat -c '%y %n' <local-file>; chezmoi source-path <local-file> | xargs stat -c '%y %n'
 ```
-Note any `MM` files (local changes that will be overwritten) and `DA` files (local files that will be deleted).
 
-### Step 2 — If any MM or DA files exist, run full diff BEFORE pulling
+- Local newer → user's edits should be saved to source (`chezmoi add` or edit the template)
+- Source newer → changes came from git/another machine; `chezmoi apply` (with confirmation) syncs them in
+
+When in doubt, read BOTH files directly rather than reasoning from the diff alone.
+
+## Key commands
+
 ```bash
-chezmoi diff
-```
-Show this diff to the user and **explicitly warn** which local changes will be lost. Ask for confirmation before proceeding.
-
-If there are no `MM` or `DA` files, you may proceed without confirmation.
-
-### Step 3 — Pull
-```bash
-chezmoi git pull
+chezmoi add ~/.bashrc          # save local file → source (the normal direction)
+chezmoi diff [file]            # what apply would change
+chezmoi status                 # drifted files (MM = both sides changed, A = apply would create, M = apply would modify, R = run script)
+chezmoi source-path <file>     # locate the source file (dot_*, .tmpl, executable_*, private_*)
+chezmoi execute-template < x.tmpl   # preview template rendering
+chezmoi managed | grep <name>  # is a file tracked?
 ```
 
-### Step 4 — Show what the pull changed
-```bash
-chezmoi diff
-```
-Show the user what will be applied from the pull.
+Source dir: `~/.local/share/chezmoi/`. `dot_*` → `.*`, `executable_*` → +x,
+`private_*` → restricted perms, `.tmpl` → Go template. This repo has
+`autoCommit`/`autoPush` enabled: chezmoi operations (add/forget) commit and
+push automatically, but direct edits to source files need a manual git
+commit + push.
 
-### Step 5 — Get explicit confirmation before applying
-Tell the user exactly what will be overwritten and ask them to confirm. Do not apply until confirmed.
+## Pull-and-apply workflow (MANDATORY when asked to pull/update)
 
-### Step 6 — Apply
-```bash
-chezmoi apply
-```
-Only use `--force` if chezmoi prompts interactively and cannot proceed otherwise, AND the user has already confirmed in Step 5.
+1. `chezmoi status` — note `MM` (local changes apply would overwrite) and `DA` (local files apply would delete).
+2. If any `MM`/`DA` exist: run `chezmoi diff`, show it, and **explicitly warn which local changes will be lost**. Get confirmation before continuing.
+3. `chezmoi git pull`
+4. `chezmoi diff` — show what the pull will apply.
+5. Get explicit confirmation.
+6. `chezmoi apply` (use `--force` only if chezmoi prompts interactively AND the user already confirmed).
 
-## Common Commands
+## Local changes to a managed file
 
-### Track Local Changes
-```bash
-chezmoi add ~/.config/hypr/hyprland.conf
-```
-This saves the current local file to chezmoi's source directory.
+The user has usually ALREADY made the change locally and wants it saved to
+source — do NOT suggest `chezmoi apply` (that would destroy their edit).
 
-### Check What Changed
-```bash
-chezmoi diff
-```
-Shows differences between chezmoi's tracked version and local files.
+- **Plain files:** `chezmoi add <file>`.
+- **Template (`.tmpl`) files:** edit the source template manually (`chezmoi add` would flatten it):
+  1. Read the template first — note every `{{ if }}`/`{{ range }}` conditional and `{{ .var }}` variable.
+  2. **NEVER remove template conditionals or variables** unless explicitly asked. They exist for cross-machine logic (e.g. `is_work`). If the local file differs only because of conditional logic, the local file is correct as-rendered — don't "fix" the template.
+  3. Apply the user's change in the right branch of the template, preserving whitespace exactly (use `cat -A` if trailing whitespace might matter).
+  4. Verify: `chezmoi diff <file>` should show nothing.
+- Template changes take effect from the filesystem immediately — no git commit needed for `chezmoi diff`/`apply` to see them.
 
-### Check Status
-```bash
-chezmoi status
-```
-Lists files that differ between chezmoi source and local system.
+## Pitfall checklist
 
-### Test Template Rendering
-```bash
-chezmoi execute-template < ~/.local/share/chezmoi/dot_config/example.conf.tmpl
-```
-Previews how a template will render without applying it.
-
-### Source Directory Location
-Chezmoi source files are stored in `~/.local/share/chezmoi/`
-- `dot_*` files become `.*` in home directory
-- `.tmpl` files are processed as Go templates
-
-## Workflow Pattern
-
-1. **User edits local config file** (e.g., `~/.bashrc`)
-2. **Add changes to chezmoi:** `chezmoi add ~/.bashrc`
-3. **Verify with diff:** `chezmoi diff` (optional)
-4. **Commit changes:** Standard git operations in `~/.local/share/chezmoi/`
-
-## Handling Local Changes to Template Files
-
-When a user reports that their local file has changes that differ from the chezmoi template:
-
-### Critical Understanding
-The user has ALREADY made changes to their local file and wants the template updated to MATCH those changes. Do NOT suggest applying the template to overwrite their local changes.
-
-**CRITICAL - Template Conditionals:**
-- **NEVER remove template conditionals** (e.g., `{{ if .is_work }}...{{ end }}`) from .tmpl files unless EXPLICITLY requested
-- Template conditionals exist for environment-specific logic and should be preserved
-- When updating templates to match local changes, preserve all existing conditionals and template variables
-- If the local file differs from the template due to conditional logic, the LOCAL file should be updated to match the template logic, NOT the other way around
-- Only when the user explicitly says to remove or modify conditionals should they be changed
-
-### Step-by-Step Process
-
-1. **Identify the exact local changes:**
-   ```bash
-   chezmoi diff ~/.config/path/to/file
-   ```
-   This shows the difference between what chezmoi would generate vs what exists locally.
-
-   **CRITICAL - Understanding chezmoi diff output:**
-
-   Chezmoi diff compares two things:
-   - **SOURCE**: What chezmoi has tracked in `~/.local/share/chezmoi/` (the "source state")
-   - **TARGET**: What actually exists in your home directory (the "destination state")
-
-   The diff format shows:
-   - Lines with `-` prefix: Content that exists in chezmoi's SOURCE (would be written to target)
-   - Lines with `+` prefix: Content that exists in the TARGET (actual local file)
-
-   **Common scenario**: User edits local file, hasn't run `chezmoi add` yet
-   - Lines with `-` = old content still in chezmoi source
-   - Lines with `+` = new content in local file that needs to be saved
-   - **Action needed**: Run `chezmoi add` or manually edit the source file to match the `+` lines
-
-   **Opposite scenario**: User pulled changes from git, hasn't applied them yet
-   - Lines with `-` = new content in chezmoi source
-   - Lines with `+` = old content in local file
-   - **Action needed**: Run `chezmoi apply` (but ONLY if you want to overwrite local changes!)
-
-   **Critical**: The `-`/`+` symbols show LOCATION (source vs target), NOT time (old vs new). Always check timestamps to determine which direction to sync.
-
-2. **Find the template source file:**
-   ```bash
-   chezmoi source-path ~/.config/path/to/file
-   ```
-   This returns the path to the `.tmpl` file (e.g., `~/.local/share/chezmoi/dot_config/path/to/file.tmpl`)
-
-3. **Check modification timestamps to determine which is newer:**
-   ```bash
-   stat -c '%y %n' ~/.config/path/to/file && chezmoi source-path ~/.config/path/to/file | xargs stat -c '%y %n'
-   ```
-   This shows the modification times of both files. The newer file typically represents the user's intended state.
-   - If local file is newer: User likely made intentional changes to be saved to the template
-   - If template is newer: Template may have been updated from another machine or git pull
-   - Present this information to help guide the decision
-
-4. **Read both files to understand the exact difference:**
-   - Read the template file directly to see its current content
-   - Use `cat -A` or `od -c` to reveal hidden characters (trailing spaces, tabs, etc.)
-   - Compare line-by-line, character-by-character if needed
-
-5. **Confirm with user if needed:**
-   - If timestamps are ambiguous or the change is significant, present the timestamp information and ask which direction to sync
-   - Most commonly, the local file is newer and should be saved to the template
-
-6. **Use `chezmoi add` for non-template files:**
-   - If the file is NOT a `.tmpl` file and local is newer, use `chezmoi add <file>` to save local changes to the template
-   - Example: `chezmoi add ~/.bashrc`
-   - This is the preferred method for simple files
-
-7. **For template files, update manually:**
-   - **ALWAYS check the render first** using `chezmoi execute-template` or by reading the template to see what conditionals and variables exist
-   - Edit the template file directly using the Edit tool
-   - Pay attention to:
-     - Template conditionals (`{{ if }}`, `{{ range }}`, etc.) - preserve these unless explicitly asked to change
-     - Template variables (`{{ .chezmoi.username }}`, etc.) - preserve these
-     - Commented vs uncommented lines
-     - Trailing whitespace (spaces, tabs)
-     - Line endings
-     - Exact character positions
-
-8. **Verify the fix:**
-   ```bash
-   chezmoi diff ~/.config/path/to/file
-   ```
-   This should show NO diff if the template was updated correctly.
-
-### Common Pitfalls
-
-- **Removing template conditionals**: NEVER remove `{{ if }}...{{ end }}` blocks or other template logic unless explicitly requested. These conditionals exist for environment-specific configuration and should be preserved.
-- **Not checking render before editing**: Always read the template file first to identify what conditionals and variables exist before making changes.
-- **Confusing diff symbols with chronology**: The `-` and `+` symbols show SOURCE (template vs local), NOT time (old vs new). Use timestamps to determine which change is newer.
-- **Reading files instead of diff**: Always read BOTH the template file AND the local file directly to verify their actual content. Don't rely solely on diff interpretation.
-- **Describing changes backwards**: When describing what will happen, be clear about the direction. DON'T say "The local file has X changes" when you mean "The template will be updated with X changes from the local file." The local file ALREADY HAS the changes; they are being SAVED TO the template.
-- **Invisible whitespace**: Trailing spaces are significant. Use `cat -A` or `od -c` to see them.
-- **Assuming templates need git commits**: Templates are read from the filesystem, not git HEAD. Changes take effect immediately without committing.
-- **Swapping logic**: If local file has line A active and line B commented, the template must also have line A active and line B commented.
-
-### Example Scenario
-
-User says: "My local monitors.conf has changes"
-
-**Correct approach:**
-1. Run `chezmoi diff ~/.config/hypr/configs/monitors.conf`
-2. Read the diff carefully - the `+` lines show what the local file contains
-3. Find the template: `chezmoi source-path ~/.config/hypr/configs/monitors.conf`
-4. Edit the template to match the local file (the `+` lines from the diff)
-5. Verify with `chezmoi diff` - should show no differences
-
-**Incorrect approach:**
-- Suggesting `chezmoi apply` to overwrite local changes
-- Misreading the diff and updating the template backwards
-- Ignoring whitespace differences
-- Claiming the template is correct when a diff still exists
-
-## Template Variables
-
-Access chezmoi data in templates:
-```
-{{ .chezmoi.hostname }}
-{{ .chezmoi.os }}
-{{ .chezmoi.username }}
-```
-
-## Error Handling
-
-If chezmoi commands fail:
-- Check if file is tracked: `chezmoi managed | grep filename`
-- Verify source directory: `ls ~/.local/share/chezmoi/`
-- Check for template errors: `chezmoi execute-template` on specific file
-
-## When NOT to Use Chezmoi
-
-Do not use chezmoi commands for:
-- Files not in the dotfiles repository
-- Temporary files or caches
-- Files with secrets (use chezmoi's encrypted files feature instead)
+- Don't describe direction backwards: the local file already HAS the changes; they're being SAVED TO source.
+- `chezmoi add` cannot add files that exist only in source; it copies live → source.
+- File not tracked? Check `chezmoi managed | grep <name>` and `.chezmoiignore` (it's templated — test with `chezmoi execute-template < .chezmoiignore`).
+- Don't manage app-rewritten files (they churn): this repo deliberately ignores `.claude/settings.json`, `.config/zed/settings.json`, `btop.conf`, `fish_variables`, `mako/config`.
+- Secrets: never `chezmoi add` credentials; use chezmoi's encryption or keep them ignored.
