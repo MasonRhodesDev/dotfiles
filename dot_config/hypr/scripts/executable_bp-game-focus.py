@@ -59,6 +59,7 @@ CEF_LOG = f"{STEAM_HOME}/logs/cef_log.txt"
 # -cef-* args). Steam rewrites the file on client updates, so we re-patch it.
 WEBHELPER_WRAP = f"{STEAM_HOME}/ubuntu12_64/steamwebhelper_sniper_wrap.sh"
 CEF_RECOVER_FLAG = "--disable-gpu-process-crash-limit"
+# Keep in sync with the exec-once steam launch in ~/.config/hypr/configs/exec.conf
 STEAM_LAUNCH = ["uwsm", "app", "--", "steam", "-cef-force-glx"]
 # GPU-crash storm -> clean restart (only when no game is running)
 CRASH_WINDOW = 45.0  # s; sliding window for counting GPU-process crashes
@@ -73,9 +74,10 @@ def log(msg: str) -> None:
 
 
 def hyprctl(*args: str) -> str:
-    return subprocess.run(
-        ["hyprctl", *args], capture_output=True, text=True
-    ).stdout
+    p = subprocess.run(["hyprctl", *args], capture_output=True, text=True)
+    if p.returncode != 0:
+        log(f"hyprctl {' '.join(args)} failed ({p.returncode}): {p.stderr.strip()}")
+    return p.stdout
 
 
 def clients() -> list:
@@ -385,8 +387,14 @@ async def cef_log_watch(sm: SteamSession) -> None:
         try:
             if f is None:
                 f = open(CEF_LOG)
-                f.seek(0, 2)  # tail from end; ignore pre-existing history
-                inode = os.fstat(f.fileno()).st_ino
+                st_ino = os.fstat(f.fileno()).st_ino
+                if inode is None or st_ino == inode:
+                    # First open (ignore pre-existing history) or reopen of the
+                    # same file after a transient error (avoid double-counting).
+                    f.seek(0, 2)
+                # else: rotated/recreated file — read from 0 so crash lines
+                # written between rotation and reopen aren't missed.
+                inode = st_ino
             line = f.readline()
             if not line:
                 # detect log rotation / truncation (e.g. a Steam restart)
