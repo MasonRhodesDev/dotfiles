@@ -276,6 +276,24 @@ tooltip {
     text-shadow: 0 0 2px rgba(0, 0, 0, 0.3);
 }
 
+/* Power profile (hyprstate) */
+
+#custom-power-profile.performance {
+    color: #f53c3c;
+}
+
+#custom-power-profile.power-saver {
+    color: #26A65B;
+}
+
+#custom-power-profile.override {
+    text-decoration: underline;
+}
+
+#custom-power-profile.unavailable {
+    color: #777777;
+}
+
 /* Battery states - keep special colors */
 
 #battery.charging {

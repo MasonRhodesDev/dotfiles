@@ -14,6 +14,7 @@
             "custom/updates",
             "clock",
             "custom/notifications",
+            "custom/power-profile",
             "battery"
         ],
 
@@ -86,6 +87,15 @@
             "tooltip-format-enumerate-connected-battery": "{device_alias}\n{device_address}\n{device_battery_percentage}%",
             "on-click-right": "blueman-manager"
         }, 
+        "custom/power-profile": {
+            "exec": "hyprstate power status --waybar",
+            "exec-if": "command -v hyprstate",
+            "return-type": "json",
+            "interval": 5,
+            "signal": 9,
+            "on-click": "hyprstate power cycle; pkill -SIGRTMIN+9 waybar",
+            "tooltip": true
+        },
         "battery": {
             "interval":30,
             "states": {
