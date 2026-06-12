@@ -1,2 +1,8 @@
 # Hyprland-specific environment variables
 # Reserved for HYPR* and AQ_* variables when needed
+
+# Render on the dGPU (RX 7700S), scan out iGPU-connected panels from the iGPU.
+# Primary device is listed first. by-path used because cardN numbering is not
+# stable across boots. Requires a display on the dGPU DP alt-mode port;
+# remove (or comment) to fall back to iGPU-primary, e.g. for battery life.
+export AQ_DRM_DEVICES=/dev/dri/by-path/pci-0000:03:00.0-card:/dev/dri/by-path/pci-0000:c4:00.0-card
