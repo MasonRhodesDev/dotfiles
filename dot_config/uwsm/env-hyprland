@@ -11,8 +11,10 @@ _gpu_sel=/usr/local/bin/hyprstate
 if [ -x "$_gpu_sel" ]; then
     _aq=$("$_gpu_sel" gpu select 2>/dev/null) || _aq=""
     case "$_aq" in *[!/:.A-Za-z0-9_-]*) _aq="" ;; esac
+    # Value is colon-separated /dev/dri/cardN nodes (NOT by-path: aquamarine
+    # splits AQ_DRM_DEVICES on ':' and PCI by-path names contain colons).
     case "$_aq" in
-        /dev/dri/by-path/pci-*-card*) export AQ_DRM_DEVICES="$_aq" ;;
+        /dev/dri/card*) export AQ_DRM_DEVICES="$_aq" ;;
     esac
 fi
 unset _gpu_sel _aq
