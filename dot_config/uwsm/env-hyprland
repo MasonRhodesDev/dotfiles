@@ -1,6 +1,15 @@
 # Hyprland-specific environment variables
 # Reserved for HYPR* and AQ_* variables when needed
 
+# Force libseat to use the logind backend instead of seatd. This user is in the
+# `seat` group (needed elsewhere), so /run/seatd.sock is reachable and libseat
+# would otherwise pick the seatd backend first. With seatd, the compositor takes
+# the seat without informing systemd-logind, leaving the logind session
+# Active=no -> no uaccess ACLs on /dev/snd, webcam, etc. (audio devices vanish).
+# The logind backend makes logind the seat controller, so the session activates
+# and device ACLs are granted on every login. The greeter keeps using seatd.
+export LIBSEAT_BACKEND=logind
+
 # Dynamic GPU selection (multi-GPU machines only). hyprstate prints a
 # colon-separated DRM device list (primary first) or nothing when unmanaged
 # (single GPU, override "off", or any error). Charset + shape guards: anything
