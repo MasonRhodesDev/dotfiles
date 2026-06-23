@@ -1,32 +1,66 @@
 #!/bin/bash
-# Clone and install hyprstate on a fresh machine.
+# Install hyprstate from its package repository.
+#   Fedora -> COPR (solaris765/hyprstate)
+#   Arch   -> AUR (paru), or makepkg from packaging/ until published
+# Replaces the old git-clone + ./install.sh dev install. Idempotent.
 # Source: https://github.com/MasonRhodesDev/hyprstate
-# Idempotent — safe to re-run.
-
 set -euo pipefail
 
-REPO_URL="git@github.com:MasonRhodesDev/hyprstate.git"
-INSTALL_DIR="$HOME/repos/hyprstate"
+COPR="solaris765/hyprstate"
 
-echo "=== hyprstate: clone + install ==="
+echo "=== hyprstate: package install ==="
 
-# Already running? Done.
-if systemctl --user is-active hyprstate.service >/dev/null 2>&1; then
-    echo "hyprstate.service already active — skipping"
+# Already installed as a package? Done.
+if command -v rpm >/dev/null 2>&1 && rpm -q hyprstate >/dev/null 2>&1; then
+    echo "hyprstate RPM already installed — skipping"
+    exit 0
+fi
+if command -v pacman >/dev/null 2>&1 && pacman -Qi hyprstate >/dev/null 2>&1; then
+    echo "hyprstate already installed (pacman) — skipping"
     exit 0
 fi
 
-# Clone or update.
-if [ ! -d "$INSTALL_DIR/.git" ]; then
-    mkdir -p "$(dirname "$INSTALL_DIR")"
-    echo "Cloning $REPO_URL -> $INSTALL_DIR"
-    git clone "$REPO_URL" "$INSTALL_DIR"
-else
-    echo "Already cloned at $INSTALL_DIR; pulling latest"
-    git -C "$INSTALL_DIR" pull --ff-only || echo "WARN: pull failed — continuing with local copy"
+# Tear down any prior git-symlink dev install (no-op on fresh machines). The
+# packaged unit/udev/dbus files in /usr would otherwise be shadowed/duplicated
+# by the dev install's /etc and /usr/local copies.
+DEV_REPO="$HOME/repos/hyprstate"
+if [ -e /usr/local/bin/hyprstate ] || [ -e /usr/local/libexec/hyprstate ] \
+   || [ -e /usr/local/libexec/hyprstate-v2 ]; then
+    if [ -x "$DEV_REPO/packaging/migrate-from-devinstall.sh" ]; then
+        echo "Migrating off the git-symlink dev install..."
+        "$DEV_REPO/packaging/migrate-from-devinstall.sh" || true
+    else
+        echo "WARN: dev install present but migrate script missing at $DEV_REPO" >&2
+    fi
 fi
 
-# Run installer (handles symlinks, systemd unit, udev rule, migrations from
-# any predecessor stack — including the old hypr-power name).
-cd "$INSTALL_DIR"
-./install.sh
+# Distro detection.
+. /etc/os-release
+case " ${ID:-} ${ID_LIKE:-} " in
+    *" fedora "*)
+        echo "Fedora: enabling COPR $COPR and installing"
+        sudo dnf copr enable -y "$COPR"
+        sudo dnf install -y hyprstate
+        ;;
+    *" arch "*)
+        echo "Arch: installing hyprstate from the AUR"
+        if command -v paru >/dev/null 2>&1; then
+            paru -S --noconfirm hyprstate
+        else
+            echo "ERROR: no AUR helper (paru) found. Install one, or run" >&2
+            echo "       makepkg -si from the repo's packaging/ directory." >&2
+            exit 1
+        fi
+        ;;
+    *)
+        echo "ERROR: unsupported distro (ID=${ID:-?}). Install hyprstate manually." >&2
+        exit 1
+        ;;
+esac
+
+# The RPM/AUR presets enable the units on first install; start them now so the
+# live session is managed without waiting for a relog.
+sudo systemctl enable --now hyprstate-powerd.service || true
+systemctl --user enable --now hyprstate.service || true
+
+echo "hyprstate installed. Logs: journalctl --user -u hyprstate.service"

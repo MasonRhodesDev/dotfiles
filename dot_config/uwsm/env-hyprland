@@ -16,7 +16,7 @@ export LIBSEAT_BACKEND=logind
 # unexpected leaves AQ_DRM_DEVICES unset = compositor defaults = pre-feature
 # behavior, so a broken selector can never block login. See GPU_SPEC.md in the
 # hyprstate repo. Override: echo igpu|dgpu|off > ~/.config/hypr/gpu-select
-_gpu_sel=/usr/local/bin/hyprstate
+_gpu_sel=/usr/bin/hyprstate
 if [ -x "$_gpu_sel" ]; then
     _aq=$("$_gpu_sel" gpu select 2>/dev/null) || _aq=""
     case "$_aq" in *[!/:.A-Za-z0-9_-]*) _aq="" ;; esac
