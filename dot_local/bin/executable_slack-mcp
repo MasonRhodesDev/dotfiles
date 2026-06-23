@@ -4,6 +4,6 @@
 # secret ever lands in ~/.claude.json or any other MCP config file.
 
 exec env \
-  SLACK_MCP_XOXP_TOKEN="$(secret-tool lookup service openclaw account SLACK_USER_TOKEN)" \
+  SLACK_MCP_XOXP_TOKEN="$(secret-tool lookup service session-env account SLACK_USER_TOKEN)" \
   SLACK_MCP_ADD_MESSAGE_TOOL="${SLACK_MCP_ADD_MESSAGE_TOOL:-true}" \
   npx -y slack-mcp-server@latest "$@"

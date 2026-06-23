@@ -238,6 +238,17 @@ github = "https://github.com/Morganamilo/paru"
 verify = "command -v paru"
 optional = true
 
+[hyprstate]
+description = "Hyprland session/power state machine: lid, monitor profiles, eDP, lock, suspend, GPU selection, root powerd (Framework 16)"
+profile = "common"
+priority = 13
+version = "latest"
+github = "https://github.com/MasonRhodesDev/hyprstate"
+# Install is handled deterministically by
+# .chezmoiscripts/run_once_after_30-install-hyprstate.sh:
+#   Fedora -> COPR solaris765/hyprstate ; Arch -> AUR (makepkg until published)
+verify = "command -v hyprstate"
+
 # ============================================================================
 # WORK — work machines only
 # ============================================================================
