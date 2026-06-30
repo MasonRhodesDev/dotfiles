@@ -1,0 +1,12 @@
+[Unit]
+Description=Daily Claude Desktop update check
+
+[Timer]
+OnCalendar=*-*-* 09:00:00
+# Catch up a run missed while the laptop was asleep/off.
+Persistent=true
+# Spread load / avoid a thundering-herd on the download host.
+RandomizedDelaySec=600
+
+[Install]
+WantedBy=timers.target

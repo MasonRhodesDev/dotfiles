@@ -1,0 +1,12 @@
+[Unit]
+Description=Update Claude Desktop (.deb) and watch for a native RPM repo
+Documentation=https://claude.com/download
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/claude-desktop-update
+# Keep the daily download/extract off the interactive cores.
+Nice=19
+IOSchedulingClass=idle
