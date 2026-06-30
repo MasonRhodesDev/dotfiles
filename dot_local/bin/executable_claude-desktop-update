@@ -1,0 +1,171 @@
+#!/usr/bin/env bash
+# claude-desktop-update — keep the (manually installed) Claude Desktop .deb
+# current on Fedora by pulling from Anthropic's apt repo index.
+#
+# Reads the repo's Packages index, picks the highest version, and if it's
+# newer than what's installed: downloads the .deb, verifies its SHA256,
+# extracts it, and reinstalls into /opt/claude-desktop with the chrome-sandbox
+# setuid bit + the libsecret password-store launcher. Verify-then-swap: a bad
+# download never touches the installed app.
+#
+# Idempotent and safe to run daily. Default: does NOT interrupt a running app
+# (the new version applies on next launch); pass --restart to relaunch it.
+set -euo pipefail
+
+REPO="https://downloads.claude.ai/claude-desktop/apt/stable"
+PKGS_URL="$REPO/dists/stable/main/binary-amd64/Packages"
+APPDIR="/opt/claude-desktop"
+MARKER="$APPDIR/.deb-version"
+LAUNCHER="/usr/local/bin/claude-desktop"
+LOG="${CLAUDE_UPDATE_LOG:-$HOME/.local/state/claude-desktop-update.log}"
+RESTART=0
+[ "${1:-}" = "--restart" ] && RESTART=1
+
+mkdir -p "$(dirname "$LOG")"
+log() { printf '%s  %s\n' "$(date -Is)" "$*" | tee -a "$LOG" >&2; }
+
+# Highest version: prefer dpkg's comparator, fall back to `sort -V`.
+ver_gt() { # ver_gt A B  -> true if A > B
+  if command -v dpkg >/dev/null 2>&1; then dpkg --compare-versions "$1" gt "$2"
+  else [ "$1" != "$2" ] && [ "$(printf '%s\n%s\n' "$2" "$1" | sort -V | tail -1)" = "$1" ]; fi
+}
+
+# Watch for a native RPM/dnf repo. If Anthropic ever publishes one, this is
+# the signal to drop this script and switch to a dnf-managed install. Probes
+# the likely mirror paths of the apt layout; repodata/repomd.xml is the
+# definitive "this is a yum/dnf repo" marker. Notifies once per new finding.
+check_rpm() {
+  local found="" url code
+  for url in \
+    "https://downloads.claude.ai/claude-desktop/rpm/stable/repodata/repomd.xml" \
+    "https://downloads.claude.ai/claude-desktop/yum/stable/repodata/repomd.xml" \
+    "https://downloads.claude.ai/claude-desktop/dnf/stable/repodata/repomd.xml" \
+    "https://downloads.claude.ai/claude-desktop/rpm/repodata/repomd.xml" \
+    "https://downloads.claude.ai/claude-desktop/rpm/stable/claude-desktop.repo"
+  do
+    code="$(curl -fsS -o /dev/null -w '%{http_code}' --max-time 20 "$url" 2>/dev/null || echo 000)"
+    [ "$code" = 200 ] && { found="$url"; break; }
+  done
+  local flag="$HOME/.local/state/claude-desktop-rpm-seen"
+  if [ -n "$found" ]; then
+    log "RPM REPO AVAILABLE: $found  ->  switch to a native dnf install!"
+    if [ "$(cat "$flag" 2>/dev/null)" != "$found" ]; then
+      printf '%s\n' "$found" > "$flag"
+      command -v notify-send >/dev/null 2>&1 && \
+        notify-send -u critical "Claude Desktop: native RPM available" \
+          "An Anthropic RPM/dnf repo is now live at $found — you can switch off the .deb updater." || true
+    fi
+  else
+    log "no RPM/dnf repo yet (still .deb-only)"
+  fi
+}
+check_rpm
+
+log "checking $PKGS_URL"
+PKGS="$(curl -fsSL --max-time 60 "$PKGS_URL")" || { log "ERROR: cannot fetch Packages index"; exit 1; }
+
+# Parse stanzas → pick the highest Version, with its Filename + SHA256.
+latest_ver=""; latest_file=""; latest_sha=""
+cur_ver=""; cur_file=""; cur_sha=""
+flush() {
+  [ -n "$cur_ver" ] || return 0
+  if [ -z "$latest_ver" ] || ver_gt "$cur_ver" "$latest_ver"; then
+    latest_ver="$cur_ver"; latest_file="$cur_file"; latest_sha="$cur_sha"
+  fi
+}
+while IFS= read -r line; do
+  case "$line" in
+    Version:\ *)  cur_ver="${line#Version: }" ;;
+    Filename:\ *) cur_file="${line#Filename: }" ;;
+    SHA256:\ *)   cur_sha="${line#SHA256: }" ;;
+    "") flush; cur_ver=""; cur_file=""; cur_sha="" ;;
+  esac
+done <<EOF
+$PKGS
+
+EOF
+flush
+
+[ -n "$latest_ver" ] && [ -n "$latest_file" ] || { log "ERROR: could not parse latest version"; exit 1; }
+
+installed="$(cat "$MARKER" 2>/dev/null || echo 0)"
+log "installed=$installed  latest=$latest_ver"
+if ! ver_gt "$latest_ver" "$installed"; then
+  log "already up to date"; exit 0
+fi
+
+log "updating $installed -> $latest_ver"
+tmp="$(mktemp -d /tmp/claude-desktop-update.XXXXXX)"
+trap 'rm -rf "$tmp"' EXIT
+deb="$tmp/claude-desktop_${latest_ver}_amd64.deb"
+
+log "downloading $latest_file"
+curl -fSL --max-time 600 -o "$deb" "$REPO/$latest_file" || { log "ERROR: download failed"; exit 1; }
+
+if [ -n "$latest_sha" ]; then
+  echo "$latest_sha  $deb" | sha256sum -c - >/dev/null 2>&1 \
+    || { log "ERROR: SHA256 mismatch — refusing to install"; exit 1; }
+  log "sha256 verified"
+fi
+
+# Extract (dpkg-deb if present, else ar + tar).
+log "extracting"
+if command -v dpkg-deb >/dev/null 2>&1; then
+  dpkg-deb -x "$deb" "$tmp/data"
+else
+  ( cd "$tmp" && ar x "$deb" )
+  mkdir -p "$tmp/data"
+  tar -C "$tmp/data" -xf "$tmp"/data.tar.*
+fi
+SRC="$tmp/data"
+[ -x "$SRC/usr/lib/claude-desktop/claude-desktop" ] || { log "ERROR: extracted tree missing binary"; exit 1; }
+
+# Install (atomic-ish swap of /opt/claude-desktop).
+log "installing to $APPDIR"
+sudo rm -rf "$APPDIR.new"
+sudo mkdir -p "$APPDIR.new"
+sudo cp -a "$SRC/usr/lib/claude-desktop/." "$APPDIR.new/"
+sudo chown root:root "$APPDIR.new/chrome-sandbox"
+sudo chmod 4755 "$APPDIR.new/chrome-sandbox"
+printf '%s\n' "$latest_ver" | sudo tee "$APPDIR.new/.deb-version" >/dev/null
+sudo rm -rf "$APPDIR.old"
+[ -d "$APPDIR" ] && sudo mv "$APPDIR" "$APPDIR.old"
+sudo mv "$APPDIR.new" "$APPDIR"
+sudo rm -rf "$APPDIR.old"
+
+# Launcher (re-assert the libsecret backend; Hyprland's desktop string isn't
+# recognized by Chromium, so without this it falls back to a plaintext store).
+sudo tee "$LAUNCHER" >/dev/null <<'EOF'
+#!/usr/bin/env bash
+exec /opt/claude-desktop/claude-desktop --password-store=gnome-libsecret "$@"
+EOF
+sudo chmod 0755 "$LAUNCHER"
+
+# Desktop entry + icons (Exec rewritten to the absolute launcher).
+sudo install -Dm0644 "$SRC/usr/share/applications/claude-desktop.desktop" \
+  /usr/share/applications/claude-desktop.desktop
+sudo sed -i -E "s|^(Exec=)claude-desktop|\\1$LAUNCHER|; s|(Exec=)claude-desktop |\\1$LAUNCHER |" \
+  /usr/share/applications/claude-desktop.desktop
+sudo cp -a "$SRC/usr/share/icons/hicolor/." /usr/share/icons/hicolor/
+sudo update-desktop-database /usr/share/applications 2>/dev/null || true
+sudo gtk-update-icon-cache -f /usr/share/icons/hicolor 2>/dev/null || true
+
+log "installed $latest_ver"
+
+# Apply to a running instance only if asked; otherwise it takes effect on next launch.
+if pgrep -f '^/opt/claude-desktop/claude-desktop' >/dev/null 2>&1; then
+  if [ "$RESTART" = 1 ]; then
+    log "restarting running app"
+    for pid in $(pgrep -f '/opt/claude-desktop/claude-desktop'); do
+      cmd=$(tr '\0' ' ' </proc/"$pid"/cmdline 2>/dev/null || true)
+      case "$cmd" in /opt/claude-desktop/claude-desktop*) kill "$pid" 2>/dev/null || true ;; esac
+    done
+    sleep 2
+    setsid "$LAUNCHER" >/dev/null 2>&1 < /dev/null &
+  else
+    log "app is running; update applies on next launch"
+    command -v notify-send >/dev/null 2>&1 && \
+      notify-send "Claude Desktop updated" "v$latest_ver installed — restart Claude to apply." || true
+  fi
+fi
+log "done"
