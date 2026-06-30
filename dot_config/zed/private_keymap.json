@@ -10,18 +10,24 @@
   // ==========================================
   // SPACE LEADER BINDINGS (Vim normal/visual mode)
   // ==========================================
-  // Leader bindings in Editor
+  // Panel toggles use each panel's own ::Toggle action. Unlike
+  // ::ToggleFocus (which can only open/focus/unfocus, never hide) and
+  // unlike workspace::ToggleLeft/RightDock (tied to a physical dock side,
+  // which breaks if a panel is moved), ::Toggle show/hides the specific
+  // panel regardless of which dock it lives in.
+  // Leader bindings in Editor (also fires inside the agent message box
+  // IF that box is a vim-enabled editor — esc to normal mode first).
   {
     "context": "Editor && (vim_mode == normal || vim_mode == visual) && !VimWaiting && !menu",
     "bindings": {
-      // File explorer (toggle to project panel)
-      "space e": "project_panel::ToggleFocus",
+      // File explorer (project panel)
+      "space e": "project_panel::Toggle",
 
-      // Claude AI (toggle right dock with assistant)
-      "space a c": "workspace::ToggleRightDock",
+      // Claude AI (agent panel)
+      "space a c": "agent::Toggle",
 
-      // Git (toggle to git panel)
-      "space g g": "git_panel::ToggleFocus",
+      // Git (git panel)
+      "space g g": "git_panel::Toggle",
 
       // File finding
       "space f f": "file_finder::Toggle",
@@ -56,13 +62,13 @@
     }
   },
 
-  // Leader bindings in Project Panel / Explorer
+  // Leader bindings in Project Panel / Explorer (not while renaming a file)
   {
-    "context": "ProjectPanel",
+    "context": "ProjectPanel && not_editing",
     "bindings": {
-      "space e": "workspace::ToggleLeftDock",
-      "space a c": "workspace::ToggleRightDock",
-      "space g g": "workspace::ToggleLeftDock",
+      "space e": "project_panel::Toggle",
+      "space a c": "agent::Toggle",
+      "space g g": "git_panel::Toggle",
       "space f f": "file_finder::Toggle"
     }
   },
@@ -71,9 +77,9 @@
   {
     "context": "Workspace && !Terminal && !Editor",
     "bindings": {
-      "space e": "project_panel::ToggleFocus",
-      "space a c": "workspace::ToggleRightDock",
-      "space g g": "git_panel::ToggleFocus",
+      "space e": "project_panel::Toggle",
+      "space a c": "agent::Toggle",
+      "space g g": "git_panel::Toggle",
       "space f f": "file_finder::Toggle"
     }
   },
@@ -82,9 +88,9 @@
   {
     "context": "Terminal",
     "bindings": {
-      "space e": "project_panel::ToggleFocus",
-      "space a c": "workspace::ToggleRightDock",
-      "space g g": "git_panel::ToggleFocus",
+      "space e": "project_panel::Toggle",
+      "space a c": "agent::Toggle",
+      "space g g": "git_panel::Toggle",
       "space f f": "file_finder::Toggle",
 
       // Split terminal
@@ -103,6 +109,20 @@
       "alt-j": "workspace::ActivatePaneDown",
       "alt-k": "workspace::ActivatePaneUp",
       "alt-l": "workspace::ActivatePaneRight"
+    }
+  },
+
+  // ==========================================
+  // AGENT (CLAUDE) PANEL — close from inside while typing
+  // ==========================================
+  // A space leader can't fire here: the message box is in `editing` mode,
+  // so `space` types a space. This modifier combo works regardless of
+  // mode. (If the message box is vim-enabled, `esc` then `space a c` also
+  // works via the Editor binding above — this is the always-works path.)
+  {
+    "context": "AgentPanel",
+    "bindings": {
+      "ctrl-alt-c": "agent::Toggle"
     }
   }
 ]
