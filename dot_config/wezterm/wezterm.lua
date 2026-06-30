@@ -34,9 +34,23 @@ else
   wezterm.log_info("wezterm.plugin API unavailable; skipping plugins")
 end
 
+-- Refresh status frequently enough for pane summaries to feel live without
+-- requiring user-var events for every update.
+config.status_update_interval = 1000
+
 -- Load header module system
 local header_loader = require('headerModulesLoader')
 local header_modules = header_loader.load_modules()
+
+wezterm.on("gui-startup", function(cmd)
+  if wezterm.background_child_process then
+    pcall(wezterm.background_child_process, {
+      "node",
+      "/home/mason/scripts/wezterm-pane-summarizer.ts",
+      "daemon",
+    })
+  end
+end)
 
 -- Main status bar update handler
 wezterm.on("update-right-status", function(window, pane)
@@ -57,6 +71,10 @@ wezterm.on("update-right-status", function(window, pane)
     window:set_left_status("")
   end
 
+  -- Keep all header sections in the left status so spacing, margins, and
+  -- justification remain consistent with the existing layout. "Right-most"
+  -- means the last pipe-delimited section, not WezTerm's right_status area.
+  window:set_right_status("")
   window:set_config_overrides(overrides)
 end)
 
@@ -69,8 +87,11 @@ wezterm.on('user-var-changed', function(window, pane, name, value)
     window:set_config_overrides(overrides)
   end
 
-  -- Handle Claude activity updates - force status bar refresh
-  if name == "CLAUDE_ACTIVE" or name == "CLAUDE_ACTIVITY" or name == "CLAUDE_MODEL" then
+  -- Handle agent activity updates - force status bar refresh
+  if name == "CLAUDE_ACTIVE" or name == "CLAUDE_ACTIVITY" or name == "CLAUDE_MODEL" or
+      name == "AGENT_ACTIVE" or name == "AGENT_KIND" or name == "AGENT_SEQ" or
+      name == "AGENT_NAME" or name == "AGENT_MODEL" or name == "AGENT_STATE" or name == "AGENT_ACTIVITY" or
+      name == "AGENT_SESSION" then
     -- Trigger a status update by emitting update-right-status
     window:perform_action(wezterm.action.EmitEvent("update-right-status"), pane)
   end

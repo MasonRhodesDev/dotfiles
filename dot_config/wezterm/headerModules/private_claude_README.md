@@ -1,171 +1,197 @@
-# Claude Module
+# Pane Status Modules
 
-The Claude header module displays the current Claude Code session activity in your WezTerm status bar.
+The status bar primarily displays a pane-local summary of what the terminal pane is doing. Agent hook status still exists as metadata/fallback for Claude Code, pi, and Codex.
 
-## Features
+## Core rule
 
-- Shows "🤖 Claude" when Claude Code is active
-- Displays current working directory
-- Shows session activity (e.g., "🤖 Reading files | ~/repos/project")
-- Updates in real-time via background watcher
+The visible status should answer: "what is this pane doing right now?"
+
+Pane summaries are generated from recent WezTerm buffer text by `/home/mason/scripts/wezterm-pane-summarizer.ts`. Agent lifecycle hooks are no longer the primary display text. The system does not infer from cwd matching, latest session files, or shared history logs.
 
 ## Display Format
 
-```
-🤖 Claude | ~/repos/project
-🤖 Reading files | ~/repos/project
-```
-
-## How It Works
-
-The Claude module uses WezTerm user variables to communicate between the shell and the header module:
-
-1. **`CLAUDE_ACTIVE`** - Set to "1" when Claude Code session is detected
-2. **`CLAUDE_ACTIVITY`** - Contains the current activity description (e.g., "Reading files")
-
-## Required Configuration
-
-The Claude module requires additional shell configuration and background scripts to function properly.
-
-### Shell Integration
-
-**Fish Shell:**
-[`dot_config/fish/conf.d/private_wezterm.fish`](../../fish/conf.d/private_wezterm.fish)
-
-**Zsh:**
-[`dot_config/private_zsh/private_wezterm.zsh`](../../private_zsh/private_wezterm.zsh)
-
-These files:
-- Detect when Claude Code is running (via `$CLAUDECODE` environment variable)
-- Set the `CLAUDE_ACTIVE` user variable
-- Launch the background watcher script
-- Provide `claude-track` command to manually register sessions
-
-### Background Scripts
-
-The shell integration uses these scripts to track Claude activity. These are registered as hooks in `~/.claude/settings.json`:
-
-1. **[`scripts/executable_wezterm-claude-session-hook`](../../../scripts/executable_wezterm-claude-session-hook)**
-   - **Registered:** [`settings.json:33`](../../../.claude/settings.json#L33) (SessionStart hook)
-   - Manages session lifecycle
-   - Initializes tracking for new sessions
-
-2. **[`scripts/executable_wezterm-claude-activity-hook`](../../../scripts/executable_wezterm-claude-activity-hook)**
-   - **Registered:** [`settings.json:37,48,59,70`](../../../.claude/settings.json#L37) (SessionStart, UserPromptSubmit, PostToolUse, Stop hooks)
-   - Monitors Claude Code session files for activity
-   - Updates `CLAUDE_ACTIVITY` user variable with current operation
-
-3. **[`scripts/executable_wezterm-claude-cleanup-hook`](../../../scripts/executable_wezterm-claude-cleanup-hook)**
-   - **Registered:** [`settings.json:81`](../../../.claude/settings.json#L81) (SessionEnd hook)
-   - Cleans up marker files when session ends
-   - Resets user variables
-
-4. **[`scripts/executable_wezterm-claude-summarize`](../../../scripts/executable_wezterm-claude-summarize)**
-   - Helper script (called by activity hook)
-   - Generates human-readable activity summaries
-   - Formats session slug for display
-
-## Manual Session Tracking
-
-If automatic detection fails, you can manually register a session:
-
-```fish
-claude-track
+```text
+◌ running tests
+◌ debugging failing tests
+◌ reviewing errors
+◌ running pi session
 ```
 
-This command:
-1. Finds the most recent Claude session file
-2. Creates a marker file for tracking
-3. Updates the WezTerm status bar with session info
+## Pane Summary
 
-## Technical Details
+`/home/mason/scripts/wezterm-pane-summarizer.ts`
 
-### User Variable Communication
+- Lists WezTerm panes.
+- Reads recent pane text with `wezterm cli get-text`.
+- Redacts obvious secrets before summarization.
+- Uses local Ollama by default (`WEZTERM_PANE_SUMMARY_MODEL`, default `qwen2.5-coder:1.5b`) with a short status-bar prompt.
+- Samples frequently but only summarizes after the pane buffer has been quiet/stable for a few seconds.
+- Falls back to a conservative local classifier if the local model call fails.
+- Writes summary state to `$XDG_RUNTIME_DIR/wezterm-pane-summary/pane-<pane_id>.json` or `~/.cache/wezterm-pane-summary/pane-<pane_id>.json`.
+- Runs as a daemon started by WezTerm `gui-startup`; can also be started manually:
 
-WezTerm user variables are set using OSC (Operating System Command) escape sequences:
-
-```fish
-printf '\033]1337;SetUserVar=CLAUDE_ACTIVE=%s\007' (echo -n "1" | base64)
+```sh
+node /home/mason/scripts/wezterm-pane-summarizer.ts daemon
 ```
 
-The module reads these variables via `pane:get_user_vars()`.
+For agent panes, fresh medium/high-confidence pane summaries replace only the activity text inside the existing agent header, preserving the agent icon/name/model. For non-agent panes, `pane_summary.lua` can render a standalone `◌ <summary>` fallback. Low-confidence fallbacks are written for debugging but not rendered.
 
-### Detection Methods
+The prompt asks for one short phrase describing what is being done now in the pane. It forbids quoting terminal text and rejects vague outputs like `working in terminal`.
 
-The module detects Claude Code sessions using multiple methods (in order):
+## User Variable Protocol
 
-1. **Process name** - Checks if foreground process is `claude`
-2. **User variable** - Checks if `CLAUDE_ACTIVE == "1"`
-3. **Window title** - Checks if window title contains "claude"
+New integrations use numeric WezTerm user variables as pane-local refresh signals:
 
-### Background Watcher
+| Variable | Meaning |
+|---|---|
+| `AGENT_ACTIVE` | `1` while the pane owns an active agent status; `0` clears it |
+| `AGENT_KIND` | Numeric agent code: `1` pi, `2` Codex, `3` Claude |
+| `AGENT_SEQ` | Monotonic numeric refresh signal for status changes |
 
-The watcher script (`wezterm-claude-watcher`):
-- Monitors `/tmp/claude-session-$PPID` marker files
-- Tails the session JSONL file for new entries
-- Parses activity from the session log
-- Updates `CLAUDE_ACTIVITY` user variable in real-time
-- Exits when shell process terminates
+String details (`agent`, `model`, `state`, `activity`, `sessionId`) live in the explicit hook-fed pane state file. This is necessary because WezTerm `20260501_010510_805a1c7b` accepts numeric-looking `SetUserVar` values but ignores arbitrary string values such as `pi` or `Running command`.
 
-## Disabling the Module
+Legacy Claude vars remain supported:
 
-To disable the Claude module, simply delete or rename this file:
+| Variable | Meaning |
+|---|---|
+| `CLAUDE_ACTIVE` | Legacy Claude active flag |
+| `CLAUDE_ACTIVITY` | Legacy Claude activity text |
+| `CLAUDE_MODEL` | Legacy Claude model |
 
-```bash
-rm ~/.config/wezterm/headerModules/claude.lua
-# or
-mv ~/.config/wezterm/headerModules/claude.lua{,.disabled}
-```
+## Transport
 
-The module loader will skip it on next reload.
+Do not write OSC sequences directly to `/dev/pts/*`; that does not reliably trigger WezTerm `user-var-changed`.
+
+The working transport is:
+
+1. Agent lifecycle hook calls `/home/mason/scripts/wezterm-agent-bridge.ts`.
+2. The bridge writes explicit pane/session state under `$XDG_RUNTIME_DIR/wezterm-agent-status/<agent>/` when available, otherwise `~/.cache/wezterm-agent-status/<agent>/`.
+3. The foreground launcher watches that pane state file only when `stdout` is a TTY.
+4. The launcher emits numeric OSC 1337 `SetUserVar` signals (`AGENT_ACTIVE`, `AGENT_KIND`, `AGENT_SEQ`) to stdout.
+5. WezTerm receives the OSC output and updates pane-local user variables.
+6. The Lua module reads the explicit pane state file keyed by the WezTerm pane id.
+
+## Implementation
+
+### Shared bridge
+
+`/home/mason/scripts/wezterm-agent-bridge.ts`
+
+- Reads hook JSON from stdin.
+- Writes explicit hook-fed state files under the user-private runtime root:
+  - `<state-root>/<agent>/<session>.json`
+  - `<state-root>/<agent>/pane-<WEZTERM_PANE>.json`
+- Does not infer from shared logs or cwd.
+- Does not write OSC directly to `/dev/pts/*`.
+
+### Shared runner
+
+`/home/mason/scripts/wezterm-agent-runner.ts`
+
+- Spawns the real agent CLI.
+- Watches the pane state file when running in WezTerm with TTY stdout.
+- Emits numeric `AGENT_ACTIVE`/`AGENT_KIND`/`AGENT_SEQ` via OSC 1337 `SetUserVar` to stdout, never into redirected/captured stdout.
+- Clears `AGENT_*` when the agent exits.
+
+### pi
+
+`/home/mason/.pi/agent/extensions/wezterm-agent-status.ts`
+
+pi status is fed by native lifecycle events:
+
+- `session_start`
+- `before_agent_start`
+- `agent_start`
+- `tool_execution_start`
+- `tool_execution_end`
+- `agent_end`
+- `turn_end`
+- `model_select`
+- `session_shutdown`
+
+Normal shell launches use `/home/mason/.local/bin/pi`, which is now a small Node launcher. In WezTerm it delegates to `/home/mason/scripts/wezterm-agent-runner.ts`; outside WezTerm it runs the real pi CLI directly at `/home/mason/.local/lib/node_modules/@earendil-works/pi-coding-agent/dist/cli.js`.
+
+`/home/mason/scripts/pi-wezterm.ts` remains as the explicit wrapper entrypoint.
+
+### Codex
+
+`/home/mason/.codex/hooks.json`
+
+Codex status is fed by lifecycle hooks:
+
+- `SessionStart`
+- `UserPromptSubmit`
+- `PreToolUse`
+- `PostToolUse`
+- `Stop`
+
+Codex requires hook trust review. After changing hooks, start Codex and use `/hooks` to review/trust the hook definitions.
+
+Normal shell launches use:
+
+`/home/mason/scripts/codex-wezterm.ts`
+
+### Shell entrypoints
+
+Wrapper functions are in:
+
+- `/home/mason/.config/fish/conf.d/wezterm.fish`
+- `/home/mason/.config/zsh/wezterm.zsh`
+
+For pi, `/home/mason/.local/bin/pi` also routes through the wrapper, so shell function loading is no longer required for pi status. Codex still depends on the shell function unless `/home/mason/scripts/codex-wezterm.ts` is launched directly.
+
+### Claude
+
+Claude keeps the existing hook scripts for now:
+
+- `/home/mason/scripts/wezterm-claude-session-hook`
+- `/home/mason/scripts/wezterm-claude-activity-hook`
+- `/home/mason/scripts/wezterm-claude-cleanup-hook`
+- `/home/mason/scripts/wezterm-claude-summarize`
+
+The Lua module supports both legacy `CLAUDE_*` and generic `AGENT_*` variables.
 
 ## Troubleshooting
 
-### Module not showing
+### No status appears
 
-1. **Verify Claude Code is running:**
-   ```bash
-   echo $CLAUDECODE  # Should be non-empty
+The Lua module renders only explicit hook-fed state: numeric `AGENT_*` pane variables plus the matching pane state file, or legacy `CLAUDE_*` pane variables. If no status appears, the wrapper/hook path has not emitted pane variables yet or the pane state file is missing.
+
+### pi status does not update
+
+1. Confirm `pi` resolves to the launcher:
+   ```sh
+   type pi
+   ls -l /home/mason/.local/bin/pi
+   ```
+2. Confirm state is being written:
+   ```sh
+   state_root="${XDG_RUNTIME_DIR:+$XDG_RUNTIME_DIR/wezterm-agent-status}"
+   state_root="${state_root:-$HOME/.cache/wezterm-agent-status}"
+   ls -la "$state_root/pi"
+   ```
+3. Reload or restart pi after extension changes.
+
+### Codex status does not update
+
+1. Confirm hooks exist:
+   ```sh
+   jq empty /home/mason/.codex/hooks.json
+   ```
+2. Start Codex and run `/hooks` to trust the hook definitions.
+3. Confirm your shell uses the wrapper:
+   ```sh
+   type codex
    ```
 
-2. **Check user variables:**
-   ```lua
-   -- In WezTerm debug console (Ctrl+Shift+L)
-   local pane = window:active_pane()
-   local vars = pane:get_user_vars()
-   wezterm.log_info("CLAUDE_ACTIVE: " .. tostring(vars.CLAUDE_ACTIVE))
-   ```
+### Status remains after exit
 
-3. **Verify watcher is running:**
-   ```bash
-   ps aux | grep wezterm-claude-watcher
-   ```
+The wrappers clear `AGENT_*` on process exit. If status remains, the session probably was not launched through the wrapper.
 
-4. **Check logs:**
-   ```bash
-   journalctl --user -u wezterm -f
-   ```
+## Automated validation
 
-### Activity not updating
+Run:
 
-1. **Manually register session:**
-   ```bash
-   claude-track
-   ```
-
-2. **Restart watcher:**
-   ```bash
-   pkill -f wezterm-claude-watcher
-   # Shell integration will auto-restart it
-   ```
-
-3. **Check marker file exists:**
-   ```bash
-   ls -la /tmp/claude-session-*
-   ```
-
-## Related Files
-
-- **Main config:** [`dot_config/wezterm/wezterm.lua`](../wezterm.lua)
-- **Module loader:** [`dot_config/wezterm/headerModulesLoader.lua`](../headerModulesLoader.lua)
-- **Claude module:** [`dot_config/wezterm/headerModules/claude.lua`](./claude.lua)
+```sh
+node /home/mason/scripts/test-wezterm-agent-status.ts
+```

@@ -39,11 +39,9 @@ function M.load_modules()
   return modules
 end
 
--- Collect active components from all modules
-function M.collect_components(modules, window, pane)
+local function active_modules_sorted(modules, pane)
   local active_modules = {}
 
-  -- Detect active modules
   for name, module in pairs(modules) do
     if module.detect then
       local active, data = module.detect(pane)
@@ -58,14 +56,17 @@ function M.collect_components(modules, window, pane)
     end
   end
 
-  -- Sort by priority (lower number = higher priority)
   table.sort(active_modules, function(a, b)
     return a.priority < b.priority
   end)
 
-  -- Collect components
+  return active_modules
+end
+
+-- Collect active components from all modules
+function M.collect_components(modules, window, pane)
   local components = {}
-  for _, active in ipairs(active_modules) do
+  for _, active in ipairs(active_modules_sorted(modules, pane)) do
     if active.get_component then
       local component = active.get_component(pane, active.data)
       if component then
@@ -75,6 +76,26 @@ function M.collect_components(modules, window, pane)
   end
 
   return components
+end
+
+function M.collect_status_components(modules, window, pane)
+  local left_components = {}
+  local right_component = nil
+
+  for _, active in ipairs(active_modules_sorted(modules, pane)) do
+    if active.get_component then
+      local component = active.get_component(pane, active.data)
+      if component then
+        if active.name == "pane_summary" or active.name == "private_pane_summary" then
+          right_component = component
+        else
+          table.insert(left_components, component)
+        end
+      end
+    end
+  end
+
+  return left_components, right_component
 end
 
 return M
