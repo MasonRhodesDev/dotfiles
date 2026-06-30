@@ -310,6 +310,46 @@ version = "latest"
 website = "https://zoom.us/download"
 verify = "flatpak list --app | grep -q us.zoom.Zoom"
 
+[kubernetes_tools]
+description = "Kubernetes CLIs (hand-installed from upstream releases): kubectl, helm, kind; k9s via rpm"
+profile = "work"
+priority = 13
+version = "latest"
+website = "https://kubernetes.io"
+verify = "command -v kubectl && command -v helm && command -v kind && command -v k9s"
+
+[aws_eks_tools]
+description = "AWS/EKS + GitOps + service-mesh CLIs: eksctl, argocd, istioctl, saml2aws (upstream release binaries)"
+profile = "work"
+priority = 13
+version = "latest"
+verify = "command -v eksctl && command -v argocd && command -v istioctl && command -v saml2aws"
+
+[dolt]
+description = "Dolt — Git-for-data SQL database CLI"
+profile = "work"
+priority = 14
+version = "latest"
+github = "https://github.com/dolthub/dolt"
+verify = "command -v dolt"
+
+[acli]
+description = "Atlassian CLI (Jira/Confluence). Repo added by .chezmoiscripts/run_onchange_after_54-third-party-repos.sh"
+profile = "work"
+priority = 14
+version = "latest"
+website = "https://developer.atlassian.com/cloud/acli/"
+verify = "command -v acli"
+
+[razer]
+description = "OpenRazer driver + Polychromatic UI for Razer peripherals (hardware:razer repo)"
+profile = "common"
+priority = 15
+version = "latest"
+github = "https://github.com/openrazer/openrazer"
+verify = "rpm -q openrazer-meta || command -v polychromatic-controller"
+optional = true
+
 # ============================================================================
 # PERSONAL — personal machines only
 # ============================================================================
