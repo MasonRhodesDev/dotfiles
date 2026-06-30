@@ -8,4 +8,4 @@ Icon=/usr/share/pixmaps/slack.png
 Type=Application
 StartupNotify=true
 Categories=GNOME;GTK;Network;InstantMessaging;
-MimeType=x-scheme-handler/slack;
+MimeType=x-scheme-handler/unknown;x-scheme-handler/about;x-scheme-handler/https;x-scheme-handler/http;text/html;x-scheme-handler/slack;
