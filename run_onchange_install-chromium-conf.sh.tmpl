@@ -1,0 +1,83 @@
+{{ if eq .chezmoi.hostname "mason-work" -}}
+#!/bin/bash
+# Managed by chezmoi — maintains the "chromium-local" block in
+# /etc/chromium/chromium.conf (sourced by Fedora's /usr/bin/chromium-browser
+# at every launch). Fedora owns the rest of the file, so only the
+# marker-delimited region is ever touched; package updates to the base
+# config survive untouched.
+#
+# The block does two things (Framework 16 specific):
+#   1) pins Chromium's GPU process to the dGPU (RX 7700S) via
+#      --render-node-override, so canvas-heavy apps (Lucidchart) stay fast
+#      even when Hyprland composites on the iGPU
+#   2) zeroes Chromium's variations_crash_streak on fresh launches, so a
+#      GPU-process crash streak can never silently disable hardware
+#      acceleration for a weeks-long browser session
+#
+# Re-runs whenever this script's rendered content changes.
+
+set -euo pipefail
+
+CONF=/etc/chromium/chromium.conf
+BEGIN='# >>> chezmoi managed: chromium-local >>>'
+END='# <<< chezmoi managed: chromium-local <<<'
+
+if [ ! -f "$CONF" ]; then
+    echo "chromium-conf: $CONF not present (chromium not installed?); skipping"
+    exit 0
+fi
+
+read -r -d '' BLOCK <<'BLOCK_EOF' || true
+# >>> chezmoi managed: chromium-local >>>
+# Local additions, installed by chezmoi (run_onchange_install-chromium-conf).
+# Edit in the chezmoi repo, NOT here — this block is rewritten on apply.
+#
+# 1) Pin Chromium's GPU process to the dGPU (RX 7700S, pci 03:00.0) even when
+#    Hyprland composites on the iGPU (undocked / laptop screen). Cross-GPU
+#    dmabuf sharing verified stable on Chromium 147 (2026-07-02). No-op when
+#    the compositor is already on the dGPU. Skipped when gpu-select=off
+#    (dGPU deliberately powered down) or the node is missing.
+DGPU_RENDER_NODE="$(readlink -f /dev/dri/by-path/pci-0000:03:00.0-render 2>/dev/null)"
+GPU_SELECT="$(cat "$HOME/.config/hypr/gpu-select" 2>/dev/null)"
+if [ -n "$DGPU_RENDER_NODE" ] && [ -e "$DGPU_RENDER_NODE" ] && [ "$GPU_SELECT" != "off" ]; then
+   CHROMIUM_FLAGS+=" --render-node-override=$DGPU_RENDER_NODE"
+fi
+
+# 2) Clear the GPU crash-streak poison pill on fresh launches. A streak >~4
+#    makes Chromium silently start with --use-gl=disabled (pure software
+#    rendering) until manually reset — with weeks-long browser uptimes one
+#    poisoned launch ruins everything until the next restart. Only runs when
+#    no instance is alive (Local State is owned by a running browser).
+#    NB: comm names truncate to 15 chars, hence "chromium-browse".
+if ! pgrep -x chromium-browse >/dev/null 2>&1; then
+   python3 - <<'PYEOF' 2>/dev/null
+import json, os
+p = os.path.expanduser("~/.config/chromium/Local State")
+try:
+    with open(p) as f:
+        d = json.load(f)
+    if d.get("variations_crash_streak"):
+        d["variations_crash_streak"] = 0
+        with open(p, "w") as f:
+            json.dump(d, f, separators=(",", ":"))
+except Exception:
+    pass
+PYEOF
+fi
+# <<< chezmoi managed: chromium-local <<<
+BLOCK_EOF
+
+current="$(sed -n "/^${BEGIN}$/,/^${END}$/p" "$CONF")"
+if [ "$current" == "$BLOCK" ]; then
+    echo "chromium-conf: local block up to date"
+    exit 0
+fi
+
+tmp="$(mktemp)"
+trap 'rm -f "$tmp"' EXIT
+sed "/^${BEGIN}$/,/^${END}$/d" "$CONF" > "$tmp"
+printf '\n%s\n' "$BLOCK" >> "$tmp"
+bash -n "$tmp"
+sudo -n cp "$tmp" "$CONF"
+echo "chromium-conf: local block installed/updated (takes effect at next browser launch)"
+{{ end -}}
