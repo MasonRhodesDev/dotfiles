@@ -1,0 +1,25 @@
+{{ if eq .system.hostname "mason-desktop" -}}
+Host desk-controller desk-controller.lan desk-controller.local
+    ConnectTimeout 10
+    ServerAliveInterval 60
+    ServerAliveCountMax 3
+
+Host unraid-games
+    HostName 192.168.1.7
+    User games
+    IdentityFile ~/.ssh/games
+    IdentitiesOnly yes
+    ConnectTimeout 10
+    ServerAliveInterval 60
+    ServerAliveCountMax 3
+
+Host *
+    AddKeysToAgent yes
+    IdentityFile ~/.ssh/id_ed25519
+{{ else -}}
+# SSM proxy for EC2 instances (used by DBeaver SSH tunnel)
+Host i-* mi-*
+    ProxyCommand /home/mason/bin/ssm-proxy %h %p
+    StrictHostKeyChecking no
+    UserKnownHostsFile /dev/null
+{{ end -}}
