@@ -1,5 +1,0 @@
-# SSM proxy for EC2 instances (used by DBeaver SSH tunnel)
-Host i-* mi-*
-    ProxyCommand /home/mason/bin/ssm-proxy %h %p
-    StrictHostKeyChecking no
-    UserKnownHostsFile /dev/null

@@ -1,0 +1,51 @@
+{{ if eq .system.hostname "mason-desktop" -}}
+[Default Applications]
+application/toml=code.desktop
+application/x-shellscript=code.desktop
+text/plain=code.desktop
+text/html=chromium.desktop
+x-scheme-handler/http=chromium.desktop
+x-scheme-handler/https=chromium.desktop
+x-scheme-handler/about=chromium.desktop
+x-scheme-handler/unknown=chromium.desktop
+video/mp4=org.gnome.gThumb.desktop
+application/x-compressed-tar=thunar.desktop
+text/x-log=userapp-cursor -LV5732.desktop
+x-scheme-handler/discord=vesktop.desktop
+application/zip=thunar.desktop
+x-scheme-handler/nxm=com.nexusmods.app.desktop
+application/octet-stream=appimagekit_0a0a769ac5774e93f4bea66fd5f2c870-Cursor.desktop
+text/markdown=dev.zed.Zed.desktop
+x-scheme-handler/claude-cli=claude-code-url-handler.desktop
+
+[Added Associations]
+application/toml=code.desktop;
+application/x-shellscript=code.desktop;
+text/plain=appimagekit_0a0a769ac5774e93f4bea66fd5f2c870-Cursor.desktop;code.desktop;
+video/mp4=qimgv.desktop;org.gnome.gThumb.desktop;
+application/x-compressed-tar=thunar.desktop;
+application/x-desktop=code.desktop;
+text/x-log=appimagekit_81248815bb7d51cf484790c644060ad4-Cursor.desktop;userapp-cursor $1-OM9X32.desktop;userapp-cursor -LV5732.desktop;
+application/zip=org.gnome.Nautilus.desktop;thunar.desktop;
+application/octet-stream=appimagekit_0a0a769ac5774e93f4bea66fd5f2c870-Cursor.desktop;
+text/markdown=dev.zed.Zed.desktop;
+{{ else -}}
+[Default Applications]
+text/html=chromium-browser.desktop
+x-scheme-handler/http=chromium-browser.desktop
+x-scheme-handler/https=chromium-browser.desktop
+x-scheme-handler/about=chromium-browser.desktop
+x-scheme-handler/unknown=chromium-browser.desktop
+text/markdown=org.gnome.TextEditor.desktop
+x-scheme-handler/mailto=chromium-browser.desktop
+x-scheme-handler/claude-cli=claude-code-url-handler.desktop
+text/javascript=dev.zed.Zed.desktop
+x-scheme-handler/goose=Goose.desktop
+x-scheme-handler/slack=slack.desktop
+x-scheme-handler/claude=claude-desktop.desktop
+
+[Added Associations]
+text/markdown=org.gnome.TextEditor.desktop;
+application/sql=dev.zed.Zed.desktop;
+text/javascript=dev.zed.Zed.desktop;
+{{ end -}}
