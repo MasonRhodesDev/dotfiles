@@ -1,0 +1,46 @@
+#!/bin/bash
+# Claude Desktop "Cowork" VM backend path shims.
+#
+# Cowork's app.asar hardcodes Debian firmware/virtiofsd probe paths
+# (/usr/share/OVMF/OVMF_CODE_4M.fd, VARS via s/OVMF_CODE/OVMF_VARS/,
+# /usr/libexec/virtiofsd | /usr/bin/virtiofsd). Arch ships these at
+# /usr/share/edk2/x64/OVMF_{CODE,VARS}.4m.fd and /usr/lib/virtiofsd, so
+# without shims Cowork reports "Virtualization isn't fully set up".
+#
+# GATED: only the PERSONAL machine gets the shims. The work machine
+# (REDACTED) has no BAA for Cowork, so we actively ENSURE the backend is
+# absent there — startVM then fails and Cowork cannot run.
+set -euo pipefail
+
+CONF=/etc/tmpfiles.d/claude-cowork-compat.conf
+{{ if .is_work -}}
+# --- Work machine: no Cowork BAA — remove the VM backend shims. ---
+if [ -e "$CONF" ] || [ -L /usr/libexec/virtiofsd ] \
+   || [ -L /usr/share/edk2/OVMF_CODE_4M.fd ]; then
+  echo "Work machine: removing Cowork VM shims (no BAA for Cowork)"
+  sudo rm -f "$CONF" \
+    /usr/share/edk2/OVMF_CODE_4M.fd \
+    /usr/share/edk2/OVMF_VARS_4M.fd \
+    /usr/libexec/virtiofsd
+else
+  echo "Work machine: Cowork VM shims already absent — nothing to do"
+fi
+{{- else -}}
+# --- Personal machine: ensure the Cowork VM stack + install the compat shims. ---
+# The /opt updater (claude-desktop-update) installs the app but not its QEMU
+# deps, so ensure them here (the deb only Recommends them). Arch only.
+if command -v pacman >/dev/null 2>&1; then
+  sudo pacman -S --needed --noconfirm qemu-system-x86 edk2-ovmf virtiofsd
+fi
+sudo tee "$CONF" >/dev/null <<'EOF'
+# Managed by chezmoi (.chezmoiscripts/run_onchange_after_34-claude-cowork-vm.sh.tmpl).
+# Map Claude Cowork's Debian firmware/virtiofsd probe paths to Arch locations.
+#Type Path                          Mode User Group Age Argument
+d /usr/libexec                      0755 root root  -   -
+L+ /usr/share/edk2/OVMF_CODE_4M.fd  -    -    -     -   /usr/share/edk2/x64/OVMF_CODE.4m.fd
+L+ /usr/share/edk2/OVMF_VARS_4M.fd  -    -    -     -   /usr/share/edk2/x64/OVMF_VARS.4m.fd
+L+ /usr/libexec/virtiofsd           -    -    -     -   /usr/lib/virtiofsd
+EOF
+sudo systemd-tmpfiles --create "$CONF"
+echo "Personal machine: Cowork VM shims installed"
+{{- end }}

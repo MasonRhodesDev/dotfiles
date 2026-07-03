@@ -16,6 +16,11 @@ exec-once=sleep 1 & dbus-update-activation-environment --systemd WAYLAND_DISPLAY
 # Initialize theme on login
 exec-once = lmtt switch dark
 
+# Claude Desktop (Chat / Cowork / Code). uwsm app -- places it in its own
+# systemd scope under the graphical session; .desktop entry preserves
+# StartupWMClass=claude-desktop and the claude:// scheme handler.
+exec-once = uwsm app -- claude-desktop.desktop
+
 # Notification daemon: swaync (SwayNotificationCenter) runs as a systemd user service
 # (~/.config/systemd/user/swaync.service, shipped by the package), so no exec-once needed here.
 
