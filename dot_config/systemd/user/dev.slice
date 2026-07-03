@@ -1,0 +1,14 @@
+[Unit]
+Description=Deprioritized development workloads (builds, agents, LSPs)
+
+[Slice]
+# ~1/6 of CPU/IO vs default-weight (100) apps when contended; full speed when idle
+CPUWeight=20
+IOWeight=20
+# Throttle-then-kill inside this slice only — never the compositor or apps
+MemoryHigh=16G
+MemoryMax=20G
+MemorySwapMax=8G
+# Let systemd-oomd sacrifice dev work early under pressure (no-op if oomd is off)
+ManagedOOMMemoryPressure=kill
+ManagedOOMMemoryPressureLimit=80%
