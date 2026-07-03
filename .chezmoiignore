@@ -28,6 +28,7 @@ CLAUDE.md
 
 # Repo documentation (stays in repo, not deployed to home)
 README.md
+LICENSE
 docs/
 
 # Repo tooling (stays in repo, not deployed to home)
