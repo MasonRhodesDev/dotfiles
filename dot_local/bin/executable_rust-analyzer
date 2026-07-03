@@ -1,0 +1,6 @@
+#!/bin/sh
+# Shim: run rust-analyzer inside dev.slice so indexing spikes (it has hit 11G
+# RSS) get throttled/killed by the slice limits instead of OOMing the session.
+# ~/.local/bin precedes ~/.cargo/bin on PATH, so every LSP client lands here.
+exec systemd-run --user --quiet --scope --slice=dev.slice --collect -- \
+    "$HOME/.cargo/bin/rust-analyzer" "$@"
