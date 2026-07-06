@@ -67,3 +67,17 @@
     email_work = {{ $emailWork | quote }}
     email_personal = {{ $emailPersonal | quote }}
     email = {{ if $is_work }}{{ $emailWork | quote }}{{ else }}{{ $emailPersonal | quote }}{{ end }}
+
+# Git identity overrides: the default [user] identity lives in ~/.gitconfig; each
+# entry here maps a git includeIf condition to an include file ~/.gitconfig-<identity>.
+# condition: "gitdir:<path>" (dir-based) or "hasconfig:remote.*.url:<glob>" (org-based).
+# Add/remove entries freely — dot_gitconfig.tmpl ranges over this list.
+[[data.git_identity_overrides]]
+    condition = "gitdir:~/repos/"
+    identity = "personal"
+[[data.git_identity_overrides]]
+    condition = "hasconfig:remote.*.url:git@github.com:redacted-org/**"
+    identity = "work"
+[[data.git_identity_overrides]]
+    condition = "hasconfig:remote.*.url:https://github.com/redacted-org/**"
+    identity = "work"

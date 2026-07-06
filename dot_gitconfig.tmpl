@@ -21,8 +21,10 @@
 [safe]
 	directory = /opt/greetd-config
 
-{{/* Repos under ~/repos/ are personal projects (work lives in ~/redacted-org).
-     Force the personal identity there regardless of this machine's role, so
-     work email never leaks into personal commits on a work machine. */}}
-[includeIf "gitdir:~/repos/"]
-	path = ~/.gitconfig-personal
+{{/* Elective identity overrides (see git_identity_overrides in .chezmoi.toml.tmpl):
+     each includes ~/.gitconfig-<identity> when its git includeIf condition matches,
+     leaving the default [user] above in place everywhere else. */ -}}
+{{ range .git_identity_overrides -}}
+[includeIf "{{ .condition }}"]
+	path = ~/.gitconfig-{{ .identity }}
+{{ end -}}
