@@ -1,34 +1,20 @@
 # Gitleaks config for the dotfiles repo.
 # The pre-commit hook (.githooks/pre-commit) blocks commits containing
 # secrets — critical because this repo is public and chezmoi autoPushes.
+#
+# NOTE: work identifiers (org/brand names, work email) are deliberately NOT
+# listed as detection patterns here — doing so would republish the very strings
+# we keep out of this public repo. Instead they never enter the source: identity
+# and work data come from Bitwarden (see .chezmoi.toml.tmpl) and work-only files
+# live in the private overlay repo. For an optional local-only blocklist guard,
+# see the pre-commit hook's `secret-guard` section.
 
 [extend]
 useDefault = true
 
-# Fail-closed on work identifiers that must never enter this PUBLIC repo. Real
-# values live in Bitwarden / the private overlay repo, not here. If one of these
-# trips on a legitimate string, scrub it — don't allowlist it.
-[[rules]]
-id = "work-org-name"
-description = "Work org name must not be committed to the public repo"
-regex = '''(?i)redacted-org'''
-
-[[rules]]
-id = "work-brand-name"
-description = "Work brand name must not be committed to the public repo"
-regex = '''(?i)redacted'''
-
-[[rules]]
-id = "work-email"
-description = "Work email must not be committed to the public repo"
-regex = '''mason@redacted\.com'''
-
 [allowlist]
 description = "Known false positives"
 paths = [
-  # This config necessarily contains the very patterns it blocks (as regexes),
-  # so it must not scan itself.
-  '''\.gitleaks\.toml''',
   # Deleted local e2e test-VM images used a throwaway ssh test password;
   # only relevant for full-history scans.
   '''e2e-testing/infrastructure/packer/.*\.pkr\.hcl''',

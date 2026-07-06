@@ -19,4 +19,26 @@ if ! gitleaks git --staged --no-banner --redact --config "$repo_root/.gitleaks.t
     echo "false positive add an allowlist entry to .gitleaks.toml." >&2
     exit 1
 fi
+
+# secret-guard: block work identifiers (org/brand names, work email) that must
+# never enter this PUBLIC repo. The forbidden strings are NOT stored here — they
+# live in a local, gitignored blocklist deployed from the private overlay repo
+# (~/.local/share/dotfiles-work/secret-guard.txt), one pattern per line, so the
+# public repo never contains the very strings it guards against. No file => skip.
+guard="$HOME/.local/share/dotfiles-work/secret-guard.txt"
+if [ -f "$guard" ]; then
+    staged="$(git diff --cached --no-color)"
+    while IFS= read -r pat; do
+        [ -z "$pat" ] && continue
+        case "$pat" in \#*) continue ;; esac
+        if printf '%s' "$staged" | grep -iqF -- "$pat"; then
+            echo "" >&2
+            echo "✗ pre-commit: staged changes contain a blocked work identifier." >&2
+            echo "  (matched a pattern from the private secret-guard blocklist)" >&2
+            echo "  This repo is public — scrub it; real values belong in Bitwarden" >&2
+            echo "  or the private overlay repo, never in the source." >&2
+            exit 1
+        fi
+    done < "$guard"
+fi
 exit 0
