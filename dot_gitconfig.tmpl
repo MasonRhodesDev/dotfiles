@@ -20,3 +20,9 @@
 	insteadof = https://github.com/
 [safe]
 	directory = /opt/greetd-config
+
+{{/* Repos under ~/repos/ are personal projects (work lives in ~/redacted-org).
+     Force the personal identity there regardless of this machine's role, so
+     work email never leaks into personal commits on a work machine. */}}
+[includeIf "gitdir:~/repos/"]
+	path = ~/.gitconfig-personal
