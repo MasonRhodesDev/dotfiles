@@ -54,10 +54,10 @@ docs/
 # .config/lmtt/modules/mako.toml — that .toml is the source of truth.
 .config/mako/config
 
-# Work-only: Claude templates (ticket creation, etc.)
-{{ if not .is_work }}
+# Claude templates live in the private work overlay repo (deployed on work
+# machines by run_onchange_after_35-sync-work-overlay), never in this public
+# repo — so chezmoi must not manage this path on any machine.
 .claude/templates
-{{ end }}
 
 # App-owned settings: Claude Code and Zed rewrite these constantly (model
 # changes, plugin toggles, panel layout), so managing them is perpetual drift.

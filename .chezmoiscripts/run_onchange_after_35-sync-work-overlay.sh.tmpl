@@ -1,0 +1,36 @@
+#!/bin/bash
+# Sync the private work overlay on work machines only. The overlay holds files
+# that must not live in the PUBLIC dotfiles repo (Claude Code templates, etc.).
+# Its git URL comes from Bitwarden via chezmoi data (.work.overlay_repo) — it is
+# never hardcoded here, so the org/repo name stays out of the public source.
+#
+# Re-runs whenever the rendered URL changes. To pull newer overlay content on
+# demand: `git -C ~/.local/share/dotfiles-work pull` (or re-run `chezmoi apply`).
+{{ if and .is_work .work.overlay_repo -}}
+set -euo pipefail
+
+REPO={{ .work.overlay_repo | quote }}
+CACHE="$HOME/.local/share/dotfiles-work"
+DEST="$HOME/.claude/templates"
+
+command -v git >/dev/null || { echo "work-overlay: git not found; skipping" >&2; exit 0; }
+
+if [ -d "$CACHE/.git" ]; then
+    git -C "$CACHE" remote set-url origin "$REPO" 2>/dev/null || true
+    git -C "$CACHE" pull --ff-only --quiet || echo "work-overlay: pull failed, using existing clone" >&2
+else
+    rm -rf "$CACHE"
+    git clone --quiet "$REPO" "$CACHE" || { echo "work-overlay: clone failed (no access?); skipping" >&2; exit 0; }
+fi
+
+# Deploy the overlay's Claude templates into ~/.claude/templates (chezmoi ignores
+# that path). Copy + lock perms to match the old private_ (0600) deployment.
+if [ -d "$CACHE/templates" ]; then
+    mkdir -p "$DEST"
+    cp -a "$CACHE/templates/." "$DEST/"
+    chmod -R go-rwx "$DEST"
+    echo "work-overlay: templates synced to $DEST"
+fi
+{{ else -}}
+: # not a work machine, or no overlay configured — nothing to sync
+{{ end -}}

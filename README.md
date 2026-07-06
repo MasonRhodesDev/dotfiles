@@ -18,10 +18,20 @@ then runs `chezmoi init --apply`):
 sh -c "$(curl -fsLS https://raw.githubusercontent.com/MasonRhodesDev/dotfiles/main/bootstrap.sh)"
 ```
 
-Identity (git author name/emails) is prompted once per machine and persisted
-in `~/.config/chezmoi/chezmoi.toml` — like `is_work`, it is never stored in
-this public repo. If the values change in Bitwarden later, run
-`chezmoi-refresh-identity`.
+All machine-varying private data is fetched **once per machine** from a single
+Bitwarden secure note (`chezmoi-data`) at init, then persisted in
+`~/.config/chezmoi/chezmoi.toml` — never stored in this public repo. Fields:
+
+| Field | Purpose |
+|-------|---------|
+| `name`, `email_work`, `email_personal` | git author identity |
+| `git_overrides` | JSON array of `{condition, identity}` git `includeIf` rules (dir- or org-based); drives `~/.gitconfig` |
+| `work_claude_md` | work-only design/brand block injected into `~/.claude/CLAUDE.md` |
+| `work_overlay_repo` | git URL of the private overlay repo (work files, e.g. Claude templates) |
+
+Only `name`/emails have a prompt fallback; the rest degrade to safe defaults if
+absent. If any value changes in Bitwarden later, run `chezmoi-refresh-identity`.
+`rbw` uses `pinentry-curses` so unlock works over a plain TTY/SSH during init.
 
 ### Existing Machine
 
@@ -139,7 +149,7 @@ Static config files are symlinked from the repo into `/etc/greetd/`, so edits in
 
 - **Never use `chezmoi apply --force`** - This can overwrite local changes
 - **Use `chezmoi add` to save changes** - Don't edit deployed-file copies in `.local/share/chezmoi` directly
-- **Work/personal split** - `is_work` (hostname-based) gates work-only files (Claude templates) and excludes gaming/Steam configs from work machines via `.chezmoiignore`
+- **Work/personal split** - `is_work` (hostname-based) excludes gaming/Steam configs from work machines via `.chezmoiignore`. Work-only *files* (Claude templates) live in a **private overlay repo** (`work_overlay_repo`), cloned into `~/.claude/templates` on work machines by `run_onchange_after_35-sync-work-overlay` — they are never committed to this public repo.
 
 ## 📄 License
 

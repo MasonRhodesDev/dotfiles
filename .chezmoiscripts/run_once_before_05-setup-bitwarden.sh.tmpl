@@ -78,6 +78,8 @@ if rbw unlock 2>/dev/null; then
     echo "✅ Vault unlocked!"
     # Secure rbw configuration directory
     chmod 0700 "$HOME/.config/rbw" 2>/dev/null || true
+    # TTY-capable pinentry so unlock works over console/SSH at init time.
+    rbw config set pinentry pinentry-curses 2>/dev/null || true
 else
     echo "⚠️  Unlock failed. Continuing with placeholder values..."
     echo "To unlock later: rbw unlock"
@@ -98,6 +100,10 @@ echo "  3. Add custom fields:"
 echo "     - name: Your Full Name"
 echo "     - email_work: your.work@email.com"
 echo "     - email_personal: your.personal@email.com"
+echo "     - git_overrides: JSON array of git identity rules, e.g."
+echo "         [{\"condition\":\"gitdir:~/repos/\",\"identity\":\"personal\"}]"
+echo "     - work_claude_md: (work only) design/brand block for ~/.claude/CLAUDE.md"
+echo "     - work_overlay_repo: (work only) git URL of the private overlay repo"
 echo "  4. Save the item"
 echo ""
 echo "Note: rbw will automatically sync and access the item."
@@ -120,9 +126,9 @@ echo "========================================="
 echo ""
 echo "If you skipped item creation, manually create 'chezmoi-data'"
 echo "secure note in Bitwarden with custom fields:"
-echo "  - name: Your Full Name"
-echo "  - email_work: your.work@email.com"
-echo "  - email_personal: your.personal@email.com"
+echo "  - name, email_work, email_personal   (git identity)"
+echo "  - git_overrides                       (JSON: dir/org -> identity rules)"
+echo "  - work_claude_md, work_overlay_repo   (work machines only)"
 echo ""
 echo "Then run: rbw sync"
 echo ""

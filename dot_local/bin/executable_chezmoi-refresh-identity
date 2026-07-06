@@ -1,31 +1,39 @@
 #!/bin/bash
-# Re-pull identity (name/emails) from the Bitwarden `chezmoi-data` note and
-# bake it into ~/.config/chezmoi/chezmoi.toml, then re-render dotfiles.
+# Re-pull identity + private data from the Bitwarden `chezmoi-data` note and bake
+# it into ~/.config/chezmoi/chezmoi.toml, then re-render dotfiles.
 #
-# Identity is normally prompted once per machine and persisted (see
-# .chezmoi.toml.tmpl) — run this only when the values changed in Bitwarden.
-# rbw pops pinentry to unlock the vault if it's locked.
+# Identity, git identity overrides, and work-overlay config are normally fetched
+# once per machine at init and persisted (see .chezmoi.toml.tmpl) — run this only
+# when the values change in Bitwarden. rbw pops pinentry to unlock if locked.
 set -euo pipefail
 
 command -v rbw >/dev/null || { echo "rbw is not installed" >&2; exit 1; }
+command -v jq  >/dev/null || { echo "jq is not installed" >&2; exit 1; }
+rbw unlocked >/dev/null 2>&1 || rbw unlock
 
-echo "Fetching identity from Bitwarden (chezmoi-data)..."
-name=$(rbw get --field name chezmoi-data)
-email_work=$(rbw get --field email_work chezmoi-data)
-email_personal=$(rbw get --field email_personal chezmoi-data)
+# Single fetch, then pull each custom field out of the item JSON.
+raw=$(rbw get --raw chezmoi-data)
+field() { printf '%s' "$raw" | jq -r --arg n "$1" '(.fields[]? | select(.name==$n) | .value) // ""'; }
 
+name=$(field name)
 [ -n "$name" ] || { echo "chezmoi-data note has no 'name' field" >&2; exit 1; }
 
+echo "Refreshing identity + private data from Bitwarden (chezmoi-data)..."
 echo "  name:           $name"
-echo "  email_work:     $email_work"
-echo "  email_personal: $email_personal"
+echo "  email_work:     $(field email_work)"
+echo "  email_personal: $(field email_personal)"
+echo "  git_overrides:  $(field git_overrides | head -c 60)…"
+echo "  overlay_repo:   $(field work_overlay_repo)"
 
-# CHEZMOI_IDENTITY_* wins over the stored promptStringOnce values in the
-# config template, so init re-bakes the fresh values.
+# CHEZMOI_* env vars win over the stored values in the config template, so init
+# re-bakes the fresh values without prompting.
 CHEZMOI_IDENTITY_NAME="$name" \
-CHEZMOI_IDENTITY_EMAIL_WORK="$email_work" \
-CHEZMOI_IDENTITY_EMAIL_PERSONAL="$email_personal" \
+CHEZMOI_IDENTITY_EMAIL_WORK="$(field email_work)" \
+CHEZMOI_IDENTITY_EMAIL_PERSONAL="$(field email_personal)" \
+CHEZMOI_GIT_OVERRIDES="$(field git_overrides)" \
+CHEZMOI_WORK_CLAUDE_MD="$(field work_claude_md)" \
+CHEZMOI_WORK_OVERLAY_REPO="$(field work_overlay_repo)" \
     chezmoi init
 
 chezmoi apply
-echo "Identity refreshed and dotfiles re-rendered."
+echo "Identity + private data refreshed and dotfiles re-rendered."

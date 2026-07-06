@@ -56,9 +56,15 @@ if command -v rbw >/dev/null; then
     fi
     if rbw unlocked >/dev/null 2>&1 && ! rbw get --field name chezmoi-data >/dev/null 2>&1; then
         warn "No 'chezmoi-data' secure note found in Bitwarden."
-        warn "Create one with custom fields: name, email_work, email_personal."
-        warn "(chezmoi init will prompt for these manually otherwise.)"
+        warn "Create one with custom fields:"
+        warn "  name, email_work, email_personal   (git identity)"
+        warn "  git_overrides                       (JSON: dir/org -> identity rules)"
+        warn "  work_claude_md, work_overlay_repo   (work machines only)"
+        warn "(chezmoi init will fall back to prompts / safe defaults otherwise.)"
     fi
+    # Use a TTY-capable pinentry so `rbw unlock` works over a console/SSH during
+    # `chezmoi init` (no GUI popup needed) — the "cli pin-lock" for headless setup.
+    rbw config set pinentry pinentry-curses 2>/dev/null || true
 fi
 
 # --- chezmoi init + apply ---------------------------------------------------

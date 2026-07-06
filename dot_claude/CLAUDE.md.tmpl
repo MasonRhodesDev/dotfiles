@@ -1,8 +1,7 @@
 ## Git
 - Never add Co-Authored-By lines for Claude on commits.
-{{ if .is_work }}
-## Design / Visual output
-- ALWAYS apply the REDACTED/redacted-org brand when generating any document (PDF, deck, report, Google Doc), HTML/Markdown artifact, email, diagram, or visual UI: invoke the `redacted-design` skill for the distilled tokens (teal-forward palette, Greycliff CF type, soft rounded styling, components, logos). Source of truth: `~/redacted-org/design-system`.
+{{ if and .is_work .work.claude_md }}
+{{ .work.claude_md }}
 {{ end }}
 ## References
 - Mermaid/PDF generation: see `~/.claude/references/mermaid-pdf.md`

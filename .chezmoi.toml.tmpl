@@ -41,43 +41,60 @@
 [data.tracking]
     manifest_file = ".system_manifest.json"
 
-{{/* Identity: prompted ONCE per machine (like is_work) and persisted in this
-     config — real values never live in the public repo. Resolution per field:
+{{/* Machine-varying identity + private data: fetched ONCE per machine from the
+     Bitwarden `chezmoi-data` note in a SINGLE rbwFields call, then persisted in
+     this rendered config — real values never live in the public repo. Precedence
+     per value:
        1. CHEZMOI_IDENTITY_* env var (refresh path: chezmoi-refresh-identity
           exports fresh values from Bitwarden and re-runs init)
-       2. value already stored in this config (promptStringOnce reuse)
-       3. interactive prompt, default seeded from the Bitwarden `chezmoi-data`
-          note when rbw is installed (rbw pops pinentry to unlock if needed;
-          locked/cancelled/absent -> empty seed, you just type the value)
+       2. value already stored in this config (reused on re-init)
+       3. the Bitwarden note (only queried when rbw is installed, unlocked, and
+          identity isn't already stored — so a locked/headless init never blocks;
+          it just falls back to stored values or the prompt)
      Normal `chezmoi apply` never touches rbw at all. */}}
-{{- $seedName := "" -}}{{- $seedWork := "" -}}{{- $seedPersonal := "" -}}
+{{- $fields := dict -}}
 {{- if and (lookPath "rbw") (not (hasKey . "identity")) (not (env "CHEZMOI_IDENTITY_NAME")) -}}
-{{-   $seedName = output "sh" "-c" "timeout 60 rbw get --field name chezmoi-data 2>/dev/null || true" | trim -}}
-{{-   if $seedName -}}
-{{-     $seedWork = output "sh" "-c" "timeout 10 rbw get --field email_work chezmoi-data 2>/dev/null || true" | trim -}}
-{{-     $seedPersonal = output "sh" "-c" "timeout 10 rbw get --field email_personal chezmoi-data 2>/dev/null || true" | trim -}}
+{{-   if eq (output "sh" "-c" "rbw unlocked >/dev/null 2>&1 && echo yes || true" | trim) "yes" -}}
+{{-     $fields = rbwFields "chezmoi-data" -}}
 {{-   end -}}
 {{- end -}}
+{{- $seedName := dig "name" "value" "" $fields -}}
+{{- $seedWork := dig "email_work" "value" "" $fields -}}
+{{- $seedPersonal := dig "email_personal" "value" "" $fields -}}
+{{- $seedOverrides := dig "git_overrides" "value" "" $fields -}}
+{{- $seedClaudeMd := dig "work_claude_md" "value" "" $fields -}}
+{{- $seedOverlay := dig "work_overlay_repo" "value" "" $fields -}}
 {{- $name := or (env "CHEZMOI_IDENTITY_NAME") (promptStringOnce . "identity.name" "Full name (git author)" $seedName) -}}
 {{- $emailWork := or (env "CHEZMOI_IDENTITY_EMAIL_WORK") (promptStringOnce . "identity.email_work" "Work email" $seedWork) -}}
 {{- $emailPersonal := or (env "CHEZMOI_IDENTITY_EMAIL_PERSONAL") (promptStringOnce . "identity.email_personal" "Personal email" $seedPersonal) -}}
 
+{{- /* Structured private data: prefer a fresh Bitwarden seed, else reuse the
+       value already stored in this config (so re-init without rbw still works). */ -}}
+{{- $overridesJson := or (env "CHEZMOI_GIT_OVERRIDES") $seedOverrides (dig "git" "overrides_json" "" .) -}}
+{{- $claudeMd := or (env "CHEZMOI_WORK_CLAUDE_MD") $seedClaudeMd (dig "work" "claude_md" "" .) -}}
+{{- $overlayRepo := or (env "CHEZMOI_WORK_OVERLAY_REPO") $seedOverlay (dig "work" "overlay_repo" "" .) -}}
+{{- $overrides := list (dict "condition" "gitdir:~/repos/" "identity" "personal") -}}
+{{- if $overridesJson -}}{{- $overrides = fromJson $overridesJson -}}{{- end -}}
 [data.identity]
     name = {{ $name | quote }}
     email_work = {{ $emailWork | quote }}
     email_personal = {{ $emailPersonal | quote }}
     email = {{ if $is_work }}{{ $emailWork | quote }}{{ else }}{{ $emailPersonal | quote }}{{ end }}
 
-# Git identity overrides: the default [user] identity lives in ~/.gitconfig; each
-# entry here maps a git includeIf condition to an include file ~/.gitconfig-<identity>.
-# condition: "gitdir:<path>" (dir-based) or "hasconfig:remote.*.url:<glob>" (org-based).
-# Add/remove entries freely — dot_gitconfig.tmpl ranges over this list.
+# Private, machine-varying data sourced from the Bitwarden `chezmoi-data` note
+# (see the fetch block above), stored here so re-init without rbw reuses it.
+# Never put real values in the public source templates — they come from here.
+[data.git]
+    # JSON array of {condition, identity} git includeIf overrides (org names live
+    # in Bitwarden, not the repo). dot_gitconfig.tmpl ranges over the parsed list.
+    overrides_json = {{ $overridesJson | quote }}
+
+[data.work]
+    claude_md = {{ $claudeMd | quote }}
+    overlay_repo = {{ $overlayRepo | quote }}
+
+{{ range $overrides -}}
 [[data.git_identity_overrides]]
-    condition = "gitdir:~/repos/"
-    identity = "personal"
-[[data.git_identity_overrides]]
-    condition = "hasconfig:remote.*.url:git@github.com:redacted-org/**"
-    identity = "work"
-[[data.git_identity_overrides]]
-    condition = "hasconfig:remote.*.url:https://github.com/redacted-org/**"
-    identity = "work"
+    condition = {{ .condition | quote }}
+    identity = {{ .identity | quote }}
+{{ end -}}
