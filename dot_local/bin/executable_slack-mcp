@@ -3,6 +3,11 @@
 # Pulls the Slack user OAuth token from the GNOME Keyring at runtime so no
 # secret ever lands in ~/.claude.json or any other MCP config file.
 
+# When spawned by a daemon (mcp-hub) the session-bus address isn't inherited,
+# and secret-tool falls back to X11 autolaunch and fails.
+DBUS_SESSION_BUS_ADDRESS="${DBUS_SESSION_BUS_ADDRESS:-unix:path=/run/user/$(id -u)/bus}"
+export DBUS_SESSION_BUS_ADDRESS
+
 exec env \
   SLACK_MCP_XOXP_TOKEN="$(secret-tool lookup service session-env account SLACK_USER_TOKEN)" \
   SLACK_MCP_ADD_MESSAGE_TOOL="${SLACK_MCP_ADD_MESSAGE_TOOL:-true}" \
