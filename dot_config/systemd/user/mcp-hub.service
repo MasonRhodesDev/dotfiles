@@ -1,0 +1,13 @@
+[Unit]
+Description=MCP Hub — central MCP server aggregator for all agent harnesses
+After=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/node /home/mason/.npm-global/lib/node_modules/mcp-hub/dist/cli.js --port 37373 --config %h/.config/mcphub/config.json
+Restart=on-failure
+RestartSec=3
+Environment=PATH=%h/.local/bin:%h/.npm-global/bin:/usr/local/bin:/usr/bin:/bin
+
+[Install]
+WantedBy=default.target
