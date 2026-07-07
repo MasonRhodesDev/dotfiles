@@ -48,8 +48,11 @@ end
 # pi/Codex hook commands cannot reliably set WezTerm user vars by writing
 # directly to /dev/pts. Launch through foreground wrappers so OSC SetUserVar
 # sequences are emitted on the pane stdout that WezTerm parses.
+# Call the wrapper script directly (it handles the non-WezTerm case itself)
+# instead of ~/.local/bin/pi — npm -g installs clobber that path with a plain
+# symlink to cli.js. Use ~/scripts/pi-upgrade to upgrade pi safely.
 function pi
-    command /home/mason/.local/bin/pi $argv
+    command node /home/mason/scripts/pi-wezterm.ts $argv
 end
 
 function codex
