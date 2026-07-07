@@ -34,11 +34,24 @@ enrich() {
 on_action() {
     # $1 = context file (may not exist); DEEPLINK may be set from it.
     local log="${XDG_RUNTIME_DIR:-/tmp}/swaync-focus-sender.log"
-    sleep 1
-    if [ -n "$(python3 "$_slack_helper" handled 5)" ]; then
-        echo "$(date '+%F %T') slack handled click itself; deep link skipped" > "$log"
-        return 0
+
+    # Fresh notifications (< 90s) may still have a live in-app handler,
+    # which is thread-precise and should win. Poll for its
+    # CLICK_NOTIFICATION log entry instead of sleeping a fixed grace —
+    # V8 GC almost never collects a notification that fast, so anything
+    # older skips the wait entirely.
+    local age=$(( $(date +%s) - ${SWAYNC_TIME:-0} ))
+    if [ "$age" -lt 90 ]; then
+        local i
+        for i in 1 2 3 4 5 6; do
+            sleep 0.2
+            if [ -n "$(python3 "$_slack_helper" handled 5)" ]; then
+                echo "$(date '+%F %T') slack handled click itself; deep link skipped" > "$log"
+                return 0
+            fi
+        done
     fi
+
     local uri="${DEEPLINK:-}"
     # Not enriched at receive (e.g. log flush race) — try again now.
     if [ -z "$uri" ] && [ -n "${SWAYNC_TIME:-}" ]; then
@@ -46,7 +59,14 @@ on_action() {
     fi
     if [ -n "$uri" ]; then
         echo "$(date '+%F %T') stale slack notification -> $uri" > "$log"
-        xdg-open "$uri"
+        # Forward straight to the running instance (slack.desktop Exec is
+        # `slack %U`); xdg-open adds gio/launcher overhead on top of the
+        # unavoidable Electron single-instance forwarding process.
+        if command -v slack > /dev/null; then
+            slack "$uri" > /dev/null 2>&1 &
+        else
+            xdg-open "$uri" > /dev/null 2>&1 &
+        fi
     else
         echo "$(date '+%F %T') stale slack notification, no context (id=${SWAYNC_ID:-?} time=${SWAYNC_TIME:-?})" > "$log"
     fi
