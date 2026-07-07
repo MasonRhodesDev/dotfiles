@@ -80,6 +80,61 @@
   font-size: 13px;
 }
 
+/* Action buttons (e.g. "Reply", "Mark as read", 2FA copy) */
+.notification-row .notification-background .notification .notification-action {
+  background: @surface_container_high;
+  color: @on_surface;
+  border-radius: 8px;
+  border: none;
+  margin: 0 6px 6px 6px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: none;
+}
+
+.notification-row .notification-background .notification .notification-action:hover {
+  background: @primary;
+  color: @on_primary;
+}
+
+.notification-row .notification-background .notification .notification-action:active {
+  background: @primary;
+  color: @on_primary;
+  opacity: 0.85;
+}
+
+/* Inline reply */
+.notification-row .notification-background .notification .inline-reply {
+  margin: 0 6px 6px 6px;
+}
+
+.notification-row .notification-background .notification .inline-reply-entry {
+  background: @surface_container_low;
+  color: @on_surface;
+  caret-color: @primary;
+  border: 1px solid @outline;
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+
+.notification-row .notification-background .notification .inline-reply-entry:focus {
+  border-color: @primary;
+}
+
+.notification-row .notification-background .notification .inline-reply-button {
+  background: @primary;
+  color: @on_primary;
+  border: none;
+  border-radius: 8px;
+  margin-left: 6px;
+  padding: 6px 12px;
+}
+
+.notification-row .notification-background .notification .inline-reply-button:hover {
+  opacity: 0.9;
+}
+
 /* Close button */
 .notification-row .notification-background .close-button {
   background: @error;
