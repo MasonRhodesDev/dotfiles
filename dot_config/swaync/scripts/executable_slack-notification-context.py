@@ -17,19 +17,14 @@ so arrival-time correlation identifies the notification reliably.
 
 Usage:
   slack-notification-context.py deeplink <epoch-seconds> [tolerance-seconds]
-      Print "slack://channel?team=...&id=..." for the notification that
-      arrived at the given time, or nothing if no confident match.
-
-  slack-notification-context.py handled [window-seconds]
-      Print "yes" if Slack itself logged a CLICK_NOTIFICATION within the last
-      window (default 4s) — i.e. its own handler was still alive and already
-      navigated (thread-precise), so a deep link would only fight it.
+      Print "slack://channel?team=...&id=...&message=..." for the
+      notification that arrived at the given time, or nothing if no
+      confident match.
 """
 
 import json
 import re
 import sys
-import time
 from datetime import datetime
 from pathlib import Path
 
@@ -39,7 +34,6 @@ LOG_FILES = ["browser.log", "browser1.log"]
 
 STAMP = r"^\[(\d{2}/\d{2}/\d{2}), (\d{2}:\d{2}:\d{2}):(\d{3})\] info: Store: "
 NEW_RE = re.compile(STAMP + r"NEW_NOTIFICATION \n(\{.*?\n\})", re.M | re.S)
-CLICK_RE = re.compile(STAMP + r"CLICK_NOTIFICATION ", re.M)
 
 
 def to_epoch(date_s, time_s, ms):
@@ -89,27 +83,11 @@ def cmd_deeplink(target, tolerance):
     print(uri)
 
 
-def cmd_handled(window):
-    now = time.time()
-    # Only the active log can contain something seconds old.
-    text = read(LOG_FILES[0])
-    for m in CLICK_RE.finditer(text[-200_000:]):
-        try:
-            epoch = to_epoch(m.group(1), m.group(2), m.group(3))
-        except ValueError:
-            continue
-        if now - epoch <= window:
-            print("yes")
-            return
-
-
 def main():
     cmd = sys.argv[1] if len(sys.argv) > 1 else ""
     if cmd == "deeplink" and len(sys.argv) > 2:
         cmd_deeplink(float(sys.argv[2]),
                      float(sys.argv[3]) if len(sys.argv) > 3 else 6.0)
-    elif cmd == "handled":
-        cmd_handled(float(sys.argv[2]) if len(sys.argv) > 2 else 4.0)
     else:
         sys.exit(__doc__ and 2)
 
