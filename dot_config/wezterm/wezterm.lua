@@ -1,8 +1,15 @@
 local wezterm = require 'wezterm'
 local config = {}
 
--- Force config reload when theme files change
-config.automatically_reload_config = true
+-- No automatic config reloads: with 11+ windows, every reload trigger costs
+-- a full Lua config eval PER WINDOW, and wezterm also reloads on every XDG
+-- portal SettingChanged signal — a theme switch (several gsettings writes)
+-- fanned out to ~400 evals and seconds of blocked GUI thread. lmtt recolors
+-- live panes directly via OSC escape sequences; new panes read
+-- lmtt-colors.lua at spawn. CTRL+SHIFT+R reloads manually after config
+-- edits. (Do NOT signal wezterm-gui for reloads: it has no reload signal
+-- handler, so SIGUSR1 just terminates it.)
+config.automatically_reload_config = false
 
 -- Improve Wayland stability during TTY switching
 config.enable_wayland = true
@@ -11,7 +18,11 @@ config.exit_behavior = "CloseOnCleanExit"
 config.notification_handling = "NeverShow"
 config.skip_close_confirmation_for_processes_named = {}
 
--- Minimal status bar: hide tabs but keep status area for SSH indicator
+-- Minimal status bar: hidden by default, shown per-window (via override)
+-- only while header components are active. Safe now that automatic config
+-- reloads are off — a tab-bar flip costs one config eval for that window,
+-- and only when the state actually changes.
+config.enable_tab_bar = false
 config.hide_tab_bar_if_only_one_tab = false
 config.show_tabs_in_tab_bar = false
 config.show_new_tab_button_in_tab_bar = false
@@ -42,6 +53,11 @@ config.status_update_interval = 1000
 local header_loader = require('headerModulesLoader')
 local header_modules = header_loader.load_modules()
 
+-- Header (left status) colors — assigned after lmtt-colors.lua loads below;
+-- declared here so the status handler closure captures them as upvalues.
+local header_fg = '#e2e2e9'
+local header_bg = '#1d2024'
+
 wezterm.on("gui-startup", function(cmd)
   if wezterm.background_child_process then
     pcall(wezterm.background_child_process, {
@@ -58,6 +74,8 @@ wezterm.on("update-right-status", function(window, pane)
 
   if #components > 0 then
     window:set_left_status(wezterm.format({
+      { Background = { Color = header_bg } },
+      { Foreground = { Color = header_fg } },
       { Text = table.concat(components, " | ") }
     }))
   else
@@ -69,14 +87,13 @@ wezterm.on("update-right-status", function(window, pane)
   -- means the last pipe-delimited section, not WezTerm's right_status area.
   window:set_right_status("")
 
-  -- CRITICAL: only touch config overrides when the tab-bar state actually
-  -- flips. set_config_overrides() triggers a FULL config re-evaluation for
-  -- the window; calling it unconditionally here (every second per window,
-  -- plus once per agent user-var event) saturated the GUI thread with
-  -- thousands of config evals and made theme switches stall for ~30s.
+  -- Show the bar only while components are active. Guarded: an override
+  -- write triggers a config eval for this window, so it must happen only
+  -- on an actual state flip — never unconditionally per tick (that pattern
+  -- once fanned a theme switch out to 300+ config evals).
   local want_tab_bar = #components > 0
   local overrides = window:get_config_overrides() or {}
-  if overrides.enable_tab_bar ~= want_tab_bar then
+  if (overrides.enable_tab_bar or false) ~= want_tab_bar then
     overrides.enable_tab_bar = want_tab_bar
     window:set_config_overrides(overrides)
   end
@@ -84,16 +101,16 @@ end)
 
 -- Handle user variable changes from nvim for config overrides
 wezterm.on('user-var-changed', function(window, pane, name, value)
-  local is_agent_var = name == "CLAUDE_ACTIVE" or name == "CLAUDE_ACTIVITY" or name == "CLAUDE_MODEL" or
-      name == "AGENT_ACTIVE" or name == "AGENT_KIND" or name == "AGENT_SEQ" or
-      name == "AGENT_NAME" or name == "AGENT_MODEL" or name == "AGENT_STATE" or name == "AGENT_ACTIVITY" or
-      name == "AGENT_SESSION"
+  -- Legacy agent-harness vars (Claude/pi/codex hooks): harnesses match the
+  -- terminal natively now, nothing consumes these — ignore them entirely.
+  -- They're plain strings, and feeding them to wezterm-config.nvim made its
+  -- json_parse throw on every event.
+  if name:match("^AGENT_") or name:match("^CLAUDE_") then
+    return
+  end
 
-  -- Handle nvim config overrides. Agent vars are plain strings, not the
-  -- JSON payloads wezterm-config.nvim expects — feeding them in made
-  -- json_parse throw a stack trace on every agent event. pcall guards
-  -- against any other non-JSON var doing the same.
-  if not is_agent_var and wezterm_config_nvim and wezterm_config_nvim.override_user_var then
+  -- Handle nvim config overrides (pcall: any non-JSON var must not throw)
+  if wezterm_config_nvim and wezterm_config_nvim.override_user_var then
     local ok, overrides = pcall(
       wezterm_config_nvim.override_user_var,
       window:get_config_overrides() or {},
@@ -103,12 +120,6 @@ wezterm.on('user-var-changed', function(window, pane, name, value)
     if ok and overrides then
       window:set_config_overrides(overrides)
     end
-  end
-
-  -- Agent activity updates: refresh the status bar (cheap now that the
-  -- handler no longer rebuilds config overrides on every pass)
-  if is_agent_var then
-    window:perform_action(wezterm.action.EmitEvent("update-right-status"), pane)
   end
 end)
 
@@ -122,6 +133,21 @@ wezterm.add_to_config_reload_watch_list(colors_file)
 local has_colors, colors_module = pcall(dofile, colors_file)
 if has_colors and colors_module then
   config.colors = colors_module
+
+  -- Make the header conform to the lmtt palette. The fancy tab bar (which
+  -- hosts the left status) is styled via window_frame, not colors.tab_bar,
+  -- so derive both from the generated tab_bar block.
+  local tab_bar = colors_module.tab_bar
+  if tab_bar and tab_bar.background then
+    header_bg = tab_bar.background
+    header_fg = (tab_bar.inactive_tab_hover and tab_bar.inactive_tab_hover.fg_color)
+        or colors_module.foreground
+        or header_fg
+    config.window_frame = {
+      active_titlebar_bg = tab_bar.background,
+      inactive_titlebar_bg = tab_bar.background,
+    }
+  end
 else
   -- Fallback colors if theme switcher hasn't generated colors yet
   config.colors = {

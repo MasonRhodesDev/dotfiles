@@ -2,3 +2,56 @@
 Name=hicolor
 Comment=User hicolor overrides
 Directories=16x16/apps,32x32/apps,48x48/apps,64x64/apps,128x128/apps,256x256/apps,512x512/apps,1024x1024/apps,scalable/apps
+
+# GTK4 requires a section with a Size field for EVERY directory listed above.
+# Without them it rejects each directory ("theme directory has no size field")
+# and, because this user-level file shadows /usr/share/icons/hicolor's
+# index.theme, the ENTIRE hicolor fallback goes dark in GTK4 apps — swaync
+# notifications lose every icon that only exists in hicolor.
+
+[16x16/apps]
+Size=16
+Context=Applications
+Type=Threshold
+
+[32x32/apps]
+Size=32
+Context=Applications
+Type=Threshold
+
+[48x48/apps]
+Size=48
+Context=Applications
+Type=Threshold
+
+[64x64/apps]
+Size=64
+Context=Applications
+Type=Threshold
+
+[128x128/apps]
+Size=128
+Context=Applications
+Type=Threshold
+
+[256x256/apps]
+Size=256
+Context=Applications
+Type=Threshold
+
+[512x512/apps]
+Size=512
+Context=Applications
+Type=Threshold
+
+[1024x1024/apps]
+Size=1024
+Context=Applications
+Type=Threshold
+
+[scalable/apps]
+Size=128
+Context=Applications
+Type=Scalable
+MinSize=8
+MaxSize=1024

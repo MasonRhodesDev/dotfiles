@@ -63,8 +63,22 @@ local function active_modules_sorted(modules, pane)
   return active_modules
 end
 
--- Collect active components from all modules
-function M.collect_components(modules, window, pane)
+-- Component cache: module detect/get_component hit files, JSON parsing, and
+-- mux RPCs — all on the GUI thread. update-right-status fires every second
+-- for every window, so uncached that work multiplies into visible input lag.
+-- Cache per pane; user-var changes invalidate so agent updates still show
+-- within a tick.
+local component_cache = {}
+local CACHE_TTL_SECONDS = 3
+
+function M.invalidate(pane)
+  local ok, id = pcall(function() return pane:pane_id() end)
+  if ok and id ~= nil then
+    component_cache[tostring(id)] = nil
+  end
+end
+
+local function compute_components(modules, pane)
   local components = {}
   for _, active in ipairs(active_modules_sorted(modules, pane)) do
     if active.get_component then
@@ -74,7 +88,24 @@ function M.collect_components(modules, window, pane)
       end
     end
   end
+  return components
+end
 
+-- Collect active components from all modules
+function M.collect_components(modules, window, pane)
+  local ok, id = pcall(function() return pane:pane_id() end)
+  if not ok or id == nil then
+    return compute_components(modules, pane)
+  end
+
+  local key = tostring(id)
+  local cached = component_cache[key]
+  if cached and os.time() - cached.at < CACHE_TTL_SECONDS then
+    return cached.components
+  end
+
+  local components = compute_components(modules, pane)
+  component_cache[key] = { at = os.time(), components = components }
   return components
 end
 
