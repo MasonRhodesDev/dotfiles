@@ -1,3 +1,9 @@
+-- io.popen(sqlite3 ...) blocks the GUI thread; with the status bar ticking
+-- every second per window, uncached queries add up to visible input lag.
+-- Cache per beads dir and refresh at most every few seconds.
+local cache = {}
+local CACHE_TTL_SECONDS = 5
+
 return {
   -- No priority defined - will default to 999 (lowest priority)
 
@@ -44,6 +50,11 @@ return {
       return nil
     end
 
+    local cached = cache[beads_dir]
+    if cached and os.time() - cached.at < CACHE_TTL_SECONDS then
+      return cached.component
+    end
+
     local beads_db = beads_dir .. '/.beads/beads.db'
 
     -- Query total open tasks
@@ -58,6 +69,7 @@ return {
 
     -- Don't show module if count is 0
     if count == 0 then
+      cache[beads_dir] = { at = os.time(), component = nil }
       return nil
     end
 
@@ -88,6 +100,8 @@ return {
       end
     end
 
-    return table.concat(parts, " | ")
+    local component = table.concat(parts, " | ")
+    cache[beads_dir] = { at = os.time(), component = component }
+    return component
   end
 }

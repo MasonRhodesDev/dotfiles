@@ -56,18 +56,11 @@ end)
 wezterm.on("update-right-status", function(window, pane)
   local components = header_loader.collect_components(header_modules, window, pane)
 
-  -- Build status display
-  local overrides = window:get_config_overrides() or {}
-
   if #components > 0 then
-    -- Show tab bar and status when any indicator is active
-    overrides.enable_tab_bar = true
     window:set_left_status(wezterm.format({
       { Text = table.concat(components, " | ") }
     }))
   else
-    -- Hide tab bar when no indicators are active
-    overrides.enable_tab_bar = false
     window:set_left_status("")
   end
 
@@ -75,24 +68,46 @@ wezterm.on("update-right-status", function(window, pane)
   -- justification remain consistent with the existing layout. "Right-most"
   -- means the last pipe-delimited section, not WezTerm's right_status area.
   window:set_right_status("")
-  window:set_config_overrides(overrides)
+
+  -- CRITICAL: only touch config overrides when the tab-bar state actually
+  -- flips. set_config_overrides() triggers a FULL config re-evaluation for
+  -- the window; calling it unconditionally here (every second per window,
+  -- plus once per agent user-var event) saturated the GUI thread with
+  -- thousands of config evals and made theme switches stall for ~30s.
+  local want_tab_bar = #components > 0
+  local overrides = window:get_config_overrides() or {}
+  if overrides.enable_tab_bar ~= want_tab_bar then
+    overrides.enable_tab_bar = want_tab_bar
+    window:set_config_overrides(overrides)
+  end
 end)
 
 -- Handle user variable changes from nvim for config overrides
 wezterm.on('user-var-changed', function(window, pane, name, value)
-  -- Handle nvim config overrides
-  if wezterm_config_nvim and wezterm_config_nvim.override_user_var then
-    local overrides = window:get_config_overrides() or {}
-    overrides = wezterm_config_nvim.override_user_var(overrides, name, value)
-    window:set_config_overrides(overrides)
-  end
-
-  -- Handle agent activity updates - force status bar refresh
-  if name == "CLAUDE_ACTIVE" or name == "CLAUDE_ACTIVITY" or name == "CLAUDE_MODEL" or
+  local is_agent_var = name == "CLAUDE_ACTIVE" or name == "CLAUDE_ACTIVITY" or name == "CLAUDE_MODEL" or
       name == "AGENT_ACTIVE" or name == "AGENT_KIND" or name == "AGENT_SEQ" or
       name == "AGENT_NAME" or name == "AGENT_MODEL" or name == "AGENT_STATE" or name == "AGENT_ACTIVITY" or
-      name == "AGENT_SESSION" then
-    -- Trigger a status update by emitting update-right-status
+      name == "AGENT_SESSION"
+
+  -- Handle nvim config overrides. Agent vars are plain strings, not the
+  -- JSON payloads wezterm-config.nvim expects — feeding them in made
+  -- json_parse throw a stack trace on every agent event. pcall guards
+  -- against any other non-JSON var doing the same.
+  if not is_agent_var and wezterm_config_nvim and wezterm_config_nvim.override_user_var then
+    local ok, overrides = pcall(
+      wezterm_config_nvim.override_user_var,
+      window:get_config_overrides() or {},
+      name,
+      value
+    )
+    if ok and overrides then
+      window:set_config_overrides(overrides)
+    end
+  end
+
+  -- Agent activity updates: refresh the status bar (cheap now that the
+  -- handler no longer rebuilds config overrides on every pass)
+  if is_agent_var then
     window:perform_action(wezterm.action.EmitEvent("update-right-status"), pane)
   end
 end)
