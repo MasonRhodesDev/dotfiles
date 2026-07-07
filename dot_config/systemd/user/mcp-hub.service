@@ -8,6 +8,8 @@ ExecStart=/usr/bin/node /home/mason/.npm-global/lib/node_modules/mcp-hub/dist/cl
 Restart=on-failure
 RestartSec=3
 Environment=PATH=%h/.local/bin:%h/.npm-global/bin:/usr/local/bin:/usr/bin:/bin
+# secret-tool (GNOME Keyring) needs the session bus; user units don't export it
+Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=%t/bus
 
 [Install]
 WantedBy=default.target

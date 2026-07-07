@@ -87,3 +87,6 @@ docs/
 
 # Fresh-machine bootstrap (run from curl, stays in repo)
 bootstrap.sh
+.config/gtk-3.0/settings.ini
+.config/gtk-4.0/settings.ini
+.config/hypr/hyprtoolkit.conf
