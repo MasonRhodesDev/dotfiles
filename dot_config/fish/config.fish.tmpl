@@ -1,5 +1,13 @@
-# Oh My Posh prompt - skip in Cursor integrated terminal
-if not set -q TERM_PROGRAM; or test "$TERM_PROGRAM" != "vscode"
+# Oh My Posh prompt. Skipped (fish's default ASCII prompt is the fallback
+# tier) in: Cursor's integrated terminal, console/TTY logins (TTY_CONSOLE is
+# exported by conf.d/tty.fish and survives into tmux, where TERM is no longer
+# "linux"), and when the binary isn't installed yet on a fresh machine.
+set -l use_omp 1
+set -q TERM_PROGRAM; and test "$TERM_PROGRAM" = vscode; and set use_omp 0
+set -q TTY_CONSOLE; and set use_omp 0
+test "$TERM" = linux; and set use_omp 0
+command -q oh-my-posh; or set use_omp 0
+if test $use_omp = 1
     oh-my-posh init fish --config /home/mason/.config/oh-my-posh/bubbles.omp.json | source
 end
 
@@ -10,7 +18,8 @@ fish_vi_key_bindings
 function rerender_on_bind_mode_change --on-variable fish_bind_mode
     if test "$fish_bind_mode" != paste -a "$fish_bind_mode" != "$FISH__BIND_MODE"
         set -gx FISH__BIND_MODE $fish_bind_mode
-        omp_repaint_prompt
+        # omp isn't loaded on console/TTY logins — don't error on mode change
+        functions -q omp_repaint_prompt; and omp_repaint_prompt
     end
 end
 
