@@ -1,5 +1,6 @@
 name = "hyprtoolkit"
 description = "Hyprtoolkit palette with Material You colors"
+binary = "hyprctl"
 priority = 100
 
 [script]
