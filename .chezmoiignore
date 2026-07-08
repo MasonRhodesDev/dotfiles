@@ -90,3 +90,7 @@ bootstrap.sh
 .config/gtk-3.0/settings.ini
 .config/gtk-4.0/settings.ini
 .config/hypr/hyprtoolkit.conf
+
+# mcp-hub config: deliberately untracked (public repo; contains work email/paths)
+.config/mcphub
+.config/mcphub/**
