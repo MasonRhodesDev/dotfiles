@@ -58,8 +58,13 @@ if test "$vt" = /dev/tty2; and not set -q tty_no_gui
 end
 
 # --- tier 2: tmux for scrollback (kernel VTs have none since 5.9) --------
+# Dedicated socket (-L vt): tmux children inherit the SERVER's env, so
+# attaching to a GUI-born default server would drop TTY_CONSOLE and bring
+# oh-my-posh glyphs back to the console. The vt server is always born from
+# a VT login. Rescuing GUI tmux sessions still works: `tmux attach` inside
+# here reaches the default socket.
 if not set -q TMUX; and not set -q tty_no_tmux; and command -q tmux
-    _tty_tier 2 tmux tmux new-session -A -s (string replace '/dev/' '' $vt)
+    _tty_tier 2 tmux tmux -L vt new-session -A -s (string replace '/dev/' '' $vt)
 end
 
 # --- tier 3: raw kernel console — you are here, nothing else to fail -----
