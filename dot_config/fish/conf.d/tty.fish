@@ -34,23 +34,30 @@ setterm -blank 0 -powersave off 2>/dev/null
 # TERM=screen-*, not linux) as console-hosted → plain ASCII prompt.
 set -gx TTY_CONSOLE 1
 
+# A tier that survived startup was a real session: log out when it ends,
+# whatever its exit code (kiosk semantics — quitting kitty must close the
+# TTY). Only a fast death is a wedged tier that falls through. Exit codes
+# alone can't tell "GPU wedge" from "kitty quit nonzero", but time can.
+function _tty_tier --argument-names grace label
+    set -l t0 (date +%s)
+    $argv[3..]
+    set -l rc $status
+    test (math (date +%s) - $t0) -ge $grace; and exit $rc
+    echo "tty: $label died within $grace sec (exit $rc) — degrading" >&2
+end
+
 # --- tier 1, tty2 only: real terminal emulator on bare DRM --------------
 # Ligatures/nerd glyphs need a shaping engine the kernel console will never
-# have. Clean exit (quit kitty) logs out; failure (GPU/seat wedge) falls
-# through to tmux with the error left visible above the prompt.
+# have. cage -s: VT switching is disabled by default (kiosk hardening) and
+# must be allowed explicitly or Ctrl+Alt+F# is swallowed.
 if test "$vt" = /dev/tty2; and not set -q tty_no_gui
     and command -q cage; and command -q kitty
-    cage -- kitty
-    and exit
-    echo "tty: cage+kitty failed — degrading to tmux console" >&2
+    _tty_tier 5 cage+kitty cage -s -- kitty
 end
 
 # --- tier 2: tmux for scrollback (kernel VTs have none since 5.9) --------
-# Clean exit/detach logs out; failure falls through to the raw shell.
 if not set -q TMUX; and not set -q tty_no_tmux; and command -q tmux
-    tmux new-session -A -s (string replace '/dev/' '' $vt)
-    and exit
-    echo "tty: tmux failed — raw shell" >&2
+    _tty_tier 2 tmux tmux new-session -A -s (string replace '/dev/' '' $vt)
 end
 
 # --- tier 3: raw kernel console — you are here, nothing else to fail -----
