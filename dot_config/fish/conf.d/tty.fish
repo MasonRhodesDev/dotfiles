@@ -38,11 +38,13 @@ set -gx TTY_CONSOLE 1
 # whatever its exit code (kiosk semantics — quitting kitty must close the
 # TTY). Only a fast death is a wedged tier that falls through. Exit codes
 # alone can't tell "GPU wedge" from "kitty quit nonzero", but time can.
+# NB: `exit` inside conf.d only aborts sourcing this file, leaving a live
+# shell behind — ending the login for real requires replacing the process.
 function _tty_tier --argument-names grace label
     set -l t0 (date +%s)
     $argv[3..]
     set -l rc $status
-    test (math (date +%s) - $t0) -ge $grace; and exit $rc
+    test (math (date +%s) - $t0) -ge $grace; and exec true
     echo "tty: $label died within $grace sec (exit $rc) — degrading" >&2
 end
 
