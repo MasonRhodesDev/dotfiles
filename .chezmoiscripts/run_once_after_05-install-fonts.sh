@@ -51,13 +51,37 @@ cd "$POWERLINE_DIR"
 ./install.sh
 cd -
 
-# Noto Sans is typically available via system package manager
-# Check if it exists, if not provide instructions
-if ! fc-list | grep -qi "noto sans"; then
-    echo "WARNING: Noto Sans not found. Install via system package manager:"
-    echo "  Fedora/RHEL: sudo dnf install google-noto-sans-fonts"
-    echo "  Debian/Ubuntu: sudo apt install fonts-noto"
-    echo "  Arch: sudo pacman -S noto-fonts"
+# ---------------------------------------------------------------------------
+# System font packages: base Unicode coverage (Noto Sans + color emoji) plus
+# the fonts referenced by my configs and my personal required set. Guarded with
+# `|| true` so one unavailable package never aborts `chezmoi apply`.
+# ---------------------------------------------------------------------------
+echo "Installing system font packages..."
+if command -v pacman >/dev/null 2>&1; then
+    # Official repo: base coverage + config-referenced + personal repo fonts.
+    sudo pacman -S --needed --noconfirm \
+        noto-fonts noto-fonts-emoji \
+        ttf-roboto adobe-source-code-pro-fonts \
+        terminus-font ttf-fira-code ttf-firacode-nerd ttf-nerd-fonts-symbols-mono \
+        || true
+    # AUR: my personal fonts that aren't in the official repos.
+    aur_helper=""
+    command -v paru >/dev/null 2>&1 && aur_helper=paru
+    [ -z "$aur_helper" ] && command -v yay >/dev/null 2>&1 && aur_helper=yay
+    if [ -n "$aur_helper" ]; then
+        "$aur_helper" -S --needed --noconfirm \
+            nerd-fonts-git ttf-harmonyos-sans ttf-ms-fonts || true
+    else
+        echo "NOTE: no AUR helper (paru/yay) — skipping nerd-fonts-git, ttf-harmonyos-sans, ttf-ms-fonts"
+    fi
+elif command -v apt-get >/dev/null 2>&1; then
+    sudo apt-get install -y \
+        fonts-noto fonts-noto-color-emoji fonts-firacode fonts-roboto \
+        fonts-terminus fonts-hack || true
+elif command -v dnf >/dev/null 2>&1; then
+    sudo dnf install -y \
+        google-noto-sans-fonts google-noto-emoji-fonts fira-code-fonts \
+        google-roboto-fonts terminus-fonts adobe-source-code-pro-fonts || true
 fi
 
 # Refresh font cache

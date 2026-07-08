@@ -65,11 +65,26 @@ github = "https://github.com/mishamyrt/Lilex"
 verify = "fc-list | grep -qi lilex"
 
 [fonts_system]
-description = "System fonts: powerline, fira-code, google-roboto"
+description = "Base + config-referenced repo fonts: noto-fonts (Noto Sans, the sans-serif fallback), ttf-roboto, adobe-source-code-pro-fonts, terminus-font, ttf-fira-code, ttf-firacode-nerd, ttf-nerd-fonts-symbols-mono, powerline"
 profile = "common"
 priority = 3
 version = "latest"
-verify = "fc-list | grep -qi roboto"
+verify = "fc-list | grep -qi 'noto sans' && fc-list | grep -qi roboto"
+
+[fonts_emoji]
+description = "Color emoji font (noto-fonts-emoji) — emoji rendering in the terminal and apps"
+profile = "common"
+priority = 3
+version = "latest"
+verify = "fc-list | grep -qi emoji"
+
+[fonts_personal_aur]
+description = "Personal fonts from the AUR: nerd-fonts-git (full Nerd Font set), ttf-harmonyos-sans, ttf-ms-fonts"
+profile = "personal"
+priority = 3
+version = "latest"
+optional = true
+verify = "fc-list | grep -qi harmonyos"
 
 [shell_tools]
 description = "Shell prompt: oh-my-posh"
