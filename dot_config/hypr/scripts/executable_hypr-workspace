@@ -28,6 +28,12 @@ get_workspace_monitor() {
     hyprctl workspaces -j | jq -r --arg ws "$ws" '.[] | select(.id == ($ws | tonumber)) | .monitorID // empty'
 }
 
+# Lua config (hyprland.lua): hyprctl dispatch args are Lua expressions, not
+# hyprlang dispatcher syntax
+toggle_special() {
+    hyprctl dispatch "hl.dsp.workspace.toggle_special(\"$1\")"
+}
+
 # === Listener Management ===
 
 get_listener_pid_file() {
@@ -57,7 +63,7 @@ start_listener() {
                     # Only close if still active (prevents race)
                     local current=$(get_active_special)
                     if [[ "$current" == "special:$ws" ]]; then
-                        hyprctl dispatch togglespecialworkspace "$ws" 2>/dev/null
+                        toggle_special "$ws" 2>/dev/null
                     fi
                     break
                     ;;
@@ -93,11 +99,11 @@ cmd_switch() {
         if [[ -n "$special" && "$special" != "null" ]]; then
             local name="${special#special:}"
             kill_listener "$name"
-            hyprctl dispatch togglespecialworkspace "$name"
+            toggle_special "$name"
         fi
     fi
 
-    hyprctl dispatch workspace "$target"
+    hyprctl dispatch "hl.dsp.focus({workspace = $target})"
 }
 
 cmd_toggle_special() {
@@ -107,7 +113,7 @@ cmd_toggle_special() {
     if [[ "$ws" -lt 0 ]]; then
         local special=$(get_active_special)
         local name="${special#special:}"
-        hyprctl dispatch togglespecialworkspace "$name"
+        toggle_special "$name"
         return
     fi
 
@@ -115,10 +121,10 @@ cmd_toggle_special() {
     if [[ "$current" == "special:$ws" ]]; then
         # Close it
         kill_listener "$ws"
-        hyprctl dispatch togglespecialworkspace "$ws"
+        toggle_special "$ws"
     else
         # Open it with auto-dismiss listener
-        hyprctl dispatch togglespecialworkspace "$ws"
+        toggle_special "$ws"
         start_listener "$ws"
     fi
 }
@@ -131,7 +137,7 @@ cmd_move_to_special() {
         return
     fi
 
-    hyprctl dispatch movetoworkspace "special:$ws"
+    hyprctl dispatch "hl.dsp.window.move({workspace = \"special:$ws\", follow = true})"
 }
 
 # === Main ===
