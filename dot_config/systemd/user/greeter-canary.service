@@ -1,0 +1,8 @@
+[Unit]
+Description=Smoke-test the greetd greeter against the installed Hyprland stack
+
+[Service]
+Type=oneshot
+# Let the pacman transaction finish replacing the whole stack before testing.
+ExecStartPre=/usr/bin/sleep 20
+ExecStart=%h/.local/bin/greeter-canary

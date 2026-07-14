@@ -1,0 +1,12 @@
+[Unit]
+Description=Run the greeter canary when the Hyprland stack is upgraded
+
+[Path]
+# pacman replaces these on upgrade of hyprland-git / its -git libs.
+PathChanged=/usr/bin/Hyprland
+PathChanged=/usr/lib/libhyprutils.so
+PathChanged=/usr/lib/libhyprgraphics.so
+PathChanged=/usr/lib/libaquamarine.so
+
+[Install]
+WantedBy=default.target

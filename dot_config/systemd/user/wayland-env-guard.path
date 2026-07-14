@@ -1,0 +1,10 @@
+[Unit]
+Description=Watch the runtime dir for Wayland socket churn
+
+[Path]
+PathModified=%t
+TriggerLimitIntervalSec=10s
+TriggerLimitBurst=5
+
+[Install]
+WantedBy=default.target

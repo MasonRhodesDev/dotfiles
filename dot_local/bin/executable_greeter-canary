@@ -1,0 +1,75 @@
+#!/bin/bash
+# Smoke-test the greetd greeter stack against the CURRENTLY INSTALLED
+# Hyprland, without leaving the session: spawn a nested Hyprland with the
+# greeter's config and check it survives long enough to be running regreet.
+#
+# Catches what `Hyprland --verify-config` cannot: runtime ABI breakage
+# between hyprland-git and its -git libs (hyprutils/aquamarine/hyprgraphics),
+# which otherwise only shows up as a greeter crash loop AFTER logout
+# (2026-07-07: SEGV in CLayerSurface::fromView; earlier the same day: SEGV in
+# CCairoSurface::cairo()).
+#
+# Exit: 0 = greeter stack OK, 1 = would crash / did not come up, 2 = cannot test.
+# Wired to hypr package upgrades by greeter-canary.path/.service (user units).
+
+set -u
+GREETER_CFG="/etc/greetd/hypr.conf"
+[ -f /etc/greetd/hypr.lua ] && GREETER_CFG="/etc/greetd/hypr.lua"
+SURVIVE_SECS=8
+LOG="$(mktemp -t greeter-canary.XXXXXX.log)"
+
+# The nested Hyprland stamps its (soon-dead) socket into the systemd user
+# env on startup, orphaning D-Bus-activated GUI services. Undo that on every
+# exit path (2026-07-13: left blueman-applet's pairing agent crash-looping).
+trap '"$HOME"/.local/bin/wayland-env-guard || true' EXIT
+
+notify() { # $1 urgency, $2 title, $3 body
+    command -v notify-send >/dev/null && notify-send -u "$1" -a greeter-canary \
+        -h string:x-canonical-private-synchronous:greeter-canary "$2" "$3"
+}
+
+if [ -z "${WAYLAND_DISPLAY:-}" ]; then
+    echo "greeter-canary: no Wayland session to nest in — cannot test" >&2
+    exit 2
+fi
+
+# Phase 1: config parse check (cheap, catches option removals/renames).
+if ! Hyprland --verify-config --config "$GREETER_CFG" >"$LOG" 2>&1; then
+    notify critical "Greeter would FAIL after this update" \
+        "Config $GREETER_CFG no longer parses. Fix before logging out."
+    echo "greeter-canary: FAIL (config parse)"; tail -5 "$LOG"; rm -f "$LOG"
+    exit 1
+fi
+
+# Phase 2: nested runtime test. The greeter config's own exec-once starts
+# regreet; we only care that the compositor survives startup + layer-shell +
+# regreet mapping, then we tear it down.
+Hyprland --config "$GREETER_CFG" >"$LOG" 2>&1 &
+PID=$!
+
+for _ in $(seq 1 $((SURVIVE_SECS * 2))); do
+    sleep 0.5
+    kill -0 "$PID" 2>/dev/null || break
+done
+
+if kill -0 "$PID" 2>/dev/null; then
+    # Survived — find the nested instance signature from its log and exit it
+    # cleanly (falls back to SIGTERM). Also reap the regreet it spawned.
+    SIG=$(grep -oam1 'hypr/[a-f0-9_]*/hyprland.log' "$LOG" | cut -d/ -f2)
+    if [ -n "$SIG" ]; then
+        hyprctl -i "$SIG" dispatch exit >/dev/null 2>&1
+        sleep 1
+    fi
+    kill "$PID" 2>/dev/null
+    notify normal "Greeter stack OK" "Nested greeter Hyprland survived ${SURVIVE_SECS}s. Safe to log out."
+    echo "greeter-canary: OK"
+    rm -f "$LOG"
+    exit 0
+fi
+
+wait "$PID"; RC=$?
+notify critical "Greeter would CRASH after this update (rc=$RC)" \
+    "Nested greeter Hyprland died. Do NOT log out — rebuild the hypr stack (see ~/.cache/hyprland/ crash reports)."
+echo "greeter-canary: FAIL (nested compositor died rc=$RC)"; tail -8 "$LOG"
+rm -f "$LOG"
+exit 1
