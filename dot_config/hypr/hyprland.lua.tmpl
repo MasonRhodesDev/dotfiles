@@ -28,6 +28,8 @@ local c = {
     outline         = "rgb(9e8e82)",
     surface         = "rgb(19120c)",
     on_surface      = "rgb(efe0d6)",
+    tertiary        = "rgb(c4cb97)",
+    tertiary_container = "rgb(434a22)",
     active_border   = { colors = { "rgb(ffb77a)", "rgb(e3c0a5)" }, angle = 45 },
     inactive_border = "rgb(9e8e82)",
     shadow          = "rgb(000000)",
@@ -285,7 +287,7 @@ hl.bind(mainMod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
 -- pinning is SUPER+SHIFT+V.
 -- Pinned windows get a high-contrast border so they're identifiable at a
 -- glance ("pin" is a dynamic match; legacy string = "<active> <inactive>").
-hl.window_rule({ name = "pinned-border",    match = { pin = true }, border_color = c.on_surface .. " " .. c.secondary })
+hl.window_rule({ name = "pinned-border",    match = { pin = true }, border_color = (c.tertiary or c.on_surface) .. " " .. (c.tertiary_container or c.outline) })
 hl.window_rule({ name = "keep-tile",        match = { title = "^(keep.google.com_/)$" }, tile = true })
 hl.window_rule({ name = "discord-special",  match = { class = "^(discord)$" }, workspace = "special:magic silent" })
 hl.window_rule({ name = "slack-special",    match = { class = "^(slack)$" }, workspace = "special:magic silent" })
