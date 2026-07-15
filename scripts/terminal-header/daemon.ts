@@ -6,14 +6,14 @@
 // files, claude correlation, pane summaries) are produced elsewhere — by the
 // claude hooks, agent runner/bridge, and pane-summarizer.service.
 
-import { execFileSync } from 'node:child_process';
 import {
-  chmodSync, mkdirSync, readdirSync, readFileSync, readlinkSync,
+  chmodSync, mkdirSync, readdirSync, readFileSync,
   renameSync, rmSync, statSync, writeFileSync,
 } from 'node:fs';
 import { join } from 'node:path';
-import type { AgentState, ForegroundProcess, PaneSnapshot, SectionContext } from './types.ts';
+import type { AgentState, SectionContext } from './types.ts';
 import { resolveHeader } from './resolver.ts';
+import { TARGETS } from './targets/index.ts';
 
 const TICK_MS = 1_500;
 const AGENT_STATE_TTL_MS = 2 * 60 * 1000;
@@ -56,87 +56,6 @@ function writeJson(path: string, value: unknown): void {
   const temp = `${path}.${process.pid}.tmp`;
   writeFileSync(temp, `${JSON.stringify(value)}\n`, { mode: 0o600 });
   renameSync(temp, path);
-}
-
-// --- Pane enumeration -------------------------------------------------------
-
-function listKittySnapshots(): PaneSnapshot[] {
-  let pids: string[] = [];
-  try {
-    pids = execFileSync('pgrep', ['-x', 'kitty'], { encoding: 'utf8', timeout: 2_000 })
-      .split('\n').map((s) => s.trim()).filter(Boolean);
-  } catch {
-    return [];
-  }
-  const snapshots: PaneSnapshot[] = [];
-  for (const pid of pids) {
-    let listing: any;
-    try {
-      listing = JSON.parse(execFileSync('kitten', ['@', '--to', `unix:@kitty-${pid}`, 'ls'], {
-        encoding: 'utf8', timeout: 2_000, maxBuffer: 4 * 1024 * 1024, stdio: ['ignore', 'pipe', 'ignore'],
-      }));
-    } catch {
-      continue;
-    }
-    for (const osWindow of listing ?? []) {
-      for (const tab of osWindow.tabs ?? []) {
-        for (const w of tab.windows ?? []) {
-          let tty: string | undefined;
-          try {
-            tty = readlinkSync(`/proc/${w.pid}/fd/0`);
-          } catch {
-            // Shell gone or unreadable; sections that need tty stay silent.
-          }
-          snapshots.push({
-            paneKey: `kitty-${pid}-${w.id}`,
-            terminal: 'kitty',
-            tty,
-            title: w.title,
-            userVars: w.user_vars ?? {},
-            foregroundProcesses: (w.foreground_processes ?? []).map((p: any): ForegroundProcess => ({
-              pid: p.pid, cmdline: p.cmdline ?? [], cwd: p.cwd,
-            })),
-          });
-        }
-      }
-    }
-  }
-  return snapshots;
-}
-
-function listWeztermSnapshots(): PaneSnapshot[] {
-  let panes: any[];
-  try {
-    panes = JSON.parse(execFileSync('wezterm', ['cli', 'list', '--format', 'json'], {
-      encoding: 'utf8', timeout: 2_000, stdio: ['ignore', 'pipe', 'ignore'],
-    }));
-  } catch {
-    return [];
-  }
-  // wezterm's CLI exposes neither user vars nor foreground processes: recover
-  // the process list per tty from one ps sweep.
-  const byTty = new Map<string, ForegroundProcess[]>();
-  try {
-    const out = execFileSync('ps', ['-eo', 'tty=,pid=,args='], { encoding: 'utf8', timeout: 2_000, maxBuffer: 4 * 1024 * 1024 });
-    for (const line of out.split('\n')) {
-      const m = line.match(/^\s*(pts\/\d+)\s+(\d+)\s+(.+)$/);
-      if (!m) continue;
-      const tty = `/dev/${m[1]}`;
-      const list = byTty.get(tty) ?? [];
-      list.push({ pid: Number(m[2]), cmdline: m[3].split(/\s+/) });
-      byTty.set(tty, list);
-    }
-  } catch {
-    // ps failure: wezterm panes just get fewer sections this tick.
-  }
-  return panes.map((p: any): PaneSnapshot => ({
-    paneKey: String(p.pane_id),
-    terminal: 'wezterm',
-    tty: p.tty_name,
-    title: p.title,
-    userVars: {},
-    foregroundProcesses: p.tty_name ? (byTty.get(p.tty_name) ?? []) : [],
-  }));
 }
 
 // --- Section context --------------------------------------------------------
@@ -232,7 +151,15 @@ function tick(): void {
   };
 
   const seen = new Set<string>();
-  for (const snapshot of [...listKittySnapshots(), ...listWeztermSnapshots()]) {
+  const snapshots = TARGETS.filter((t) => t.available()).flatMap((t) => {
+    try {
+      return t.listPanes();
+    } catch {
+      // One broken target must not take down the others.
+      return [];
+    }
+  });
+  for (const snapshot of snapshots) {
     seen.add(snapshot.paneKey);
     let header: string | null = null;
     try {

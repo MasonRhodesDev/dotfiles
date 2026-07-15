@@ -14,7 +14,8 @@ export interface PaneSnapshot {
   /** Stable pane key shared with the agent-status protocol:
    *  kitty-<kitty pid>-<window id> for kitty, the numeric pane id for wezterm. */
   paneKey: string;
-  terminal: 'kitty' | 'wezterm';
+  /** Registry name of the target that produced this snapshot ('kitty', …). */
+  terminal: string;
   /** /dev/pts/N of the pane's shell, when resolvable. */
   tty?: string;
   title?: string;
@@ -50,4 +51,17 @@ export interface Section {
   tier: number;
   /** Return the section's text (no separators) or null to stay silent. */
   detect(snapshot: PaneSnapshot, ctx: SectionContext): string | null;
+}
+
+/** A terminal the daemon can snapshot. Targets are a registry like sections:
+ *  one file per terminal in targets/, registered in targets/index.ts, paired
+ *  with a dumb renderer under renderers/<name>/. */
+export interface TerminalTarget {
+  name: string;
+  /** Cheap, memoized: is this terminal even installed? Skipped per tick when
+   *  false, so absent terminals cost nothing. */
+  available(): boolean;
+  /** Snapshot every live pane. Must handle "installed but not running" by
+   *  returning []. */
+  listPanes(): PaneSnapshot[];
 }
