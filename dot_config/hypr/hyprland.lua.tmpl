@@ -184,6 +184,7 @@ hl.bind(mainMod .. " + Q", hl.dsp.exec_cmd("uwsm app -- kitty"))
 hl.bind(mainMod .. " + C", hl.dsp.window.close())
 hl.bind(mainMod .. " + E", hl.dsp.exec_cmd("uwsm app -- thunar"))
 hl.bind(mainMod .. " + V", hl.dsp.window.float({ action = "toggle" }))
+hl.bind(mainMod .. " + SHIFT + V", hl.dsp.window.pin())  -- toggle pin (show on all workspaces)
 hl.bind(mainMod .. " + R", hl.dsp.exec_cmd("pkill fuzzel || uwsm app -- fuzzel"))
 hl.bind(mainMod .. " + P", hl.dsp.window.pseudo())
 hl.bind(mainMod .. " + J", hl.dsp.layout("togglesplit"))
@@ -277,13 +278,11 @@ hl.bind(mainMod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
 ----------------------------------------------------------------------
 -- WINDOW / WORKSPACE RULES ------------------------------------------
 ----------------------------------------------------------------------
--- Keep all floating windows above tiled windows
-hl.window_rule({ name = "float-pin",        match = { float = true }, pin = true })
--- swappy must NOT be pinned: pinned windows live on the regular workspace,
--- so a pinned swappy spawned over a special opens UNDER it, and its
--- exit-on-copy refocuses the regular workspace, dismissing the special.
--- Unpinned it opens on the focused (special) workspace like any float.
-hl.window_rule({ name = "swappy-no-pin",    match = { class = "^(swappy)$" }, pin = false })
+-- No float-pin catch-all: floating windows already render above tiled on
+-- their own workspace, and pinning forces them onto the regular workspace —
+-- a float launched over a special would open under it and dismiss the
+-- special on close. Deliberate pins stay explicit per-rule below; manual
+-- pinning is SUPER+SHIFT+V.
 hl.window_rule({ name = "keep-tile",        match = { title = "^(keep.google.com_/)$" }, tile = true })
 hl.window_rule({ name = "discord-special",  match = { class = "^(discord)$" }, workspace = "special:magic silent" })
 hl.window_rule({ name = "slack-special",    match = { class = "^(slack)$" }, workspace = "special:magic silent" })
