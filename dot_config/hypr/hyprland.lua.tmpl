@@ -125,6 +125,14 @@ hl.config({
         },
     },
 
+    binds = {
+        -- Changing workspaces hides the special open on the TARGET workspace's
+        -- monitor (built-in same-monitor rule). Unlike the plugin's
+        -- workspace.active listener, this also covers switching to the
+        -- workspace already underneath the special (no event fires there).
+        hide_special_on_workspace_change = true,
+    },
+
     input = {
         kb_layout    = "us",
         kb_options   = "fkeys:basic_13-24,caps:shift",
