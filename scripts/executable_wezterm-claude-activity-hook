@@ -37,11 +37,22 @@ if [[ -z "$TTY_DEVICE" ]]; then
     exit 0
 fi
 
+# Send a SetUserVar OSC to the pane TTY. Inside tmux the TTY is the pane pty
+# (tmux's, not the terminal's): wrap in the tmux DCS passthrough envelope
+# (ESCs doubled) so tmux forwards the OSC to the attached client. Needs
+# `allow-passthrough on` (set in ~/.tmux.conf).
+send_user_var() {
+    local seq
+    seq=$(printf '\033]1337;SetUserVar=%s=%s\007' "$1" "$(printf '%s' "$2" | base64 -w0)")
+    if [[ -n "$TMUX" ]]; then
+        seq=$(printf '\033Ptmux;%s\033\\' "${seq//$'\033'/$'\033'$'\033'}")
+    fi
+    printf '%s' "$seq" > "$TTY_DEVICE" 2>/dev/null
+}
+
 # Function to send activity to specific pane
 send_activity() {
-    local activity="$1"
-    local encoded=$(echo -n "$activity" | base64)
-    printf '\033]1337;SetUserVar=CLAUDE_ACTIVITY=%s\007' "$encoded" > "$TTY_DEVICE" 2>/dev/null
+    send_user_var CLAUDE_ACTIVITY "$1"
 }
 
 # Function to send model info to specific pane
@@ -50,7 +61,7 @@ send_model() {
     if [[ -f "$settings" ]] && command -v jq >/dev/null 2>&1; then
         local model=$(jq -r '.model // empty' "$settings" 2>/dev/null)
         if [[ -n "$model" ]]; then
-            printf '\033]1337;SetUserVar=CLAUDE_MODEL=%s\007' "$(echo -n "$model" | base64)" > "$TTY_DEVICE" 2>/dev/null
+            send_user_var CLAUDE_MODEL "$model"
         fi
     fi
 }
@@ -136,6 +147,12 @@ case "$HOOK_EVENT" in
         exit 0
         ;;
 esac
+
+# Any activity implies an active session: re-assert CLAUDE_ACTIVE so
+# sessions that predate the attached window (tmux reattach, session started
+# before passthrough) recover their header on the next event instead of
+# waiting for a SessionStart.
+send_user_var CLAUDE_ACTIVE 1
 
 # Send activity update to pane
 send_activity "$ACTIVITY"

@@ -135,7 +135,9 @@ local function read_state(pane)
   local ok, state = pcall(wezterm.json_parse, content)
   local summary = ok and type(state) == "table" and safe_summary(state.summary) or nil
   local tty = pane_tty(pane)
-  if summary and state.active and state.source == "terminal-task-stack" and state.summarizer == "ollama" and (state.paneTty and tty and state.paneTty == tty) and fresh_ms(state, TTL_MS) and (state.confidence == "medium" or state.confidence == "high") then
+  local trusted_source = (state and state.source == "terminal-task-stack" and state.summarizer == "ollama")
+      or (state and state.source == "transcript" and state.summarizer == "transcript")
+  if summary and state.active and trusted_source and (state.paneTty and tty and state.paneTty == tty) and fresh_ms(state, TTL_MS) and (state.confidence == "medium" or state.confidence == "high") then
     state.summary = summary
     return state
   end

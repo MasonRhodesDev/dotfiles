@@ -1,0 +1,16 @@
+[Unit]
+Description=Terminal pane summarizer (kitty + wezterm headers)
+
+[Service]
+ExecStart=/home/mason/.local/share/fnm/aliases/default/bin/node /home/mason/scripts/wezterm-pane-summarizer.ts daemon
+# Lite by design: must never get in the way of interactive work.
+Nice=19
+IOSchedulingClass=idle
+CPUSchedulingPolicy=idle
+MemoryHigh=512M
+MemoryMax=1G
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target

@@ -56,7 +56,11 @@ function pi
 end
 
 function codex
-    if set -q WEZTERM_PANE
+    if set -q GT_ROLE
+        # Gas Town workers go through the agent-town shim so its GT_ROLE
+        # model tiering keeps working; the header runner is skipped there.
+        command /home/mason/.local/bin/codex $argv
+    else if set -q WEZTERM_PANE; or set -q KITTY_WINDOW_ID
         command node /home/mason/scripts/codex-wezterm.ts $argv
     else
         command /home/mason/.local/bin/codex $argv

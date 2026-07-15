@@ -58,15 +58,9 @@ local header_modules = header_loader.load_modules()
 local header_fg = '#e2e2e9'
 local header_bg = '#1d2024'
 
-wezterm.on("gui-startup", function(cmd)
-  if wezterm.background_child_process then
-    pcall(wezterm.background_child_process, {
-      "node",
-      "/home/mason/scripts/wezterm-pane-summarizer.ts",
-      "daemon",
-    })
-  end
-end)
+-- The pane summarizer used to be spawned here, which meant it only ran while
+-- wezterm was up. It is now a systemd user service (pane-summarizer.service)
+-- that serves both kitty and wezterm panes.
 
 -- Main status bar update handler
 wezterm.on("update-right-status", function(window, pane)

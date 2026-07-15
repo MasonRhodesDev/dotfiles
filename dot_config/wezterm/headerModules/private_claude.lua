@@ -79,6 +79,31 @@ local function read_pane_state(pane, agent)
   return nil
 end
 
+local function cwd_component(pane)
+  local ok, url = pcall(function()
+    return pane:get_current_working_dir()
+  end)
+  if not ok or url == nil then return "" end
+
+  -- Url object (newer wezterm) or "file://host/path" string (older).
+  local path
+  if type(url) == "userdata" or type(url) == "table" then
+    path = url.file_path
+  else
+    path = tostring(url):gsub("^file://[^/]*", "")
+  end
+  if not path or path == "" then return "" end
+
+  local home = os.getenv("HOME")
+  if home and home ~= "" and path:sub(1, #home) == home then
+    path = "~" .. path:sub(#home + 1)
+  end
+  if #path > 40 then
+    path = "…" .. path:sub(-39)
+  end
+  return " | 📁 " .. path
+end
+
 local function render_component(agent, model, state, activity, pane)
   local definition = agents[agent] or agents.claude
   local label = definition.label
@@ -95,7 +120,7 @@ local function render_component(agent, model, state, activity, pane)
     result = result .. " | " .. detail
   end
 
-  return result
+  return result .. cwd_component(pane)
 end
 
 return {

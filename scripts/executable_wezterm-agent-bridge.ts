@@ -154,15 +154,16 @@ const payload = parsePayload(input);
 try {
   if (!knownAgents.has(agent)) process.exit(0);
 
-  // Pane identity: wezterm pane id, or kitty window id (prefixed — both are
-  // small integers and share the same state-file namespace).
+  // Pane identity: wezterm pane id, or kitty pid + window id (the pid is in
+  // the key because Hyprland runs one kitty instance per OS window, so every
+  // window's id is 1 and the id alone collides across instances).
   // TERM decides the terminal: stale WEZTERM_PANE survives nested terminal
   // launches, but TERM is always set by the terminal that owns the pty.
   const inKitty = (process.env.TERM ?? '').includes('kitty') && Boolean(process.env.KITTY_WINDOW_ID);
-  const pane = inKitty
-    ? `kitty-${process.env.KITTY_WINDOW_ID}`
-    : process.env.WEZTERM_PANE
-      ?? (process.env.KITTY_WINDOW_ID ? `kitty-${process.env.KITTY_WINDOW_ID}` : undefined);
+  const kittyPane = process.env.KITTY_WINDOW_ID
+    ? `kitty-${process.env.KITTY_PID ?? '0'}-${process.env.KITTY_WINDOW_ID}`
+    : undefined;
+  const pane = inKitty ? kittyPane : process.env.WEZTERM_PANE ?? kittyPane;
   const sessionId = payload.session_id ?? pane ?? `${agent}-${process.ppid}`;
 
   if (clear) {

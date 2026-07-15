@@ -1,0 +1,30 @@
+[Unit]
+Description=Ollama (local pane-summary model, CPU-only)
+
+[Service]
+ExecStart=/home/mason/.local/opt/ollama/bin/ollama serve
+Environment=OLLAMA_HOST=127.0.0.1:11434
+Environment=OLLAMA_KEEP_ALIVE=2m
+Environment=OLLAMA_MAX_LOADED_MODELS=1
+Environment=OLLAMA_NUM_PARALLEL=1
+Environment=OLLAMA_CONTEXT_LENGTH=4096
+# Never touch a GPU: summaries are not worth waking the dGPU out of D3cold
+# (hyprstate owns GPU state). Ollama >=0.32 ships a Vulkan backend that is ON
+# by default and happily grabs the RX 7700S — OLLAMA_VULKAN=0 is the switch
+# that actually matters; the CUDA/ROCm hiders are belt and braces.
+Environment=OLLAMA_VULKAN=0
+Environment=GGML_VK_VISIBLE_DEVICES=-1
+Environment=CUDA_VISIBLE_DEVICES=-1
+Environment=ROCR_VISIBLE_DEVICES=-1
+Environment=HIP_VISIBLE_DEVICES=-1
+# Lite by design: must never get in the way of interactive work.
+Nice=19
+IOSchedulingClass=idle
+CPUSchedulingPolicy=idle
+MemoryHigh=3G
+MemoryMax=4G
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target
