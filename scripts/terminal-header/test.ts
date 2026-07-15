@@ -76,6 +76,33 @@ const CASES: Case[] = [
     want: '🔐 mason-work-horse | 🤖 Claude (opus) | remote scrollback tagline',
   },
   {
+    name: 'remote claude behind tailscale ssh detected by title',
+    snapshot: {
+      paneKey: 'kitty-6-1',
+      title: '✳ Claude Code',
+      foregroundProcesses: [proc(['ssh', 'mason-work-horse'], HOME)],
+    },
+    summaries: { 'kitty-6-1': 'remote tagline' },
+    want: '🔐 mason-work-horse | 🤖 Claude | remote tagline',
+  },
+  {
+    name: 'remote claude title with spinner glyph and stale local vars',
+    snapshot: {
+      title: '⠐ fixing the header daemon',
+      userVars: { CLAUDE_ACTIVE: '0' },
+      foregroundProcesses: [proc(['ssh', 'work-horse'])],
+    },
+    want: '🔐 work-horse | 🤖 Claude',
+  },
+  {
+    name: 'ssh without an agent title is just ssh',
+    snapshot: {
+      title: 'mason@mason-work-horse:~',
+      foregroundProcesses: [proc(['ssh', 'mason-work-horse'])],
+    },
+    want: '🔐 mason-work-horse',
+  },
+  {
     name: 'cleared agent vars mean no header',
     snapshot: {
       userVars: { AGENT_ACTIVE: '0', CLAUDE_ACTIVE: '0' },

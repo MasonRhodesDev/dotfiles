@@ -37,11 +37,23 @@ function render(agent: string, model: string): string {
   return `${definition.icon} ${label}`;
 }
 
+// Claude Code's window title crosses an ssh hop through the agent's own
+// stdout: "✳ <summary>" when idle, a braille spinner glyph while working.
+const CLAUDE_TITLE = /^[✳⠀-⣿] /u;
+
 export const agentSection: Section = {
   name: 'agent',
   tier: 10,
   detect(snapshot: PaneSnapshot, ctx: SectionContext): string | null {
     if (atBareShell(snapshot)) return null;
+
+    // 0. Remote agent behind ssh, detected by the title it pushed through
+    //    the wire. This is the only signal that survives Tailscale SSH,
+    //    which leaves the remote pty root-owned so remote hooks cannot
+    //    write OSC to it (checked 1.98.8). No model info available.
+    if (ctx.fired.has('ssh') && CLAUDE_TITLE.test(snapshot.title ?? '')) {
+      return render('claude', '');
+    }
 
     const uv = snapshot.userVars;
     // 1. Runner-driven user vars (kitty; includes agents at the far end of an

@@ -239,6 +239,10 @@ const AGENT_PROCESS_NAMES = new Set(['claude', 'codex', 'pi']);
 function kittyWindowLooksLikeAgent(w: any): boolean {
   const uv = w?.user_vars ?? {};
   if (uv.AGENT_ACTIVE === '1' || uv.CLAUDE_ACTIVE === '1') return true;
+  // Remote agent behind ssh: its title crosses the wire ("✳ …" idle, braille
+  // spinner while working) even when its OSC cannot (Tailscale SSH leaves the
+  // remote pty root-owned, so remote hooks can't emit).
+  if (/^[✳⠀-⣿] /u.test(w?.title ?? '')) return true;
   for (const proc of w?.foreground_processes ?? []) {
     for (const arg of proc?.cmdline ?? []) {
       const base = String(arg).split('/').pop() ?? '';
