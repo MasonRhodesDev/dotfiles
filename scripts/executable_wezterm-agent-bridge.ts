@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { chmodSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, readFileSync, readlinkSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
 const agent = (process.argv[2] ?? '').toLowerCase();
@@ -142,6 +142,35 @@ function nextStatus(payload: HookPayload, previous?: StoredState): Pick<StoredSt
   }
 }
 
+// TERM=*kitty* without pane vars = the far end of an ssh session from kitty.
+// Key the state file by the controlling pty so it matches the runner's key
+// (the runner reads its stdout pty; hooks run with piped stdio, so fall back
+// to the controlling terminal from /proc/self/stat).
+function remoteTtyPane(): string | undefined {
+  if (!(process.env.TERM ?? '').includes('kitty')) return undefined;
+  for (const fd of [0, 1, 2]) {
+    try {
+      const tty = readlinkSync(`/proc/self/fd/${fd}`);
+      if (tty.startsWith('/dev/pts/')) return `remote-pts-${tty.slice('/dev/pts/'.length)}`;
+    } catch {
+      continue;
+    }
+  }
+  try {
+    const stat = readFileSync('/proc/self/stat', 'utf8');
+    const fields = stat.slice(stat.lastIndexOf(')') + 2).split(' ');
+    const ttyNr = Number(fields[4]);
+    if (ttyNr > 0) {
+      const major = (ttyNr >> 8) & 0xfff;
+      const minor = (ttyNr & 0xff) | ((ttyNr >> 12) & 0xfff00);
+      if (major >= 136 && major <= 143) return `remote-pts-${(major - 136) * 256 + minor}`;
+    }
+  } catch {
+    // No controlling terminal; no pane identity.
+  }
+  return undefined;
+}
+
 function maybeCodexHookResponse(payload: HookPayload): void {
   if (agent !== 'codex') return;
   if (!(payload.hook_event_name ?? payload.hookEventName)) return;
@@ -163,7 +192,7 @@ try {
   const kittyPane = process.env.KITTY_WINDOW_ID
     ? `kitty-${process.env.KITTY_PID ?? '0'}-${process.env.KITTY_WINDOW_ID}`
     : undefined;
-  const pane = inKitty ? kittyPane : process.env.WEZTERM_PANE ?? kittyPane;
+  const pane = (inKitty ? kittyPane : process.env.WEZTERM_PANE ?? kittyPane) ?? remoteTtyPane();
   const sessionId = payload.session_id ?? pane ?? `${agent}-${process.ppid}`;
 
   if (clear) {

@@ -16,8 +16,11 @@ else
     TRANSCRIPT_PATH=$(echo "$INPUT" | grep -o '"transcript_path":"[^"]*"' | cut -d'"' -f4)
 fi
 
-# Only proceed if in WezTerm or kitty (both interpret OSC 1337 SetUserVar)
-if [[ -z "$WEZTERM_PANE" && -z "$KITTY_WINDOW_ID" ]]; then
+# Only proceed if in WezTerm or kitty (both interpret OSC 1337 SetUserVar).
+# TERM=*kitty* alone also qualifies: over ssh the pane env vars don't cross
+# the wire but TERM does, and OSC written to our pty flows back to the local
+# terminal — this is what lights the header for remote agents.
+if [[ -z "$WEZTERM_PANE" && -z "$KITTY_WINDOW_ID" && "$TERM" != *kitty* ]]; then
     echo "{}"
     exit 0
 fi

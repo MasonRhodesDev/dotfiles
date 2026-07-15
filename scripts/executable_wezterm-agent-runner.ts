@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { chmodSync, existsSync, mkdirSync, readFileSync, unwatchFile, watchFile, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, readFileSync, readlinkSync, unwatchFile, watchFile, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawn } from 'node:child_process';
 
@@ -157,7 +157,23 @@ const inKitty = (process.env.TERM ?? '').includes('kitty') && Boolean(process.en
 const kittyPane = process.env.KITTY_WINDOW_ID
   ? `kitty-${process.env.KITTY_PID ?? '0'}-${process.env.KITTY_WINDOW_ID}`
   : undefined;
-const pane = inKitty ? kittyPane : process.env.WEZTERM_PANE ?? kittyPane;
+
+// TERM=*kitty* without pane vars = the far end of an ssh session from kitty.
+// The state file stays on this (remote) host, so key it by our pty — the
+// bridge derives the same key from its controlling terminal. The OSC user
+// vars still cross the ssh channel and light the local header.
+function remoteTtyPane(): string | undefined {
+  if (!(process.env.TERM ?? '').includes('kitty')) return undefined;
+  try {
+    const tty = readlinkSync('/proc/self/fd/1');
+    if (tty.startsWith('/dev/pts/')) return `remote-pts-${tty.slice('/dev/pts/'.length)}`;
+  } catch {
+    // Not a pty; no pane identity.
+  }
+  return undefined;
+}
+
+const pane = (inKitty ? kittyPane : process.env.WEZTERM_PANE ?? kittyPane) ?? remoteTtyPane();
 const shouldEmitStatus = Boolean(pane && process.stdout.isTTY);
 const path = shouldEmitStatus && pane ? paneStatePath(agent, pane) : undefined;
 const runnerStartedAtMs = Date.now();

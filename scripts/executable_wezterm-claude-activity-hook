@@ -16,8 +16,9 @@ else
     TRANSCRIPT_PATH=$(echo "$INPUT" | grep -o '"transcript_path":"[^"]*"' | cut -d'"' -f4)
 fi
 
-# Only proceed if in WezTerm or kitty
-[[ -z "$WEZTERM_PANE" && -z "$KITTY_WINDOW_ID" ]] && echo "{}" && exit 0
+# Only proceed if in WezTerm or kitty. TERM=*kitty* alone also qualifies:
+# over ssh the pane env vars don't cross the wire but TERM does.
+[[ -z "$WEZTERM_PANE" && -z "$KITTY_WINDOW_ID" && "$TERM" != *kitty* ]] && echo "{}" && exit 0
 
 # Get correlation file
 CORRELATION_DIR="/tmp/claude-wezterm"

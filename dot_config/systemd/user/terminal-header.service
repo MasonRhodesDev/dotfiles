@@ -1,0 +1,16 @@
+[Unit]
+Description=Terminal header resolver (sections FSM for kitty + wezterm)
+
+[Service]
+ExecStart=/home/mason/.local/share/fnm/aliases/default/bin/node /home/mason/scripts/terminal-header/daemon.ts
+# Cheap (json reads + terminal CLI enumeration) but drives visible UI:
+# nice'd, but no idle CPU class so headers stay current under load.
+Nice=19
+IOSchedulingClass=idle
+MemoryHigh=256M
+MemoryMax=512M
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

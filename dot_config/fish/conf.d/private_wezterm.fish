@@ -60,7 +60,9 @@ function codex
         # Gas Town workers go through the agent-town shim so its GT_ROLE
         # model tiering keeps working; the header runner is skipped there.
         command /home/mason/.local/bin/codex $argv
-    else if set -q WEZTERM_PANE; or set -q KITTY_WINDOW_ID
+    else if set -q WEZTERM_PANE; or set -q KITTY_WINDOW_ID; or string match -q '*kitty*' -- $TERM
+        # TERM=*kitty* without the pane vars = far end of an ssh session from
+        # kitty; the runner's OSC still reaches the local terminal.
         command node /home/mason/scripts/codex-wezterm.ts $argv
     else
         command /home/mason/.local/bin/codex $argv
