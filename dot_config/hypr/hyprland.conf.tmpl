@@ -2,6 +2,9 @@
 
 $mainMod=SUPER
 
+# workspace-zones (waybar-workspace-buttons repo): workspace N owns special:N
+plugin = /home/{{ .chezmoi.username }}/.local/lib/hyprland-plugins/libworkspace-zones.so
+
 source = /home/{{ .chezmoi.username }}/.config/hypr/configs/style.conf
 source = /home/{{ .chezmoi.username }}/.config/hypr/configs/binds.conf
 
