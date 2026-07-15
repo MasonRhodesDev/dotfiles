@@ -20,7 +20,14 @@
 
 
         "cffi/workspace-buttons": {
+            {{- /* RPM (Fedora COPR solaris765/waybar-workspace-buttons) installs to
+                   lib64; hand-built/Arch installs land in lib. Resolved at apply time,
+                   so re-apply after installing the RPM. */}}
+            {{- if stat "/usr/lib64/waybar/workspace_buttons.so" }}
+            "module_path": "/usr/lib64/waybar/workspace_buttons.so",
+            {{- else }}
             "module_path": "/usr/lib/waybar/workspace_buttons.so",
+            {{- end }}
             "all-outputs": false,
             "show-empty": false
         },

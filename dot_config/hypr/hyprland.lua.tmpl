@@ -199,10 +199,13 @@ hl.bind(mainMod .. " + SHIFT + 0", hl.dsp.window.move({ workspace = 10 }))
 hl.bind(mainMod .. " + S",         hl.dsp.workspace.toggle_special("magic"))
 hl.bind(mainMod .. " + SHIFT + S", hl.dsp.window.move({ workspace = "special:magic" }))
 
--- workspace-zones plugin dispatchers (string dispatchers -> via hyprctl)
-hl.bind("SUPER + ALT + S",        hl.dsp.exec_cmd("hyprctl dispatch zones:toggle"))
-hl.bind(hyper .. " + S",          hl.dsp.exec_cmd("hyprctl dispatch zones:move"))
-hl.bind("SUPER + CTRL + ALT + S", hl.dsp.exec_cmd("hyprctl dispatch zones:movesilent"))
+-- workspace-zones plugin: first-party Lua functions (hl.plugin.zones.*),
+-- registered by the plugin via addLuaFunction. Closures resolve at keypress
+-- time, so plugin load order doesn't matter; if the plugin is missing the
+-- press logs a Lua error instead of silently doing nothing.
+hl.bind("SUPER + ALT + S",        function() hl.plugin.zones.toggle() end)
+hl.bind(hyper .. " + S",          function() hl.plugin.zones.move() end)
+hl.bind("SUPER + CTRL + ALT + S", function() hl.plugin.zones.movesilent() end)
 
 -- Move current workspace between monitors
 hl.bind(mainMod .. " + SHIFT + minus", hl.dsp.exec_cmd("hyprctl dispatch movecurrentworkspacetomonitor -1"))
