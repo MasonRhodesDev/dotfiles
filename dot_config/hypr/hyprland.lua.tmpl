@@ -1,0 +1,304 @@
+-- Hyprland Lua configuration (migrated from hyprlang .conf tree).
+-- Hyprland auto-selects this file over hyprland.conf when it exists; to roll
+-- back, move/rename this file and Hyprland falls back to hyprland.conf.
+--
+-- Managed by chezmoi: dot_config/hypr/hyprland.lua.tmpl
+-- Colors come from lmtt (dofile lmtt-colors.lua); monitors come from hyprstate
+-- (dofile profiles/.active.lua). Both are guarded so a fresh machine still
+-- boots before those files exist.
+
+local HOME = os.getenv("HOME")
+
+local function file_exists(p)
+    local f = io.open(p, "r")
+    if f then f:close() return true end
+    return false
+end
+
+----------------------------------------------------------------------
+-- COLORS (lmtt) -----------------------------------------------------
+-- lmtt regenerates ~/.config/hypr/lmtt-colors.lua on every `lmtt switch`;
+-- it returns a table of pre-formatted Hyprland color values. Fallback below
+-- keeps borders sane on first boot before lmtt has run.
+----------------------------------------------------------------------
+local colors_path = HOME .. "/.config/hypr/lmtt-colors.lua"
+local c = {
+    primary         = "rgb(ffb77a)",
+    secondary       = "rgb(e3c0a5)",
+    outline         = "rgb(9e8e82)",
+    surface         = "rgb(19120c)",
+    on_surface      = "rgb(efe0d6)",
+    active_border   = { colors = { "rgb(ffb77a)", "rgb(e3c0a5)" }, angle = 45 },
+    inactive_border = "rgb(9e8e82)",
+    shadow          = "rgb(000000)",
+}
+if file_exists(colors_path) then
+    local ok, loaded = pcall(dofile, colors_path)
+    if ok and type(loaded) == "table" then c = loaded end
+end
+
+----------------------------------------------------------------------
+-- PLUGINS -----------------------------------------------------------
+----------------------------------------------------------------------
+-- workspace-zones (waybar-workspace-buttons repo): workspace N owns special:N,
+-- auto-dismissed on leave. Wrapped in pcall: `hyprctl reload` re-executes this
+-- file with the plugin already loaded, which would otherwise error and abort
+-- the whole config.
+pcall(function()
+    hl.plugin.load(HOME .. "/.local/lib/hyprland-plugins/libworkspace-zones.so")
+end)
+
+----------------------------------------------------------------------
+-- MONITORS (hyprstate) ----------------------------------------------
+-- hyprstate repoints profiles/.active.lua and runs `hyprctl reload`. The
+-- active profile is a script that calls hl.monitor()/hl.workspace_rule()
+-- directly, so we just execute it for side effects (idempotent on reload).
+----------------------------------------------------------------------
+local active_profile = HOME .. "/.config/hypr/profiles/.active.lua"
+if file_exists(active_profile) then
+    pcall(dofile, active_profile)
+end
+
+-- Fallback catch-all (only applies to outputs the active profile didn't cover).
+hl.monitor({ output = "eDP-2", mode = "2560x1600@165", position = "auto", scale = 1.25 })
+hl.monitor({ output = "", mode = "preferred", position = "auto", scale = 1 })
+
+----------------------------------------------------------------------
+-- LOOK AND FEEL -----------------------------------------------------
+----------------------------------------------------------------------
+hl.config({
+    general = {
+        allow_tearing = false,
+        border_size   = 4,
+        gaps_in       = 5,
+        gaps_out      = 5,
+        layout        = "dwindle",
+        col = {
+            active_border   = c.primary,          -- solid primary (was $lmtt_primary)
+            inactive_border = c.inactive_border,  -- solid outline
+        },
+    },
+
+    decoration = {
+        rounding = 10,
+        blur = {
+            enabled = true,
+            passes  = 1,
+            size    = 3,
+        },
+    },
+
+    dwindle = {
+        preserve_split = true,
+    },
+
+    -- NOTE: group/groupbar gradient color accessors are version-sensitive in
+    -- the Lua config; verify these render on first boot (see rollback notes).
+    group = {
+        col = {
+            border_active        = c.active_border,   -- gradient {colors, angle}
+            border_inactive      = c.inactive_border,
+            border_locked_active = "rgb(a584bb)",
+        },
+        groupbar = {
+            text_color = "rgb(ffdea3)",
+            col = {
+                active   = c.active_border,
+                inactive = c.inactive_border,
+            },
+        },
+    },
+
+    input = {
+        kb_layout    = "us",
+        kb_options   = "fkeys:basic_13-24,caps:shift",
+        follow_mouse = 1,
+        sensitivity  = 0,
+        touchpad = {
+            natural_scroll = false,
+        },
+    },
+
+    misc = {
+        background_color        = "rgb(101c32)",
+        disable_hyprland_logo   = false,
+        disable_splash_rendering = false,
+        force_default_wallpaper = 1,
+        focus_on_activate       = true,
+    },
+
+    cursor = {
+        no_hardware_cursors = true,
+        use_cpu_buffer      = true,
+        enable_hyprcursor   = true,
+    },
+
+    render = {
+        direct_scanout = 0,
+    },
+})
+
+----------------------------------------------------------------------
+-- ANIMATIONS --------------------------------------------------------
+----------------------------------------------------------------------
+hl.config({ animations = { enabled = true } })
+hl.curve("myBezier", { type = "bezier", points = { { 0.05, 0.9 }, { 0.1, 1.05 } } })
+hl.animation({ leaf = "windows",     enabled = true, speed = 7,  bezier = "myBezier" })
+hl.animation({ leaf = "windowsOut",  enabled = true, speed = 7,  bezier = "default", style = "popin 80%" })
+hl.animation({ leaf = "border",      enabled = true, speed = 10, bezier = "default" })
+hl.animation({ leaf = "borderangle", enabled = true, speed = 8,  bezier = "default" })
+hl.animation({ leaf = "fade",        enabled = true, speed = 7,  bezier = "default" })
+hl.animation({ leaf = "workspaces",  enabled = true, speed = 6,  bezier = "default" })
+
+----------------------------------------------------------------------
+-- KEYBINDINGS -------------------------------------------------------
+----------------------------------------------------------------------
+local mainMod = "SUPER"
+local meh     = "CTRL + ALT + SHIFT"
+local hyper   = "SUPER + ALT + SHIFT"
+
+-- Apps / window management
+hl.bind(mainMod .. " + Q", hl.dsp.exec_cmd("uwsm app -- kitty"))
+hl.bind(mainMod .. " + C", hl.dsp.window.close())
+hl.bind(mainMod .. " + E", hl.dsp.exec_cmd("uwsm app -- thunar"))
+hl.bind(mainMod .. " + V", hl.dsp.window.float({ action = "toggle" }))
+hl.bind(mainMod .. " + R", hl.dsp.exec_cmd("pkill fuzzel || uwsm app -- fuzzel"))
+hl.bind(mainMod .. " + P", hl.dsp.window.pseudo())
+hl.bind(mainMod .. " + J", hl.dsp.layout("togglesplit"))
+hl.bind(mainMod .. " + F", hl.dsp.exec_cmd("hyprctl dispatch fullscreen")) -- TODO: hl.dsp.window.fullscreen() once signature confirmed
+
+-- Focus movement
+hl.bind(mainMod .. " + left",  hl.dsp.focus({ direction = "left" }))
+hl.bind(mainMod .. " + right", hl.dsp.focus({ direction = "right" }))
+hl.bind(mainMod .. " + up",    hl.dsp.focus({ direction = "up" }))
+hl.bind(mainMod .. " + down",  hl.dsp.focus({ direction = "down" }))
+hl.bind(meh .. " + h", hl.dsp.focus({ direction = "left" }))
+hl.bind(meh .. " + j", hl.dsp.focus({ direction = "down" }))
+hl.bind(meh .. " + k", hl.dsp.focus({ direction = "up" }))
+hl.bind(meh .. " + l", hl.dsp.focus({ direction = "right" }))
+
+-- Move window within layout
+hl.bind(mainMod .. " + SHIFT + left",  hl.dsp.window.move({ direction = "left" }))
+hl.bind(mainMod .. " + SHIFT + right", hl.dsp.window.move({ direction = "right" }))
+hl.bind(mainMod .. " + SHIFT + up",    hl.dsp.window.move({ direction = "up" }))
+hl.bind(mainMod .. " + SHIFT + down",  hl.dsp.window.move({ direction = "down" }))
+
+-- Workspace switching (new: direct hl.dsp.focus, retires the hypr-workspace wrapper)
+for i = 1, 9 do
+    hl.bind(mainMod .. " + " .. i, hl.dsp.focus({ workspace = i }))
+end
+hl.bind(mainMod .. " + 0", hl.dsp.workspace.toggle_special("magic"))
+
+-- Move active window to workspace
+for i = 1, 9 do
+    hl.bind(mainMod .. " + SHIFT + " .. i, hl.dsp.window.move({ workspace = i }))
+end
+hl.bind(mainMod .. " + SHIFT + 0", hl.dsp.window.move({ workspace = 10 }))
+
+-- Special "magic" scratchpad
+hl.bind(mainMod .. " + S",         hl.dsp.workspace.toggle_special("magic"))
+hl.bind(mainMod .. " + SHIFT + S", hl.dsp.window.move({ workspace = "special:magic" }))
+
+-- workspace-zones plugin dispatchers (string dispatchers -> via hyprctl)
+hl.bind("SUPER + ALT + S",        hl.dsp.exec_cmd("hyprctl dispatch zones:toggle"))
+hl.bind(hyper .. " + S",          hl.dsp.exec_cmd("hyprctl dispatch zones:move"))
+hl.bind("SUPER + CTRL + ALT + S", hl.dsp.exec_cmd("hyprctl dispatch zones:movesilent"))
+
+-- Move current workspace between monitors
+hl.bind(mainMod .. " + SHIFT + minus", hl.dsp.exec_cmd("hyprctl dispatch movecurrentworkspacetomonitor -1"))
+hl.bind(mainMod .. " + SHIFT + equal", hl.dsp.exec_cmd("hyprctl dispatch movecurrentworkspacetomonitor +1"))
+
+-- Scroll through workspaces
+hl.bind(mainMod .. " + mouse_down", hl.dsp.focus({ workspace = "e+1" }))
+hl.bind(mainMod .. " + mouse_up",   hl.dsp.focus({ workspace = "e-1" }))
+
+-- Screenshots
+hl.bind("Print",         hl.dsp.exec_cmd(HOME .. "/scripts/snip"))
+hl.bind("SHIFT + Print", hl.dsp.exec_cmd(HOME .. "/scripts/record"))
+
+-- Utilities
+hl.bind(mainMod .. " + L", hl.dsp.exec_cmd("hyprlock"))
+hl.bind(mainMod .. " + M", hl.dsp.exec_cmd(HOME .. "/.config/hypr/scripts/power-menu.sh"))
+hl.bind(mainMod .. " + T", hl.dsp.exec_cmd("lmtt switch"))
+hl.bind(mainMod .. " + N", hl.dsp.exec_cmd("swaync-client -t -sw"))
+hl.bind(mainMod .. " + XF86AudioPlay", hl.dsp.exec_cmd(HOME .. "/.config/wofi/change-default-audio-device.js WofiListAudioDevices"))
+hl.bind(mainMod .. " + D", hl.dsp.exec_cmd([[wl-copy --clear && notify-send -t 2000 "Clipboard cleared" "Ready for drag-and-drop"]]))
+hl.bind(meh .. " + v", hl.dsp.exec_cmd("voice-dictation toggle"))
+
+-- Cycle windows (floating), then raise
+hl.bind("ALT + Tab", hl.dsp.exec_cmd("hyprctl --batch 'dispatch cyclenext ; dispatch bringactivetotop'"))
+hl.bind("SHIFT + XF86AudioPlay", hl.dsp.exec_cmd("hyprpwcenter"))
+
+-- Media / brightness (locked = active on lockscreen)
+hl.bind("XF86AudioPlay", hl.dsp.exec_cmd(HOME .. "/.config/hypr/scripts/osd/media-osd.sh play-pause"), { locked = true })
+hl.bind("XF86AudioStop", hl.dsp.exec_cmd(HOME .. "/.config/hypr/scripts/osd/media-osd.sh stop"),        { locked = true })
+hl.bind("XF86AudioMute", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"),                 { locked = true })
+hl.bind("XF86AudioNext", hl.dsp.exec_cmd(HOME .. "/.config/hypr/scripts/osd/media-osd.sh next"),        { locked = true })
+hl.bind("XF86AudioPrev", hl.dsp.exec_cmd(HOME .. "/.config/hypr/scripts/osd/media-osd.sh previous"),    { locked = true })
+
+-- Volume / brightness (locked + repeating)
+hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("wpctl set-volume -l 1.5 @DEFAULT_AUDIO_SINK@ 1%+"), { locked = true, repeating = true })
+hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd("wpctl set-volume -l 1.5 @DEFAULT_AUDIO_SINK@ 1%-"), { locked = true, repeating = true })
+hl.bind("XF86MonBrightnessUp",   hl.dsp.exec_cmd(HOME .. "/.config/hypr/scripts/osd/brightness-osd.sh up"),   { locked = true, repeating = true })
+hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd(HOME .. "/.config/hypr/scripts/osd/brightness-osd.sh down"), { locked = true, repeating = true })
+
+-- Mouse move/resize
+hl.bind(mainMod .. " + mouse:272", hl.dsp.window.drag(),   { mouse = true })
+hl.bind(mainMod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
+
+----------------------------------------------------------------------
+-- WINDOW / WORKSPACE RULES ------------------------------------------
+----------------------------------------------------------------------
+-- Keep all floating windows above tiled windows
+hl.window_rule({ name = "float-pin",        match = { float = true }, pin = true })
+hl.window_rule({ name = "keep-tile",        match = { title = "^(keep.google.com_/)$" }, tile = true })
+hl.window_rule({ name = "discord-special",  match = { class = "^(discord)$" }, workspace = "special:magic silent" })
+hl.window_rule({ name = "slack-special",    match = { class = "^(slack)$" }, workspace = "special:magic silent" })
+hl.window_rule({ name = "ytmusic-special",  match = { title = "^(YouTube Music)$" }, workspace = "special:magic silent" })
+hl.window_rule({ name = "kitty-size",       match = { class = "^(kitty)$" }, size = "100 100" })
+hl.window_rule({ name = "helvum-float",     match = { title = "^(Helvum)$" }, float = true })
+hl.window_rule({ name = "crx-float",        match = { title = "^(_crx_nngceckbapebfimnlniiiahkandclblb)$" }, float = true })
+hl.window_rule({ name = "pip",              match = { title = "^(Picture in picture)$" }, float = true, pin = true, opacity = "0.9 0.9" })
+hl.window_rule({ name = "mainpicker",       match = { title = "^(MainPicker)$" }, opacity = "1 1" })
+hl.window_rule({ name = "meet-sharing",     match = { title = "^(meet.google.com is sharing.*)$" }, opacity = "1 1", float = true, pin = true })
+hl.window_rule({ name = "huddle",           match = { title = "^(Huddle.*)$" }, opacity = "1 1" })
+hl.window_rule({ name = "bitwarden-float",  match = { title = "^(.*Bitwarden.*)$" }, float = true })
+hl.window_rule({ name = "gcr-prompter",     match = { class = "^(gcr-prompter)$" }, float = true, pin = true, center = true, stay_focused = true })
+hl.window_rule({ name = "voice-dictation",  match = { class = "^(dev.mason.dictation)$" }, float = true, pin = true, size = "200 50", move = "50%-100 95%", border_size = 0, no_blur = true, no_shadow = true, no_initial_focus = true, no_focus = true })
+hl.window_rule({ name = "pre-sleep",        match = { title = "^(PRE_SLEEP_WINDOW)$" }, float = true, move = "-2000 -2000", size = "10000 10000", opacity = "0.95 override 0.95 override 0.95 override", xray = false })
+hl.window_rule({ name = "google-signin",    match = { title = "^(Sign in - Google Accounts.*)$" }, float = true })
+hl.window_rule({ name = "chrome-testing",   match = { title = "^(.*Chrome for Testing)$" }, workspace = "special:mcp-puppeteer silent" })
+hl.window_rule({ name = "wofi",             match = { class = "^(wofi)$" }, float = true, opacity = "0.99999 0.99999", center = true, stay_focused = true, pin = true })
+hl.window_rule({ name = "hyprpwcenter",     match = { class = "^(hyprpwcenter)$" }, float = true, center = true, size = "1000 600", stay_focused = true, pin = true })
+hl.window_rule({ name = "hyprdm",           match = { class = "^(hyprdm)$" }, float = true, center = true, size = "600 460" })
+hl.window_rule({ name = "satty",            match = { class = "^(com.gabm.satty)$" }, float = true, pin = true, center = true, stay_focused = true })
+hl.window_rule({ name = "android-emulator", match = { class = "^(Emulator)$" }, float = true })
+hl.window_rule({ name = "steam-main",       match = { class = "^(steam)$", title = "^(Steam)$" }, workspace = "special:magic silent", no_initial_focus = true, focus_on_activate = false })
+hl.window_rule({ name = "steam-empty",      match = { class = "^(steam)$", title = "^()$" }, stay_focused = true, min_size = "1 1" })
+hl.window_rule({ name = "zoom-annotate",    match = { class = "^(zoom)$", title = "^(annotate_toolbar)$" }, float = true, size = "1 1", move = "-9999 -9999", opacity = "0.0 override 0.0 override", border_size = 0, no_blur = true, no_shadow = true, no_initial_focus = true, no_focus = true })
+{{ if not .is_work }}
+-- Game rules (personal PC only)
+hl.window_rule({ name = "steam-bigpicture", match = { class = "^(steam)$", title = "^(Steam Big Picture Mode)$" }, workspace = "7", fullscreen = true, focus_on_activate = false })
+hl.workspace_rule({ workspace = "7", border = false, rounding = false })
+hl.window_rule({ name = "steam-game",  match = { class = "^(steam_app_\\d+)$" }, workspace = "7 silent", no_initial_focus = true, focus_on_activate = false, immediate = true, opacity = "1.0 override", no_blur = true, idle_inhibit = "always", pin = false })
+hl.window_rule({ name = "gamescope",   match = { class = "^(gamescope)$" }, workspace = "7 silent", no_initial_focus = true, focus_on_activate = false, pin = false })
+hl.window_rule({ name = "godot-game",  match = { title = "^(Godot)$" }, workspace = "7 silent", no_initial_focus = true, focus_on_activate = false, immediate = true, opacity = "1.0 override", no_blur = true, idle_inhibit = "always", pin = false })
+hl.window_rule({ name = "minecraft",   match = { class = "^(Minecraft.*)$" }, workspace = "7 silent", no_initial_focus = true, focus_on_activate = false, immediate = true, idle_inhibit = "always", pin = false })
+{{ end }}
+
+----------------------------------------------------------------------
+-- AUTOSTART ---------------------------------------------------------
+----------------------------------------------------------------------
+hl.on("hyprland.start", function()
+    hl.exec_cmd("dbus-update-activation-environment --all")
+    hl.exec_cmd("sleep 1 & dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP")
+    hl.exec_cmd("lmtt switch dark")
+    hl.exec_cmd("uwsm app -- claude-desktop.desktop")
+{{ if .is_work }}
+    hl.exec_cmd("uwsm app -- slack")
+{{ end }}
+{{ if not .is_work }}
+    hl.exec_cmd("uwsm app -- steam -cef-force-glx")
+    hl.exec_cmd("uwsm app -- discord")
+{{ end }}
+end)
