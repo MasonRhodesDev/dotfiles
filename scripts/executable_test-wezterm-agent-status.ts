@@ -58,6 +58,25 @@ function stateRoot(env: NodeJS.ProcessEnv = testEnv()): string {
     : join(env.HOME ?? '.', '.cache', 'wezterm-agent-status');
 }
 
+// Summaries are agent-pane-only: the summarizer skips (and clears) panes with
+// no fresh agent state. Tests that exercise summary preservation must first
+// mark their fake pane as an agent pane, as the runner/bridge would in life.
+function seedAgentPaneState(agent: string, pane: string): void {
+  const dir = join(stateRoot(), agent);
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, `pane-${pane}.json`), `${JSON.stringify({
+    active: true,
+    agent,
+    sessionId: `test-${pane}`,
+    pane,
+    model: '',
+    activity: '',
+    state: 'working',
+    updatedAt: new Date().toISOString(),
+    updatedAtMs: Date.now(),
+  })}\n`);
+}
+
 run('TypeScript/JS syntax checks pass', () => {
   command('node', ['--check', '/home/mason/scripts/wezterm-agent-bridge.ts']);
   command('node', ['--check', '/home/mason/scripts/wezterm-agent-runner.ts']);
@@ -614,6 +633,7 @@ exit 1
 
   const root = join(testRuntimeDir, 'wezterm-pane-summary');
   mkdirSync(root, { recursive: true });
+  seedAgentPaneState('pi', '901');
   const statePath = join(root, 'pane-901.json');
   const before = Date.now();
   writeFileSync(statePath, `${JSON.stringify({
@@ -673,6 +693,7 @@ exec ${JSON.stringify(process.execPath)} ${JSON.stringify(wrapper)} "$@"
 `);
   chmodSync(fakeNode, 0o755);
 
+  seedAgentPaneState('pi', '903');
   command(fakeNode, ['/home/mason/scripts/wezterm-pane-summarizer.ts', 'force-once'], {
     env: { ...env, PATH: `${binDir}:${process.env.PATH ?? ''}` },
   });
@@ -707,6 +728,7 @@ exit 1
 `);
   chmodSync(fakeWezterm, 0o755);
 
+  seedAgentPaneState('pi', '904');
   command('node', ['/home/mason/scripts/wezterm-pane-summarizer.ts', 'force-once'], {
     env: { ...env, PATH: `${binDir}:${process.env.PATH ?? ''}` },
   });
@@ -862,6 +884,7 @@ exit 1
 
   const root = join(testRuntimeDir, 'wezterm-pane-summary');
   mkdirSync(root, { recursive: true });
+  seedAgentPaneState('pi', '902');
   const statePath = join(root, 'pane-902.json');
   const before = Date.now();
   writeFileSync(statePath, `${JSON.stringify({
@@ -910,6 +933,7 @@ exit 1
 
   const root = join(testRuntimeDir, 'wezterm-pane-summary');
   mkdirSync(root, { recursive: true });
+  seedAgentPaneState('pi', '900');
   const statePath = join(root, 'pane-900.json');
   const before = Date.now() - 90_000;
   writeFileSync(statePath, `${JSON.stringify({
