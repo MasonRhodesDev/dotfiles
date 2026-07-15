@@ -285,7 +285,16 @@ def check_visibility() -> None:
         # config reload) refreshes it. Same Options object, one changed field.
         set_options(opts, is_wayland(), boss.args.debug_rendering, boss.args.debug_font_fallback)
         for tm in boss.os_window_map.values():
-            tm.tabbar_visibility_changed()
+            legacy_relayout = getattr(tm, 'tabbar_visibility_changed', None)
+            if legacy_relayout is not None:
+                # kitty < 0.47
+                legacy_relayout()
+            else:
+                # kitty >= 0.47: mirror the update_tab_bar_visibility
+                # decorator in tabs.py — relayout the bar, then the tabs.
+                if not tm.tab_bar_hidden:
+                    tm.layout_tab_bar()
+                tm.resize(only_tabs=True)
         _dbg('visibility flipped')
     for tm in boss.os_window_map.values():
         tm.mark_tab_bar_dirty()
