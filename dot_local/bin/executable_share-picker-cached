@@ -1,0 +1,39 @@
+#!/bin/bash
+# xdph custom_picker_binary wrapper (see ~/.config/hypr/xdph.conf).
+#
+# Chromium/Electron opens several portal ScreenCast sessions per share —
+# preview enumeration, then the actual capture — and each one would pop
+# hyprland-share-picker (2-4 dialogs per share). Serialize prompts and replay
+# the first real selection for repeats within TTL so the user picks once.
+#
+# Protocol (xdph ScreencopyShared.cpp): stdout must contain
+# [SELECTION]<flags>/<screen:NAME|window:HANDLE|region:OUT@X,Y,W,H> and xdph
+# passes --allow-token when screencopy:allow_token_by_default is set.
+set -u
+CACHE="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/xdph-share-picker.cache"
+TTL=15
+PICKER="${XDPH_PICKER:-hyprland-share-picker}"
+
+exec 9>"$CACHE.lock"
+flock 9 # a concurrent prompt waits here, then reads the fresh cache
+
+if [ -f "$CACHE" ]; then
+    ts=$(sed -n 1p "$CACHE")
+    sel=$(sed -n 2p "$CACHE")
+    if [ -n "$sel" ] && [ $(($(date +%s) - ts)) -le "$TTL" ]; then
+        printf '%s\n' "$sel"
+        exit 0
+    fi
+fi
+
+out=$("$PICKER" "$@")
+ec=$?
+sel=$(printf '%s\n' "$out" | grep -o '\[SELECTION\].*' | tail -1)
+if [ "$ec" -eq 0 ] && [ -n "$sel" ]; then
+    # Stamp after the picker closes — the user may deliberate longer than TTL.
+    printf '%s\n%s\n' "$(date +%s)" "$sel" > "$CACHE"
+else
+    rm -f "$CACHE" # a cancel invalidates any previous selection
+fi
+printf '%s\n' "$out"
+exit "$ec"
