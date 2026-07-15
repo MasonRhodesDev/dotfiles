@@ -47,12 +47,10 @@ end
 pcall(function()
     hl.plugin.load(HOME .. "/.local/lib/hyprland-plugins/libworkspace-zones.so")
 end)
--- Also dismiss NAMED specials (special:magic) when switching workspaces on
--- the monitor they're open on — same-monitor rule, like zones. Opt-in
--- (plugin >= 0.2.0); pcall-guarded for older plugin builds.
-pcall(function()
-    hl.plugin.zones.dismiss_named_on()
-end)
+-- Named specials (special:magic) dismiss via the built-in
+-- binds.hide_special_on_workspace_change (see LOOK AND FEEL) — verified
+-- same-monitor scoped: it hides only the special on the TARGET workspace's
+-- monitor, and also covers switching to the workspace already underneath.
 
 ----------------------------------------------------------------------
 -- MONITORS (hyprstate) ----------------------------------------------
