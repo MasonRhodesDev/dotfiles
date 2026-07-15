@@ -368,7 +368,6 @@ function getPaneText(paneId: string): string | undefined {
 
 const CLAUDE_CORRELATION_DIR = '/tmp/claude-wezterm';
 const TRANSCRIPT_TAIL_BYTES = 256 * 1024;
-const TRANSCRIPT_HEAD_BYTES = 64 * 1024;
 const TRANSCRIPT_RESTAMP_MS = 60_000;
 
 function ttyToTranscript(): Map<string, string> {
@@ -413,26 +412,6 @@ function readFileSlice(path: string, position: number, length: number): string {
   }
 }
 
-function firstTextContent(message: any): string | undefined {
-  const content = message?.content;
-  if (typeof content === 'string') return content;
-  if (Array.isArray(content)) {
-    for (const item of content) {
-      if (item?.type === 'text' && typeof item.text === 'string') return item.text;
-    }
-  }
-  return undefined;
-}
-
-function usableUserText(text: string | undefined): string | undefined {
-  if (!text) return undefined;
-  const cleaned = text.replace(/\s+/g, ' ').trim();
-  if (!cleaned) return undefined;
-  // Skip harness noise: system reminders, slash commands, caveat banners.
-  if (cleaned.startsWith('<') || cleaned.startsWith('/') || cleaned.startsWith('Caveat:')) return undefined;
-  return cleaned;
-}
-
 function transcriptGist(path: string): { summary: string; confidence: 'medium' | 'high' } | undefined {
   let size: number;
   try {
@@ -461,24 +440,10 @@ function transcriptGist(path: string): { summary: string; confidence: 'medium' |
     // Fall through to the head scan.
   }
 
-  // Otherwise: the first real user prompt is what the conversation is about.
-  try {
-    const head = readFileSlice(path, 0, Math.min(size, TRANSCRIPT_HEAD_BYTES));
-    for (const rawLine of head.split('\n')) {
-      const line = rawLine.trim();
-      if (!line) continue;
-      try {
-        const parsed = JSON.parse(line);
-        if (parsed?.type !== 'user') continue;
-        const text = usableUserText(firstTextContent(parsed.message));
-        if (text) return { summary: text, confidence: 'medium' };
-      } catch {
-        continue;
-      }
-    }
-  } catch {
-    return undefined;
-  }
+  // No compaction title yet: report nothing. Raw prompt text must NEVER be
+  // shown in terminal chrome (privacy + it reads as noise) — the pane falls
+  // through to the scrollback pipeline, whose model output is tagline-shaped
+  // and display-gated.
   return undefined;
 }
 

@@ -18,7 +18,7 @@ import { TARGETS } from './targets/index.ts';
 const TICK_MS = 1_500;
 const AGENT_STATE_TTL_MS = 2 * 60 * 1000;
 const SUMMARY_TTL_MS = 2 * 60 * 1000;
-const SUMMARY_MAX_CHARS = 60;
+const SUMMARY_MAX_CHARS = 48;
 const RESTAMP_MS = 20_000;
 const CLAUDE_CORRELATION_DIR = '/tmp/claude-wezterm';
 
@@ -122,16 +122,38 @@ function loadTranscripts(): Map<string, string> {
   return map;
 }
 
+// Display gate: a summary renders only if it reads like a tagline. Model
+// output gets the strict treatment (ports the old wezterm safe_summary
+// heuristics — small local models emit lists, paths, and quoted fragments);
+// transcript-sourced compaction titles are already title-shaped and only get
+// the length treatment. Anything rejected simply doesn't render — a missing
+// tagline beats a dirty one.
+function saneTagline(raw: string, summarizer: string): string | undefined {
+  let s = raw.replace(/["'`]/g, '').replace(/\s+/g, ' ').trim();
+  if (!s || s.includes('[REDACTED')) return undefined;
+  if (summarizer !== 'transcript') {
+    if (s.split(' ').length > 8) return undefined;
+    if (/[,;{}\[\]<>|=]/.test(s)) return undefined;
+    if (/https?:\/\//i.test(s) || /\S+@\S+\.\S+/.test(s)) return undefined;
+    if (/[0-9a-f]{16,}/i.test(s)) return undefined;
+    if (/\S+\/\S+/.test(s)) return undefined;
+  }
+  if (s.length > SUMMARY_MAX_CHARS) {
+    s = s.slice(0, SUMMARY_MAX_CHARS);
+    const lastSpace = s.lastIndexOf(' ');
+    if (lastSpace > 20) s = s.slice(0, lastSpace);
+    s = `${s.trimEnd()}…`;
+  }
+  return s.replace(/[.,;:\s]+$/, '') || undefined;
+}
+
 function loadSummary(paneKey: string, nowMs: number): string | undefined {
   const state = readJson(join(runtimeRoot('wezterm-pane-summary'), `pane-${safeName(paneKey)}.json`));
   if (!state?.active) return undefined;
   if (typeof state.updatedAtMs !== 'number' || nowMs - state.updatedAtMs > SUMMARY_TTL_MS) return undefined;
   if (state.confidence !== 'medium' && state.confidence !== 'high') return undefined;
   if (typeof state.summary !== 'string') return undefined;
-  let summary = state.summary.replace(/\s+/g, ' ').trim();
-  if (!summary) return undefined;
-  if (summary.length > SUMMARY_MAX_CHARS) summary = `${summary.slice(0, SUMMARY_MAX_CHARS - 1)}…`;
-  return summary;
+  return saneTagline(state.summary, String(state.summarizer ?? ''));
 }
 
 // --- Main loop ---------------------------------------------------------------
