@@ -90,15 +90,26 @@ if [ -n "${address:-}" ]; then
     # Special workspaces (scratchpads) are named "special:<name>". focuswindow
     # doesn't pull a window out of them, so explicitly show the special
     # workspace on the current monitor first.
+    # Dispatch syntax depends on the active config dialect: with hyprland.lua
+    # present, `hyprctl dispatch` args are Lua expressions and classic string
+    # dispatchers fail (silently for keyword, loudly for dispatch).
+    if [ -f "$HOME/.config/hypr/hyprland.lua" ]; then
+        dispatch_toggle_special() { hyprctl dispatch "hl.dsp.workspace.toggle_special(\"$1\")" >/dev/null; }
+        dispatch_focus_window()   { hyprctl dispatch "hl.dsp.focus({ window = \"address:$1\" })" >/dev/null; }
+    else
+        dispatch_toggle_special() { hyprctl dispatch togglespecialworkspace "$1" >/dev/null; }
+        dispatch_focus_window()   { hyprctl dispatch focuswindow "address:$1" >/dev/null; }
+    fi
+
     if [[ "$workspace" == special:* ]]; then
         special_name="${workspace#special:}"
         active_special=$(hyprctl -j monitors | jq -r '.[] | select(.focused) | .specialWorkspace.name')
         if [ "$active_special" != "$workspace" ]; then
-            hyprctl dispatch togglespecialworkspace "$special_name" >/dev/null
+            dispatch_toggle_special "$special_name"
         fi
     fi
 
-    hyprctl dispatch focuswindow "address:$address" >/dev/null
+    dispatch_focus_window "$address"
 fi
 
 wait
