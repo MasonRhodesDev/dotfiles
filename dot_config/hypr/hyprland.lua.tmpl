@@ -185,7 +185,17 @@ local hyper   = "SUPER + ALT + SHIFT"
 hl.bind(mainMod .. " + Q", hl.dsp.exec_cmd("uwsm app -- kitty"))
 hl.bind(mainMod .. " + C", hl.dsp.window.close())
 hl.bind(mainMod .. " + E", hl.dsp.exec_cmd("uwsm app -- thunar"))
-hl.bind(mainMod .. " + V", hl.dsp.window.float({ action = "toggle" }))
+hl.bind(mainMod .. " + V", function()
+    -- Hyprland bug workaround: unfloating a pinned window only clears the pin
+    -- (window stays floating) AND skips the window-rule re-evaluation, leaving
+    -- the pinned-border color stuck. Unpin via the dispatcher first (which
+    -- refreshes rules), then unfloat — one press instead of two, correct border.
+    local w = hl.get_active_window()
+    if w and w.pinned then
+        hl.dispatch(hl.dsp.window.pin())
+    end
+    hl.dispatch(hl.dsp.window.float({ action = "toggle" }))
+end)
 hl.bind(mainMod .. " + SHIFT + V", hl.dsp.window.pin())  -- toggle pin (show on all workspaces)
 hl.bind(mainMod .. " + R", hl.dsp.exec_cmd("pkill fuzzel || uwsm app -- fuzzel"))
 hl.bind(mainMod .. " + P", hl.dsp.window.pseudo())

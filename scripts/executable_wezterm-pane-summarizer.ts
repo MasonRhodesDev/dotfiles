@@ -412,39 +412,98 @@ function readFileSlice(path: string, position: number, length: number): string {
   }
 }
 
-function transcriptGist(path: string): { summary: string; confidence: 'medium' | 'high' } | undefined {
-  let size: number;
+function transcriptTailLines(path: string, size: number): string[] {
   try {
-    size = statSync(path).size;
+    const tail = readFileSlice(path, Math.max(0, size - TRANSCRIPT_TAIL_BYTES), Math.min(size, TRANSCRIPT_TAIL_BYTES));
+    return tail.split('\n');
+  } catch {
+    return [];
+  }
+}
+
+// Newest compaction/title summary in the transcript — claude's own
+// conversation title, the best signal there is.
+function compactionTitle(lines: string[]): string | undefined {
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const line = lines[i].trim();
+    if (!line.includes('"summary"')) continue;
+    try {
+      const parsed = JSON.parse(line);
+      if (parsed?.type === 'summary' && typeof parsed.summary === 'string' && parsed.summary.trim()) {
+        return parsed.summary.trim();
+      }
+    } catch {
+      // Partial line at the slice boundary; keep scanning.
+    }
+  }
+  return undefined;
+}
+
+function messageText(message: any): string | undefined {
+  const content = message?.content;
+  if (typeof content === 'string') return content;
+  if (Array.isArray(content)) {
+    for (const item of content) {
+      if (item?.type === 'text' && typeof item.text === 'string') return item.text;
+    }
+  }
+  return undefined;
+}
+
+// Excerpts describing the conversation OVERALL: the earliest and latest user
+// messages in the window we can see. Model input only — never rendered.
+function conversationDigest(lines: string[]): string | undefined {
+  const userTexts: string[] = [];
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line || !line.includes('"user"')) continue;
+    try {
+      const parsed = JSON.parse(line);
+      if (parsed?.type !== 'user') continue;
+      const text = messageText(parsed.message)?.replace(/\s+/g, ' ').trim();
+      if (!text || text.startsWith('<') || text.startsWith('/') || text.startsWith('Caveat:')) continue;
+      userTexts.push(text.slice(0, 300));
+    } catch {
+      continue;
+    }
+  }
+  if (!userTexts.length) return undefined;
+  const picked = userTexts.length <= 5
+    ? userTexts
+    : [...userTexts.slice(0, 2), ...userTexts.slice(-3)];
+  return redactTerminalText(picked.join('\n'));
+}
+
+// Ask the local model to TITLE the conversation. Output is display-gated
+// downstream like any other model text.
+async function ollamaTitle(digest: string): Promise<string | undefined> {
+  if (DISABLE_MODEL) return undefined;
+  try {
+    const response = await fetch(`${OLLAMA_URL}/api/chat`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        model: OLLAMA_MODEL,
+        stream: false,
+        keep_alive: '2m',
+        options: { temperature: 0.1, num_predict: 24 },
+        messages: [
+          {
+            role: 'system',
+            content: 'You title conversations between a developer and a coding assistant. Reply with ONLY a 3-6 word title describing the overall topic of the whole conversation. No quotes, no punctuation, no explanation.',
+          },
+          { role: 'user', content: digest },
+        ],
+      }),
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (!response.ok) return undefined;
+    const body: any = await response.json();
+    const raw = typeof body?.message?.content === 'string' ? body.message.content : '';
+    return cleanModelSummary(raw);
   } catch {
     return undefined;
   }
-
-  // Newest compaction/title summary wins (scan the tail backwards).
-  try {
-    const tail = readFileSlice(path, Math.max(0, size - TRANSCRIPT_TAIL_BYTES), Math.min(size, TRANSCRIPT_TAIL_BYTES));
-    const lines = tail.split('\n');
-    for (let i = lines.length - 1; i >= 0; i--) {
-      const line = lines[i].trim();
-      if (!line.includes('"summary"')) continue;
-      try {
-        const parsed = JSON.parse(line);
-        if (parsed?.type === 'summary' && typeof parsed.summary === 'string' && parsed.summary.trim()) {
-          return { summary: parsed.summary.trim(), confidence: 'high' };
-        }
-      } catch {
-        // Partial line at the slice boundary; keep scanning.
-      }
-    }
-  } catch {
-    // Fall through to the head scan.
-  }
-
-  // No compaction title yet: report nothing. Raw prompt text must NEVER be
-  // shown in terminal chrome (privacy + it reads as noise) — the pane falls
-  // through to the scrollback pipeline, whose model output is tagline-shaped
-  // and display-gated.
-  return undefined;
 }
 
 const TAGLINE_MAX_CHARS = 60;
@@ -462,15 +521,32 @@ function taglineOf(text: string): string {
   return out.replace(/[.,;:\s]+$/, '');
 }
 
+interface TranscriptSummary {
+  summary: string;
+  confidence: 'medium' | 'high';
+  summarizer: 'transcript' | 'ollama';
+}
+
 interface TranscriptMemory {
   mtimeMs: number;
   size: number;
   lastWriteMs: number;
+  /** Transcript size at the last (attempted) titling — regen is growth-driven. */
+  titledSize: number;
+  lastTitleAttemptMs: number;
+  lastSummary?: TranscriptSummary;
 }
 
 const transcriptSeen = new Map<string, TranscriptMemory>();
 
-function observeTranscriptPane(pane: PaneInfo, transcript: string): boolean {
+const TITLE_REGEN_BYTES = 16 * 1024;
+const TITLE_RETRY_MS = 60_000;
+
+// The tagline is the conversation's OVERALL topic, not its latest exchange:
+// claude's own compaction title when one exists, otherwise a local-model
+// title of a digest of the conversation's user messages, re-generated only
+// as the transcript grows. Raw prompt text is never rendered.
+async function observeTranscriptPane(pane: PaneInfo, transcript: string): Promise<boolean> {
   const paneId = String(pane.pane_id);
   let stat;
   try {
@@ -481,31 +557,77 @@ function observeTranscriptPane(pane: PaneInfo, transcript: string): boolean {
   const now = Date.now();
   const prior = transcriptSeen.get(paneId);
   const unchanged = prior && prior.mtimeMs === stat.mtimeMs && prior.size === stat.size;
-  if (unchanged && now - prior.lastWriteMs < TRANSCRIPT_RESTAMP_MS) return true;
+  if (unchanged && prior.lastSummary && now - prior.lastWriteMs < TRANSCRIPT_RESTAMP_MS) return true;
 
-  const gist = transcriptGist(transcript);
-  if (!gist) return false;
+  const persist = (summary: TranscriptSummary) => {
+    writeState(paneStatePath(paneId), {
+      active: true,
+      pane: paneId,
+      paneTty: pane.tty_name,
+      source: 'transcript',
+      summary: summary.summary,
+      confidence: summary.confidence,
+      sampleHash: hashText(`${transcript}:${stat.mtimeMs}:${stat.size}`),
+      updatedAt: new Date(now).toISOString(),
+      updatedAtMs: now,
+      summarizer: summary.summarizer,
+    });
+  };
 
-  // Transcript text is not model output — cleanModelSummary would mangle it.
-  // Redact, then compress to a tagline: first sentence, word-boundary
-  // truncated. Headers want an article title, not a paragraph.
-  const summary = taglineOf(redactTerminalText(gist.summary));
-  if (!summary) return false;
+  const lines = transcriptTailLines(transcript, stat.size);
 
-  transcriptSeen.set(paneId, { mtimeMs: stat.mtimeMs, size: stat.size, lastWriteMs: now });
-  writeState(paneStatePath(paneId), {
-    active: true,
-    pane: paneId,
-    paneTty: pane.tty_name,
-    source: 'transcript',
-    summary,
-    confidence: gist.confidence,
-    sampleHash: hashText(`${transcript}:${stat.mtimeMs}:${stat.size}`),
-    updatedAt: new Date(now).toISOString(),
-    updatedAtMs: now,
-    summarizer: 'transcript',
-  });
-  return true;
+  const title = compactionTitle(lines);
+  if (title) {
+    const summary: TranscriptSummary = {
+      summary: taglineOf(redactTerminalText(title)),
+      confidence: 'high',
+      summarizer: 'transcript',
+    };
+    persist(summary);
+    transcriptSeen.set(paneId, {
+      mtimeMs: stat.mtimeMs, size: stat.size, lastWriteMs: now,
+      titledSize: stat.size, lastTitleAttemptMs: now, lastSummary: summary,
+    });
+    return true;
+  }
+
+  const grewEnough = stat.size - (prior?.titledSize ?? 0) >= TITLE_REGEN_BYTES;
+  const wantTitle = (!prior?.lastSummary || grewEnough)
+    && now - (prior?.lastTitleAttemptMs ?? 0) >= TITLE_RETRY_MS;
+
+  if (wantTitle) {
+    const digest = conversationDigest(lines);
+    const modelTitle = digest ? await ollamaTitle(digest) : undefined;
+    if (modelTitle) {
+      const summary: TranscriptSummary = { summary: modelTitle, confidence: 'medium', summarizer: 'ollama' };
+      persist(summary);
+      transcriptSeen.set(paneId, {
+        mtimeMs: stat.mtimeMs, size: stat.size, lastWriteMs: now,
+        titledSize: stat.size, lastTitleAttemptMs: now, lastSummary: summary,
+      });
+      return true;
+    }
+    transcriptSeen.set(paneId, {
+      mtimeMs: stat.mtimeMs, size: stat.size,
+      lastWriteMs: prior?.lastSummary ? now : 0,
+      titledSize: prior?.titledSize ?? 0,
+      lastTitleAttemptMs: now,
+      lastSummary: prior?.lastSummary,
+    });
+    if (prior?.lastSummary) {
+      persist(prior.lastSummary);
+      return true;
+    }
+    return false;
+  }
+
+  // Keep the existing title fresh while the conversation moves on.
+  if (prior?.lastSummary) {
+    persist(prior.lastSummary);
+    transcriptSeen.set(paneId, { ...prior, mtimeMs: stat.mtimeMs, size: stat.size, lastWriteMs: now });
+    return true;
+  }
+  return false;
 }
 
 const seen = new Map<string, PaneMemory>();
@@ -621,7 +743,7 @@ async function once(force = false): Promise<void> {
     try {
       const paneId = String(pane.pane_id);
       const transcript = pane.tty_name ? transcripts.get(pane.tty_name) : undefined;
-      if (transcript && observeTranscriptPane(pane, transcript)) continue;
+      if (transcript && await observeTranscriptPane(pane, transcript)) continue;
 
       // Summaries are for harness panes only. A pane qualifies via a fresh
       // agent state file, a kitty-side hint (user vars / foreground agent
