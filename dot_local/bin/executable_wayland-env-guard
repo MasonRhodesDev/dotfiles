@@ -7,6 +7,12 @@
 # dangling on exit, which breaks every D-Bus-activated GUI service afterwards
 # (blueman-applet's pairing agent being the recurring victim).
 #
+# Also keeps the xdg-desktop-portal stack healthy: xdph that races a
+# compositor restart dies into start-limit-hit and stays dead until reset
+# (2026-07-14: six days without screen sharing), and a missing
+# XDG_CURRENT_DESKTOP makes xdg-desktop-portal skip hyprland-portals.conf,
+# dropping the ScreenCast/Screenshot backends entirely.
+#
 # Wired to runtime-dir changes by wayland-env-guard.path.
 set -u
 RUN="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
@@ -20,8 +26,43 @@ s.connect(sys.argv[1])
 EOF
 }
 
-cur=$(systemctl --user show-environment 2>/dev/null | sed -n 's/^WAYLAND_DISPLAY=//p')
+env_get() {
+    systemctl --user show-environment 2>/dev/null | sed -n "s/^$1=//p"
+}
+
+heal_portals() { # $1 = 1 when the socket env was just repointed
+    local repointed="$1" fix=0
+
+    # Without XDG_CURRENT_DESKTOP=Hyprland the portal falls back to
+    # portals.conf and never loads the hyprland ScreenCast/Screenshot backend.
+    if [ "$(env_get XDG_CURRENT_DESKTOP)" != "Hyprland" ]; then
+        dbus-update-activation-environment --systemd XDG_CURRENT_DESKTOP=Hyprland 2>/dev/null
+        fix=1
+    fi
+
+    if [ "$repointed" = 1 ]; then
+        # xdph, if it survived at all, is attached to the dead compositor.
+        systemctl --user reset-failed xdg-desktop-portal-hyprland.service 2>/dev/null
+        systemctl --user restart xdg-desktop-portal-hyprland.service 2>/dev/null
+        fix=1
+    elif systemctl --user is-failed --quiet xdg-desktop-portal-hyprland.service; then
+        # Crashed into start-limit-hit racing a compositor restart.
+        systemctl --user reset-failed xdg-desktop-portal-hyprland.service 2>/dev/null
+        systemctl --user start xdg-desktop-portal-hyprland.service 2>/dev/null
+        fix=1
+    fi
+
+    if [ "$fix" = 1 ]; then
+        # The main portal only exports backend interfaces it found at startup.
+        systemctl --user try-restart xdg-desktop-portal.service 2>/dev/null
+        echo "wayland-env-guard: healed portal stack"
+    fi
+}
+
+cur=$(env_get WAYLAND_DISPLAY)
 if [ -n "$cur" ] && probe "$RUN/$cur"; then
+    # Socket is fine, but the portal stack may still need healing.
+    [ -n "$(env_get HYPRLAND_INSTANCE_SIGNATURE)" ] && heal_portals 0
     exit 0
 fi
 
@@ -70,3 +111,9 @@ systemctl --user set-environment "$(printf '%s=%s' WAYLAND_DISPLAY "$WAYLAND_DIS
 dbus-update-activation-environment --systemd "${vars[@]}" 2>/dev/null
 
 echo "wayland-env-guard: repointed WAYLAND_DISPLAY '${cur:-unset}' -> '$sock'"
+
+# Only heal portals when the socket belongs to a Hyprland instance — the
+# desktop-specific env and backend are meaningless for a foreign compositor.
+[ -n "$sig" ] && heal_portals 1
+
+exit 0
