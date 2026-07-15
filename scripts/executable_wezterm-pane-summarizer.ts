@@ -474,6 +474,15 @@ function conversationDigest(lines: string[]): string | undefined {
   return redactTerminalText(picked.join('\n'));
 }
 
+const TITLE_INSTRUCTION = 'You title conversations between a developer and a coding assistant. Reply with ONLY a 3-6 word title describing the overall topic of the whole conversation. No quotes, no punctuation, no explanation.';
+
+// Titler provider: 'ollama' (default, local) or 'codex' (headless ChatGPT via
+// the codex CLI — already authenticated, cheapest tier, ~4s per title at the
+// regen cadence). codex falls back to ollama on any failure.
+const TITLER = (process.env.PANE_SUMMARY_TITLER ?? 'ollama').toLowerCase();
+const CODEX_BIN = process.env.PANE_SUMMARY_CODEX_BIN ?? 'codex';
+const CODEX_TITLE_MODEL = process.env.PANE_SUMMARY_CODEX_MODEL ?? 'gpt-5.6-luna';
+
 // Ask the local model to TITLE the conversation. Output is display-gated
 // downstream like any other model text.
 async function ollamaTitle(digest: string): Promise<string | undefined> {
@@ -488,10 +497,7 @@ async function ollamaTitle(digest: string): Promise<string | undefined> {
         keep_alive: '2m',
         options: { temperature: 0.1, num_predict: 24 },
         messages: [
-          {
-            role: 'system',
-            content: 'You title conversations between a developer and a coding assistant. Reply with ONLY a 3-6 word title describing the overall topic of the whole conversation. No quotes, no punctuation, no explanation.',
-          },
+          { role: 'system', content: TITLE_INSTRUCTION },
           { role: 'user', content: digest },
         ],
       }),
@@ -504,6 +510,39 @@ async function ollamaTitle(digest: string): Promise<string | undefined> {
   } catch {
     return undefined;
   }
+}
+
+function codexTitle(digest: string): string | undefined {
+  if (DISABLE_MODEL) return undefined;
+  const out = join(stateRoot(), `codex-title-${process.pid}.tmp`);
+  try {
+    execFileSync(CODEX_BIN, [
+      'exec',
+      '-c', `model=${CODEX_TITLE_MODEL}`,
+      '--skip-git-repo-check',
+      '--ephemeral',
+      '-s', 'read-only',
+      '--output-last-message', out,
+      '-',
+    ], {
+      input: `${TITLE_INSTRUCTION}\n\n<conversation-excerpts>\n${digest}\n</conversation-excerpts>`,
+      timeout: 45_000,
+      stdio: ['pipe', 'ignore', 'ignore'],
+    });
+    return cleanModelSummary(readFileSync(out, 'utf8'));
+  } catch {
+    return undefined;
+  } finally {
+    rmSync(out, { force: true });
+  }
+}
+
+async function generateTitle(digest: string): Promise<string | undefined> {
+  if (TITLER === 'codex') {
+    const title = codexTitle(digest);
+    if (title) return title;
+  }
+  return ollamaTitle(digest);
 }
 
 const TAGLINE_MAX_CHARS = 60;
@@ -597,7 +636,7 @@ async function observeTranscriptPane(pane: PaneInfo, transcript: string): Promis
 
   if (wantTitle) {
     const digest = conversationDigest(lines);
-    const modelTitle = digest ? await ollamaTitle(digest) : undefined;
+    const modelTitle = digest ? await generateTitle(digest) : undefined;
     if (modelTitle) {
       const summary: TranscriptSummary = { summary: modelTitle, confidence: 'medium', summarizer: 'ollama' };
       persist(summary);

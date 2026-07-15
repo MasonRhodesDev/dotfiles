@@ -3,6 +3,11 @@ Description=Terminal pane summarizer (kitty + wezterm headers)
 
 [Service]
 ExecStart=/home/mason/.local/share/fnm/aliases/default/bin/node /home/mason/scripts/wezterm-pane-summarizer.ts daemon
+# Conversation-title provider: uncomment to title via headless codex
+# (ChatGPT, cheapest tier, ~4s/title at the 16KB regen cadence) instead of
+# local ollama; ollama remains the fallback on any codex failure.
+#Environment=PANE_SUMMARY_TITLER=codex
+#Environment=PANE_SUMMARY_CODEX_BIN=%h/.npm-global/bin/codex
 # Lite by design: must never get in the way of interactive work.
 Nice=19
 IOSchedulingClass=idle
