@@ -83,11 +83,12 @@ def check_visibility() -> None:
                 # kitty < 0.47
                 legacy_relayout()
             else:
-                # kitty >= 0.47: mirror the update_tab_bar_visibility
-                # decorator in tabs.py — relayout the bar, then the tabs.
-                if not tm.tab_bar_hidden:
-                    tm.layout_tab_bar()
-                tm.resize(only_tabs=True)
+                # kitty >= 0.47: full resize — layout_tab_bar() plus a
+                # relayout of every tab. resize(only_tabs=True) sometimes
+                # left window content occupying the bar's row (content
+                # drawing over the header) because the central geometry
+                # wasn't recomputed for all windows.
+                tm.resize()
         _dbg('visibility flipped')
     for tm in boss.os_window_map.values():
         tm.mark_tab_bar_dirty()
