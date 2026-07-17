@@ -3,7 +3,7 @@
         "position": "top",
         "reload_style_on_change": true,
         "modules-left": ["cffi/workspace-buttons"],
-        "modules-center": ["custom/screen-recorder", "custom/media"],
+        "modules-center": ["custom/screen-recorder", "custom/media", "custom/screen-recorder-spacer"],
         "modules-right": [
             "group/expand",
             "bluetooth",
@@ -212,6 +212,13 @@
             "exec": "timeout 5 $HOME/scripts/screen-recorder/waybar-module.sh",
             "on-click": "$HOME/scripts/record",
             "signal": 10
+        },
+        "custom/screen-recorder-spacer": {
+            "format": "{}",
+            "return-type": "json",
+            "interval": "once",
+            "exec": "timeout 5 $HOME/scripts/screen-recorder/waybar-module.sh spacer",
+            "signal": 10
         }
-} 
+}
 

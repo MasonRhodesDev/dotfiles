@@ -17,17 +17,21 @@ else
     }
 fi
 
+# Two invocations share this script:
+#   (no arg)  -> the clickable REC button, shown left of the media module
+#   spacer    -> an invisible, equal-width mirror shown right of the media
+#                module so the media module stays centered when REC appears.
+MODE="${1:-button}"
+
 if is_recording; then
-    icon="󰑊"
-    class="recording"
-    tooltip="Screen recording in progress - click to stop"
-    text="$icon REC"
+    if [[ "$MODE" == "spacer" ]]; then
+        printf '{"text": "󰑊 REC", "tooltip": "", "class": "spacer"}\n'
+    else
+        printf '{"text": "󰑊 REC", "tooltip": "Screen recording in progress - click to stop", "class": "recording"}\n'
+    fi
 else
     # Empty text makes waybar hide the module entirely: no widget rendered,
     # no reserved space, and (crucially) not clickable while idle. Recording
-    # can only be started via the SHIFT+Print bind.
+    # can only be started via the SHIFT+Print bind. Same for the spacer.
     printf '{"text": "", "tooltip": "", "class": "idle"}\n'
-    exit 0
 fi
-
-printf '{"text": "%s", "tooltip": "%s", "class": "%s"}\n' "$text" "$tooltip" "$class"

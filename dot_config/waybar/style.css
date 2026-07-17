@@ -35,28 +35,37 @@ window#waybar {
     box-shadow: none;
 }
 
-/* Screen recorder module - prominent red when recording */
-#custom-screen-recorder {
+/* Screen recorder module - prominent red when recording.
+   The REC button sits to the LEFT of the media module; an invisible,
+   equal-width mirror (#custom-screen-recorder-spacer) sits to its RIGHT so
+   the media module stays perfectly centered while recording. The two boxes
+   must be dimensionally identical (same font-weight, padding, min-width)
+   with mirrored margins so their footprints cancel out. Both are hidden by
+   waybar (empty text) while idle. */
+#custom-screen-recorder,
+#custom-screen-recorder-spacer {
     padding-left: 4px;
     padding-right: 4px;
     border-radius: 8px;
     margin: 0px;
-    margin-right: 4px;
+    min-width: 44px;
+    font-weight: bold;
     background: transparent;
+}
+
+#custom-screen-recorder {
+    margin-right: 4px;   /* gap between REC button and media */
+}
+
+#custom-screen-recorder-spacer {
+    margin-left: 4px;    /* mirror gap between media and spacer */
+    color: transparent;  /* invisible: reserves width only */
 }
 
 #custom-screen-recorder.recording {
     background: rgba(255, 0, 0, 0.15);
     color: #ff3333;
-    font-weight: bold;
     animation: pulse 2s ease-in-out infinite;
-}
-
-#custom-screen-recorder.hidden {
-    opacity: 0;
-    padding: 0;
-    margin: 0;
-    min-width: 0;
 }
 
 @keyframes pulse {
