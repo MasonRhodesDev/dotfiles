@@ -23,10 +23,11 @@ if is_recording; then
     tooltip="Screen recording in progress - click to stop"
     text="$icon REC"
 else
-    icon=""
-    class="idle hidden"
-    tooltip="Screen recorder idle - click to start recording"
-    text=" "
+    # Empty text makes waybar hide the module entirely: no widget rendered,
+    # no reserved space, and (crucially) not clickable while idle. Recording
+    # can only be started via the SHIFT+Print bind.
+    printf '{"text": "", "tooltip": "", "class": "idle"}\n'
+    exit 0
 fi
 
 printf '{"text": "%s", "tooltip": "%s", "class": "%s"}\n' "$text" "$tooltip" "$class"
