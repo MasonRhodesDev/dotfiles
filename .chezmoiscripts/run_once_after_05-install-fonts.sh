@@ -59,10 +59,14 @@ cd -
 echo "Installing system font packages..."
 if command -v pacman >/dev/null 2>&1; then
     # Official repo: base coverage + config-referenced + personal repo fonts.
+    # Nerd fonts come as individual prebuilt ttf-*-nerd packages — NEVER
+    # nerd-fonts-git, whose PKGBUILD mirror-clones the entire ~10 GB font repo
+    # to build collections we don't use.
     sudo pacman -S --needed --noconfirm \
         noto-fonts noto-fonts-emoji \
         ttf-roboto adobe-source-code-pro-fonts \
-        terminus-font ttf-fira-code ttf-firacode-nerd ttf-nerd-fonts-symbols-mono \
+        terminus-font ttf-fira-code ttf-firacode-nerd ttf-jetbrains-mono-nerd \
+        ttf-nerd-fonts-symbols-mono \
         || true
     # AUR: my personal fonts that aren't in the official repos.
     aur_helper=""
@@ -70,9 +74,9 @@ if command -v pacman >/dev/null 2>&1; then
     [ -z "$aur_helper" ] && command -v yay >/dev/null 2>&1 && aur_helper=yay
     if [ -n "$aur_helper" ]; then
         "$aur_helper" -S --needed --noconfirm \
-            nerd-fonts-git ttf-harmonyos-sans ttf-ms-fonts || true
+            ttf-harmonyos-sans ttf-ms-fonts || true
     else
-        echo "NOTE: no AUR helper (paru/yay) — skipping nerd-fonts-git, ttf-harmonyos-sans, ttf-ms-fonts"
+        echo "NOTE: no AUR helper (paru/yay) — skipping ttf-harmonyos-sans, ttf-ms-fonts"
     fi
 elif command -v apt-get >/dev/null 2>&1; then
     sudo apt-get install -y \
