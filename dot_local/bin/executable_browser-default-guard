@@ -1,0 +1,27 @@
+#!/bin/bash
+# browser-default-guard — keep the default web browser pinned to Chromium.
+#
+# Slack (Electron's setAsDefaultProtocolClient) rewrites ~/.config/mimeapps.list
+# on every launch, hijacking the web-browser association set — text/html plus
+# the http/https/about/unknown scheme handlers — and pointing them at
+# slack.desktop. This restores the intended defaults whenever that happens.
+# Triggered by browser-default-guard.path on any change to mimeapps.list.
+set -euo pipefail
+
+export PATH="/usr/bin:/bin:$PATH"
+
+want=chromium-browser.desktop
+cur=$(xdg-mime query default x-scheme-handler/https 2>/dev/null || true)
+
+# Already correct → nothing to do. This early-exit is also what stops the
+# guard's own corrective write from re-triggering itself in a loop.
+[ "$cur" = "$want" ] && exit 0
+
+logger -t browser-default-guard "https handler was '${cur:-unset}'; reasserting $want"
+
+xdg-mime default "$want" \
+    text/html \
+    x-scheme-handler/http \
+    x-scheme-handler/https \
+    x-scheme-handler/about \
+    x-scheme-handler/unknown

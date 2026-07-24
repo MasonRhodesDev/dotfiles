@@ -1,17 +1,44 @@
 #!/bin/bash
-# Ultra-fast screenshot with swappy annotation
+# Capture-first screenshot with swappy annotation.
+# Pixels are locked in at keypress; the freeze overlay and slurp only pick
+# the crop region from the already-saved image, so nothing that happens
+# during selection (dialogs closing, overlay fade-outs) can leak into the
+# shot.
 
-# Quick screen freeze and selection
+TMP=$(mktemp -d)
+FREEZE_PID=""
+cleanup() {
+    [ -n "$FREEZE_PID" ] && kill "$FREEZE_PID" 2>/dev/null
+    rm -rf "$TMP"
+}
+trap cleanup EXIT
+
+FULL="$TMP/full.png"
+grim "$FULL" || exit 1
+
+# Freeze the display so the selection matches the captured pixels
 hyprpicker -r -z &
 FREEZE_PID=$!
 sleep 0.02
 
 SELECTION=$(slurp -d 2>/dev/null)
 SLURP_EXIT=$?
-kill "$FREEZE_PID" 2>/dev/null || true
+kill "$FREEZE_PID" 2>/dev/null
+FREEZE_PID=""
 
 [ $SLURP_EXIT -ne 0 ] && exit 1
 [ -z "$SELECTION" ] && exit 1
+
+# slurp reports logical layout coords ("X,Y WxH"); grim's full image is
+# rendered at the greatest output scale with its origin at the layout's
+# top-left corner. Map one onto the other.
+read -r LAYOUT_X LAYOUT_Y SCALE < <(hyprctl monitors -j |
+    jq -r '[(map(.x) | min), (map(.y) | min), (map(.scale) | max)] | @tsv')
+
+CROP=$(echo "$SELECTION" | awk -v ox="$LAYOUT_X" -v oy="$LAYOUT_Y" -v s="$SCALE" '
+    { split($1, p, ","); split($2, d, "x")
+      printf "%dx%d+%d+%d", d[1]*s + 0.5, d[2]*s + 0.5, (p[1]-ox)*s + 0.5, (p[2]-oy)*s + 0.5 }')
+[ -z "$CROP" ] && exit 1
 
 # Create swappy config for optimization
 mkdir -p ~/.config/swappy
@@ -29,7 +56,6 @@ fill_shape=false
 auto_save=false
 EOF
 
-# Launch swappy with the screenshot - user will Ctrl+C to copy when ready
-grim -g "$SELECTION" - | swappy -f -
+magick "$FULL" -crop "$CROP" +repage - | swappy -f -
 
 echo "💡 Swappy shortcuts: Ctrl+C (copy & quit), Ctrl+S (save), Escape (manual quit)"

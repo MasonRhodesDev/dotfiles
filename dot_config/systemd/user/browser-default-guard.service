@@ -1,0 +1,6 @@
+[Unit]
+Description=Reassert Chromium as the default web browser
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/browser-default-guard

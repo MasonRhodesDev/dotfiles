@@ -1,0 +1,10 @@
+[Unit]
+Description=Watch mimeapps.list for default-browser hijacking (Slack)
+
+[Path]
+PathModified=%h/.config/mimeapps.list
+TriggerLimitIntervalSec=10s
+TriggerLimitBurst=5
+
+[Install]
+WantedBy=default.target
