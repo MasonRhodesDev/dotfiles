@@ -39,13 +39,29 @@ export SCCACHE_CACHE_SIZE=50G
 export CARGO_INCREMENTAL=0
 export CARGO_TERM_COLOR=always'
 
+# Hard wall-clock timeout, not just ConnectTimeout: Tailscale SSH "check mode" stalls
+# AFTER the TCP connect, during auth, and BatchMode does not prevent it. A real stall was
+# observed lasting >25s. Autonomous harnesses must fail fast and loudly, never hang.
+SSH_PROBE_TIMEOUT=12
 reachable() {
-    ssh -o BatchMode=yes -o ConnectTimeout=8 "$HOST" true 2>/dev/null
+    timeout "$SSH_PROBE_TIMEOUT" \
+        ssh -o BatchMode=yes -o ConnectTimeout=6 -o NumberOfPasswordPrompts=0 \
+            "$HOST" true 2>/dev/null
+}
+
+unreachable_msg() {
+    cat >&2 <<EOF
+cb: $HOST did not answer within ${SSH_PROBE_TIMEOUT}s.
+    Most likely Tailscale SSH check-mode wants browser re-auth. Verify with:
+      ssh $HOST true
+    Building locally instead is always available: cargo build
+EOF
+    exit 1
 }
 
 case "${1:-}" in
 --status)
-    reachable || die "$HOST unreachable (Tailscale up? SSH check-mode may need re-auth)"
+    reachable || unreachable_msg
     ssh -o BatchMode=yes "$HOST" "$REMOTE_ENV"'
         echo "host:    $(hostname)  ($(nproc) threads, $(free -g | awk "/^Mem:/{print \$7}")Gi avail)"
         echo "load:    $(cut -d" " -f1-3 /proc/loadavg)"
@@ -61,8 +77,21 @@ case "${1:-}" in
 esac
 
 # --- locate the repo ------------------------------------------------------------
-ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
-[[ -f "$ROOT/Cargo.toml" ]] || die "no Cargo.toml at repo root ($ROOT)"
+# Prefer the git root, but several repos (claurst, cmux, auth-bridge, moondust) keep
+# Cargo.toml in a subdirectory. Fall back to the nearest Cargo.toml walking up from cwd.
+GITROOT=$(git rev-parse --show-toplevel 2>/dev/null || true)
+if [[ -n "$GITROOT" && -f "$GITROOT/Cargo.toml" ]]; then
+    ROOT="$GITROOT"
+else
+    ROOT=""
+    d=$PWD
+    while [[ "$d" != / ]]; do
+        [[ -f "$d/Cargo.toml" ]] && { ROOT=$d; break; }
+        d=$(dirname "$d")
+    done
+    [[ -n "$ROOT" ]] || die "no Cargo.toml here or in any parent (cb builds cargo projects)"
+    info "using nearest Cargo.toml: ${ROOT/#$HOME/~}"
+fi
 NAME=$(basename "$ROOT")
 REMOTE="$REMOTE_ROOT/$NAME"   # home-relative: rsync will NOT expand $HOME
 
@@ -77,7 +106,7 @@ for a in "$@"; do
     esac
 done
 
-reachable || die "$HOST unreachable (Tailscale up? SSH check-mode may need re-auth)"
+reachable || unreachable_msg
 
 if [[ $MODE == clean ]]; then
     info "removing remote target for $NAME"
