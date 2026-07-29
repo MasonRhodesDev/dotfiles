@@ -42,13 +42,26 @@ fi
 # (tmux's, not the terminal's): wrap in the tmux DCS passthrough envelope
 # (ESCs doubled) so tmux forwards the OSC to the attached client. Needs
 # `allow-passthrough on` (set in ~/.tmux.conf).
+#
+# The write MUST be time-bounded. A pty that still exists but isn't being
+# drained (detached tmux pane, stalled reader) fills its ~12K kernel buffer
+# and then blocks writers indefinitely — and this hook runs on
+# UserPromptSubmit, so an unbounded write stalls the prompt loop. Measured
+# before this cap: 713ms median, 19% of prompts over 2s, five 30s hook
+# timeouts. The OSC is cosmetic, so dropping one beats holding up the session.
+# Once a pane is stalled, skip the remaining writes for this invocation.
+OSC_WRITE_TIMEOUT=0.25
+OSC_STALLED=0
 send_user_var() {
+    [[ "$OSC_STALLED" == 1 ]] && return 0
     local seq
     seq=$(printf '\033]1337;SetUserVar=%s=%s\007' "$1" "$(printf '%s' "$2" | base64 -w0)")
     if [[ -n "$TMUX" ]]; then
         seq=$(printf '\033Ptmux;%s\033\\' "${seq//$'\033'/$'\033'$'\033'}")
     fi
-    printf '%s' "$seq" > "$TTY_DEVICE" 2>/dev/null
+    timeout -k 0.1 "$OSC_WRITE_TIMEOUT" \
+        bash -c 'printf "%s" "$1" > "$2"' _ "$seq" "$TTY_DEVICE" 2>/dev/null \
+        || OSC_STALLED=1
 }
 
 # Function to send activity to specific pane
@@ -95,9 +108,12 @@ case "$HOOK_EVENT" in
             # Post-compaction - extract the new summary
             ACTIVITY=$(extract_conversation_summary "$TRANSCRIPT_PATH")
         else
-            # Initial session start - get first user message
+            # Initial session start - get first user message. Bound the read:
+            # we only want the FIRST match, but jq has to stream the whole file
+            # to find it, and transcripts here reach 38MB. The first user
+            # message is always in the opening handful of JSONL objects.
             if command -v jq >/dev/null 2>&1 && [[ -f "$TRANSCRIPT_PATH" ]]; then
-                ACTIVITY=$(jq -r 'select(.type=="user") | .message.content[]? | select(.type=="text") | .text' "$TRANSCRIPT_PATH" 2>/dev/null | head -1 | head -c 60)
+                ACTIVITY=$(head -n 200 "$TRANSCRIPT_PATH" | jq -r 'select(.type=="user") | .message.content[]? | select(.type=="text") | .text' 2>/dev/null | head -1 | head -c 60)
             fi
             [[ -z "$ACTIVITY" ]] && ACTIVITY="Starting session"
         fi
