@@ -1,0 +1,24 @@
+[Unit]
+Description=Thermal tripwire — catch runaway daemons and capture evidence
+Documentation=file:%h/.local/state/thermal-trips
+After=graphical-session.target
+PartOf=graphical-session.target
+Requisite=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/scripts/thermal-tripwire
+Restart=on-failure
+RestartSec=10
+
+# Must never become the problem it watches for. The loop is a few sysfs reads
+# every 15s; the only heavier work is a 20s /proc walk on trip.
+Nice=19
+IOSchedulingClass=idle
+CPUSchedulingPolicy=idle
+MemoryHigh=128M
+MemoryMax=256M
+Slice=background.slice
+
+[Install]
+WantedBy=graphical-session.target
