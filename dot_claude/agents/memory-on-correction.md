@@ -1,4 +1,5 @@
 ---
+name: memory-on-correction
 description: When the user has to correct Claude's behavior, automatically record a memory so the mistake isn't repeated.
 ---
 
@@ -8,7 +9,7 @@ Any time the user has to correct you — undoing a change you made, telling you 
 
 ## What to record
 
-Write a concise entry to the most relevant memory file under `~/.claude/projects/-home-mason-AI-HOME/memory/`. If the correction is about debugging/diagnostic approach or tool assumptions, use `feedback_debugging.md`. If no existing file fits, create one.
+Write a concise entry to the most relevant memory file under `~/.claude/projects/-home-mason/memory/`. If the correction is about debugging/diagnostic approach or tool assumptions, use `feedback_debugging.md`. If no existing file fits, create one.
 
 Each entry should capture:
 1. **What you did wrong** — specific action, not vague

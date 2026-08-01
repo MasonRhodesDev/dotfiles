@@ -1,0 +1,167 @@
+#!/usr/bin/env bash
+# cb — build this Rust repo on work-horse instead of on the laptop.
+#
+# Why: the laptop's 16 threads are routinely contended (Gas Town crews measured at
+# 10-15 busy cores), and heavy cargo builds there pin the fans at ~4500 RPM and push
+# Tctl past 90C. work-horse has the same thread count but sits idle. This is an
+# OFFLOAD, not a speedup: work-horse is a slower per-core i7-10700KF, so an isolated
+# build is ~25-40% slower. The point is that it doesn't happen on this machine.
+#
+# Explicit by design: plain `cargo build` is untouched, so rust-analyzer, incremental
+# builds and anything path-sensitive keep working exactly as before.
+#
+#   cb                       # build cwd's repo (debug) on work-horse
+#   cb --release             # any cargo args pass straight through
+#   cb --run -- --flag       # build remote, fetch binary, run it locally
+#   cb --bin foo --release
+#   cb --shell               # interactive shell in the remote copy
+#   cb --clean               # wipe this repo's remote target dir
+#   cb --status              # remote host + cache stats
+#
+# Env overrides: CB_HOST (default mason-work-horse), CB_JOBS (default 12).
+
+set -euo pipefail
+
+HOST="${CB_HOST:-mason-work-horse}"
+REMOTE_ROOT="remote-builds"
+# work-horse has 31GB vs the laptop's 60GB. Rust link steps with many parallel codegen
+# units are the usual OOM culprit, so leave headroom rather than using all 16 threads.
+JOBS="${CB_JOBS:-12}"
+
+die() { printf '\033[31mcb: %s\033[0m\n' "$*" >&2; exit 1; }
+info() { printf '\033[36m==>\033[0m %s\n' "$*"; }
+
+# sccache gives near-free rebuilds. CARGO_INCREMENTAL=0 is REQUIRED: sccache cannot
+# cache incremental compilation units and silently stops caching Rust if it's on.
+REMOTE_ENV='export RUSTC_WRAPPER=sccache
+export SCCACHE_DIR=$HOME/.cache/sccache
+export SCCACHE_CACHE_SIZE=50G
+export CARGO_INCREMENTAL=0
+export CARGO_TERM_COLOR=always'
+
+# Hard wall-clock timeout, not just ConnectTimeout: Tailscale SSH "check mode" stalls
+# AFTER the TCP connect, during auth, and BatchMode does not prevent it. A real stall was
+# observed lasting >25s. Autonomous harnesses must fail fast and loudly, never hang.
+SSH_PROBE_TIMEOUT=12
+reachable() {
+    timeout "$SSH_PROBE_TIMEOUT" \
+        ssh -o BatchMode=yes -o ConnectTimeout=6 -o NumberOfPasswordPrompts=0 \
+            "$HOST" true 2>/dev/null
+}
+
+unreachable_msg() {
+    cat >&2 <<EOF
+cb: $HOST did not answer within ${SSH_PROBE_TIMEOUT}s.
+    Most likely Tailscale SSH check-mode wants browser re-auth. Verify with:
+      ssh $HOST true
+    Building locally instead is always available: cargo build
+EOF
+    exit 1
+}
+
+case "${1:-}" in
+--status)
+    reachable || unreachable_msg
+    ssh -o BatchMode=yes "$HOST" "$REMOTE_ENV"'
+        echo "host:    $(hostname)  ($(nproc) threads, $(free -g | awk "/^Mem:/{print \$7}")Gi avail)"
+        echo "load:    $(cut -d" " -f1-3 /proc/loadavg)"
+        echo "rustc:   $(rustc --version)"
+        echo "disk:    $(df -h "$HOME" | tail -1 | awk "{print \$4\" free\"}")"
+        echo
+        sccache --show-stats 2>/dev/null | grep -iE "compile requests|cache hits|cache misses|cache size|max cache" || echo "(no sccache stats yet)"
+        echo
+        echo "remote build trees:"
+        du -sh "$HOME/'"$REMOTE_ROOT"'"/*/ 2>/dev/null | sort -rh | head -12 || echo "  (none yet)"'
+    exit 0
+    ;;
+esac
+
+# --- locate the repo ------------------------------------------------------------
+# Prefer the git root, but several repos (claurst, cmux, auth-bridge, moondust) keep
+# Cargo.toml in a subdirectory. Fall back to the nearest Cargo.toml walking up from cwd.
+GITROOT=$(git rev-parse --show-toplevel 2>/dev/null || true)
+if [[ -n "$GITROOT" && -f "$GITROOT/Cargo.toml" ]]; then
+    ROOT="$GITROOT"
+else
+    ROOT=""
+    d=$PWD
+    while [[ "$d" != / ]]; do
+        [[ -f "$d/Cargo.toml" ]] && { ROOT=$d; break; }
+        d=$(dirname "$d")
+    done
+    [[ -n "$ROOT" ]] || die "no Cargo.toml here or in any parent (cb builds cargo projects)"
+    info "using nearest Cargo.toml: ${ROOT/#$HOME/~}"
+fi
+NAME=$(basename "$ROOT")
+REMOTE="$REMOTE_ROOT/$NAME"   # home-relative: rsync will NOT expand $HOME
+
+MODE=build
+ARGS=()
+for a in "$@"; do
+    case "$a" in
+        --run)   MODE=run ;;
+        --shell) MODE=shell ;;
+        --clean) MODE=clean ;;
+        *)       ARGS+=("$a") ;;
+    esac
+done
+
+reachable || unreachable_msg
+
+if [[ $MODE == clean ]]; then
+    info "removing remote target for $NAME"
+    ssh -o BatchMode=yes "$HOST" "rm -rf \"$REMOTE/target\""
+    info "done (source tree kept; use --status to see sizes)"
+    exit 0
+fi
+
+# --- sync source up -------------------------------------------------------------
+# target/ is excluded in BOTH directions: these trees reach 57G and copying them would
+# defeat the entire purpose. The remote target dir persists per repo, so remote builds
+# stay incremental. .git IS included — build.rs scripts (vergen et al) read it.
+info "syncing $NAME -> $HOST"
+ssh -o BatchMode=yes "$HOST" "mkdir -p \"$REMOTE\""
+rsync -a --delete --info=stats1 \
+    --exclude='/target/' --exclude='node_modules/' --exclude='.direnv/' \
+    --exclude='*.swp' --exclude='/.cache/' \
+    "$ROOT"/ "$HOST:$REMOTE"/ | grep -E 'Number of .*files transferred|Total transferred' || true
+
+if [[ $MODE == shell ]]; then
+    info "shell in $REMOTE (toolchain env preloaded)"
+    exec ssh -t "$HOST" "cd \"$REMOTE\" && $REMOTE_ENV && exec bash -i"
+fi
+
+# --- build remotely -------------------------------------------------------------
+CARGO_ARGS="${ARGS[*]:-}"
+TTY_FLAG=(); [[ -t 0 && -t 1 ]] && TTY_FLAG=(-t)
+info "cargo build -j$JOBS ${CARGO_ARGS:-(no args)} on $HOST"
+START=$(date +%s)
+# shellcheck disable=SC2029
+ssh -o BatchMode=yes "${TTY_FLAG[@]}" "$HOST" "cd \"$REMOTE\" && $REMOTE_ENV && cargo build -j$JOBS $CARGO_ARGS" \
+    || die "remote build failed"
+ELAPSED=$(( $(date +%s) - START ))
+
+# --- pull artifacts back --------------------------------------------------------
+# Top-level files of target/<profile>/ only — that's the executables and their .d
+# files. deps/, build/ and incremental/ stay remote (they're the bulk of the 57G).
+PROFILE=debug
+[[ " $CARGO_ARGS " == *" --release "* ]] && PROFILE=release
+info "fetching $PROFILE artifacts"
+mkdir -p "$ROOT/target/$PROFILE"
+rsync -a --info=stats1 \
+    --include='*' --exclude='*/' --exclude='.cargo-*lock' \
+    "$HOST:$REMOTE/target/$PROFILE"/ "$ROOT/target/$PROFILE"/ \
+    2>/dev/null | grep -E 'Number of .*files transferred' || true
+
+# Honest accounting: the COMPILE costs this machine nothing, but rsync plus
+# streaming the build log measured ~1 core against a 2.3-core idle baseline.
+# A local build of the same crate would occupy 12-16.
+info "compiled in ${ELAPSED}s on $HOST — no local compile (local cost: sync + log only)"
+
+if [[ $MODE == run ]]; then
+    BIN=$(find "$ROOT/target/$PROFILE" -maxdepth 1 -type f -executable -print0 2>/dev/null \
+          | xargs -0 -r ls -t 2>/dev/null | head -1)
+    [[ -n "$BIN" ]] || die "no executable found in target/$PROFILE"
+    info "running $(basename "$BIN")"
+    exec "$BIN"
+fi

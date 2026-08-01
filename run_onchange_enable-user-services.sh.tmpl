@@ -5,6 +5,9 @@
 # udiskie:      {{ include "dot_config/systemd/user/udiskie.service" | sha256sum }}
 # swaybg:       {{ include "dot_config/systemd/user/swaybg.service" | sha256sum }}
 # api-keys:     {{ include "dot_config/systemd/user/api-keys.service" | sha256sum }}
+# browser-guard.path:    {{ include "dot_config/systemd/user/browser-default-guard.path" | sha256sum }}
+# browser-guard.service: {{ include "dot_config/systemd/user/browser-default-guard.service" | sha256sum }}
+# browser-guard.bin:     {{ include "dot_local/bin/executable_browser-default-guard" | sha256sum }}
 
 set -euo pipefail
 
@@ -25,3 +28,10 @@ for svc in "${SERVICES[@]}"; do
     systemctl --user enable "$svc" 2>/dev/null || true
     systemctl --user restart "$svc" || true
 done
+
+# Path-triggered guard that reasserts Chromium as the default browser whenever
+# Slack hijacks mimeapps.list. Enable/start the .path (not the .service — the
+# oneshot service is launched by the path unit on demand).
+echo "→ browser-default-guard.path"
+systemctl --user enable browser-default-guard.path 2>/dev/null || true
+systemctl --user restart browser-default-guard.path || true
