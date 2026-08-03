@@ -29,3 +29,9 @@ FNM_PATH="{{ .chezmoi.homeDir }}/.local/share/fnm"
 if [ -d "$FNM_PATH" ]; then
   export PATH="$FNM_PATH:$PATH"
 fi
+
+# kimi-code (installer only wires up fish; keep it here so bash gets it too)
+KIMI_PATH="{{ .chezmoi.homeDir }}/.kimi-code/bin"
+if [ -d "$KIMI_PATH" ]; then
+  export PATH="$KIMI_PATH:$PATH"
+fi
