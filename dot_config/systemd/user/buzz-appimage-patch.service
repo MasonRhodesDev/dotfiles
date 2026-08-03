@@ -1,0 +1,13 @@
+[Unit]
+Description=Re-apply Buzz AppImage Wayland/xdg patches after a self-update
+Documentation=file:/home/mason/.local/bin/buzz-appimage-patch
+
+[Service]
+Type=oneshot
+Nice=19
+ExecStart=/home/mason/.local/bin/buzz-appimage-patch
+# The patcher writes into ~/Applications, which re-triggers the watching path
+# unit; the sha check makes that second run a no-op, but keep a burst limit so a
+# pathological loop can't spin.
+StartLimitBurst=5
+StartLimitIntervalSec=120

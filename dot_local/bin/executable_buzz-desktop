@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# Buzz desktop launcher (Block's Buzz, Tauri + WebKitGTK AppImage).
+#
+# Runs ~/Applications/Buzz.AppImage, which is a locally repacked build of the
+# upstream AppImage (pristine copy kept as Buzz_0.5.3_amd64.orig.AppImage) with
+# two patches baked in, because neither is fixable from outside the AppImage:
+#
+#   1. apprun-hooks/linuxdeploy-plugin-gtk.sh hard-set GDK_BACKEND=x11 (upstream
+#      workaround for tauri#8541). On Hyprland at 1.5x that meant XWayland
+#      upscaling -> blurry UI. Patched to honor a caller-set GDK_BACKEND, which
+#      this script sets to wayland so WebKit renders at native 1.5x.
+#   2. usr/bin/xdg-open and usr/bin/xdg-mime are now shims that strip the
+#      bundle's Ubuntu LD_LIBRARY_PATH (and GTK/GIO/GStreamer overrides) before
+#      exec'ing the host tools. Without that, links opened from Buzz died with
+#      chromium: libtiff.so.6 "version LIBTIFF_4.6.1 not found".
+#
+# Override the backend for a one-off run:  BUZZ_GDK_BACKEND=x11 buzz-desktop
+set -euo pipefail
+
+APPIMAGE_PATH="${BUZZ_APPIMAGE:-$HOME/Applications/Buzz.AppImage}"
+
+if [[ ! -x "$APPIMAGE_PATH" ]]; then
+  echo "buzz-desktop: AppImage not found or not executable: $APPIMAGE_PATH" >&2
+  exit 1
+fi
+
+# Buzz self-updates by overwriting its own AppImage, wiping the local patches.
+# buzz-appimage-patch.path normally re-applies them within seconds, but if Buzz
+# is being launched right after an update (or the watcher is disabled), patch
+# synchronously first — a blurry, link-broken window is worse than ~10s of wait.
+if [[ -x "$HOME/.local/bin/buzz-appimage-patch" ]]; then
+  recorded="$HOME/.local/state/buzz-appimage-patch.sha256"
+  actual="$(sha256sum "$(readlink -f "$APPIMAGE_PATH")" | cut -d' ' -f1)"
+  if [[ ! -f "$recorded" ]] || [[ "$actual" != "$(cat "$recorded")" ]]; then
+    command -v notify-send >/dev/null 2>&1 &&
+      notify-send -a Buzz -i buzz-desktop "Buzz was updated" "Re-applying Wayland + link patches…" || true
+    "$HOME/.local/bin/buzz-appimage-patch" || echo "buzz-desktop: patching failed, launching anyway" >&2
+  fi
+fi
+
+# Wayland-native rendering (crisp on fractional-scale outputs). The patched GTK
+# hook falls back to x11 if this is unset, matching upstream behavior.
+export GDK_BACKEND="${BUZZ_GDK_BACKEND:-wayland}"
+
+# Harness discovery walks PATH for CLIs (omp, kimi, opencode, cursor-agent, ...).
+# Launched from a .desktop file, Buzz inherits only the systemd user PATH, which
+# omits the toolchain dirs from ~/.bashrc — so harnesses installed via bun, pnpm
+# or fnm are invisible and show up as "not installed". Note omp is a bun-shebang
+# script: bun itself must be on PATH too, or spawning `omp acp` fails.
+for dir in "$HOME/.local/bin" "$HOME/bin" "$HOME/scripts" "$HOME/.bun/bin" \
+           "$HOME/.local/share/pnpm" "$HOME/.cargo/bin" "$HOME/.npm-global/bin"; do
+  [[ -d "$dir" && ":$PATH:" != *":$dir:"* ]] && PATH="$dir:$PATH"
+done
+export PATH
+
+# WebKitGTK's DMABUF renderer is disabled by the app itself under AppImage; keep
+# its GL path honest about the session so it doesn't probe an X11 display.
+export XDG_SESSION_TYPE="${XDG_SESSION_TYPE:-wayland}"
+
+exec "$APPIMAGE_PATH" "$@"

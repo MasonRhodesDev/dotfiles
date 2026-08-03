@@ -1,0 +1,14 @@
+[Unit]
+Description=Watch for Buzz replacing its own AppImage (self-update)
+
+[Path]
+# Buzz's updater overwrites its own AppImage in place, reverting the local
+# patches. PathChanged on the directory catches write-then-rename; PathModified
+# on the file itself catches an in-place rewrite. Either fires the patcher,
+# which is idempotent.
+PathChanged=/home/mason/Applications
+PathModified=/home/mason/Applications/Buzz_0.5.3_amd64.AppImage
+Unit=buzz-appimage-patch.service
+
+[Install]
+WantedBy=default.target

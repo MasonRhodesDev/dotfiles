@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Name=Buzz
+GenericName=Community Chat
+Comment=Nostr-based team chat with ACP coding agents
+Exec=/home/mason/.local/bin/buzz-desktop %u
+Icon=buzz-desktop
+Terminal=false
+Categories=Network;InstantMessaging;
+Keywords=buzz;nostr;chat;relay;agents;acp;builderlab;
+MimeType=x-scheme-handler/buzz;
+StartupNotify=true
+StartupWMClass=buzz-desktop
+SingleMainWindow=true

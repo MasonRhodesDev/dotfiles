@@ -1,0 +1,205 @@
+#!/usr/bin/env bash
+# Re-apply the local Buzz AppImage patches. Idempotent; safe to run repeatedly.
+#
+# Buzz self-updates by overwriting its own AppImage in place, which silently
+# reverts two patches that make it usable on Hyprland:
+#
+#   1. apprun-hooks/linuxdeploy-plugin-gtk.sh hard-sets GDK_BACKEND=x11
+#      (upstream workaround for tauri#8541). On fractional-scale outputs that
+#      means XWayland upscaling -> blurry UI. Patched to honor a caller-set
+#      GDK_BACKEND; ~/.local/bin/buzz-desktop sets wayland.
+#   2. usr/bin/xdg-open / usr/bin/xdg-mime get replaced with a shim that strips
+#      the bundle's Ubuntu LD_LIBRARY_PATH before exec'ing the host tools.
+#      Without it, links from Buzz die with
+#      "chromium: libtiff.so.6: version LIBTIFF_4.6.1 not found".
+#
+# Driven by buzz-appimage-patch.path (watches ~/Applications) and by
+# buzz-desktop at launch. State/log under ~/.local/state.
+set -euo pipefail
+
+APPS_DIR="${BUZZ_APPS_DIR:-$HOME/Applications}"
+STATE_DIR="$HOME/.local/state"
+LOG="$STATE_DIR/buzz-appimage-patch.log"
+SHA_FILE="$STATE_DIR/buzz-appimage-patch.sha256"
+SHIM="$HOME/.local/bin/appimage-safe-open"
+UPSTREAM_COPY="$APPS_DIR/Buzz.upstream.AppImage"
+
+mkdir -p "$STATE_DIR"
+
+log() { printf '%s %s\n' "$(date -Is)" "$*" >>"$LOG"; }
+die() {
+  log "ERROR: $*"
+  echo "buzz-appimage-patch: $*" >&2
+  exit 1
+}
+
+notify() {
+  command -v notify-send >/dev/null 2>&1 || return 0
+  notify-send -a Buzz -i buzz-desktop "$1" "${2:-}" >/dev/null 2>&1 || true
+}
+
+# --- the environment-cleaning shim, single source of truth ------------------
+# Written both into the AppImage (as xdg-open/xdg-mime) and to $SHIM, where it
+# doubles as a global $BROWSER so links keep working even if a future upstream
+# layout change makes the repack fail.
+write_shim() {
+  cat >"$1" <<'SHIM_EOF'
+#!/usr/bin/env bash
+# Launch the host's xdg-open / xdg-mime with a de-AppImage'd environment.
+#
+# AppImages prepend their bundled libraries to LD_LIBRARY_PATH and every child
+# inherits them, so a spawned browser loads Ubuntu libs against Fedora binaries
+# and dies (chromium: libtiff.so.6 "version LIBTIFF_4.6.1 not found"). Strip
+# every $APPDIR-derived entry, drop the bundle's GTK/GIO/GStreamer overrides,
+# then hand off. Dispatches on $0, so it works as xdg-open, xdg-mime, or
+# $BROWSER. Managed by buzz-appimage-patch -- edit that, not this.
+set -u
+
+appdir="${APPDIR:-$(readlink -f "$(dirname "$(readlink -f "$0")")/../..")}"
+
+strip_appdir() { # drop $appdir entries from a colon-separated list
+  local list="$1" out="" entry
+  local IFS=:
+  for entry in $list; do
+    [ -n "$entry" ] || continue
+    case "$entry" in "$appdir" | "$appdir"/*) continue ;; esac
+    out="${out:+$out:}$entry"
+  done
+  printf '%s' "$out"
+}
+
+export PATH="$(strip_appdir "${PATH:-}")"
+export PATH="${PATH:-/usr/local/bin:/usr/bin:/bin}"
+export XDG_DATA_DIRS="$(strip_appdir "${XDG_DATA_DIRS:-}")"
+export XDG_DATA_DIRS="${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
+
+if libpath="$(strip_appdir "${LD_LIBRARY_PATH:-}")" && [ -n "$libpath" ]; then
+  export LD_LIBRARY_PATH="$libpath"
+else
+  unset LD_LIBRARY_PATH
+fi
+
+# BROWSER must go: xdg-open honors it, and it may point back at this shim.
+unset BROWSER APPDIR APPIMAGE ARGV0 LD_PRELOAD \
+  GTK_THEME GTK_PATH GTK_EXE_PREFIX GTK_DATA_PREFIX GTK_IM_MODULE_FILE \
+  GDK_BACKEND GDK_PIXBUF_MODULE_FILE GSETTINGS_SCHEMA_DIR GIO_EXTRA_MODULES \
+  GST_PLUGIN_SYSTEM_PATH GST_PLUGIN_SYSTEM_PATH_1_0 GST_PLUGIN_PATH \
+  GST_PLUGIN_PATH_1_0 GST_PLUGIN_SCANNER GST_PLUGIN_SCANNER_1_0 \
+  WEBKIT_DISABLE_DMABUF_RENDERER WEBKIT_DISABLE_COMPOSITING_MODE
+
+case "$(basename "$0")" in
+  xdg-mime) exec /usr/bin/xdg-mime "$@" ;;
+  *) exec /usr/bin/xdg-open "$@" ;;
+esac
+SHIM_EOF
+  chmod 755 "$1"
+}
+
+# Keep the standalone copy current on every run.
+write_shim "$SHIM.tmp" && mv -f "$SHIM.tmp" "$SHIM"
+
+# --- pick the target -------------------------------------------------------
+target=""
+for candidate in "$APPS_DIR"/Buzz*.AppImage; do
+  [[ -f "$candidate" && ! -L "$candidate" ]] || continue
+  case "$(basename "$candidate")" in
+    *upstream* | *.orig.* | *.tmp) continue ;;
+  esac
+  target="$candidate"
+done
+if [[ -z "$target" ]]; then
+  # No Buzz on this machine (these dotfiles are shared) — nothing to do, and a
+  # failed unit every time ~/Applications changes would just be noise.
+  exit 0
+fi
+
+# The updater may still be writing; wait for the size to settle.
+prev=0
+for _ in 1 2 3 4 5 6 7 8 9 10; do
+  size=$(stat -c %s "$target")
+  [[ "$size" == "$prev" && "$size" -gt 0 ]] && break
+  prev="$size"
+  sleep 2
+done
+
+chmod +x "$target"
+current_sha="$(sha256sum "$target" | cut -d' ' -f1)"
+
+if [[ -f "$SHA_FILE" ]] && [[ "$current_sha" == "$(cat "$SHA_FILE")" ]]; then
+  exit 0 # already our patched build
+fi
+
+log "unpatched build detected: $target ($(numfmt --to=iec "$size" 2>/dev/null || echo "$size" bytes))"
+
+offset="$("$target" --appimage-offset)" ||
+  die "cannot read AppImage offset from $target - not an AppImage?"
+
+# Keep a pristine copy of this upstream build for rollback.
+cp -f "$target" "$UPSTREAM_COPY.tmp" && mv -f "$UPSTREAM_COPY.tmp" "$UPSTREAM_COPY"
+
+work="$APPS_DIR/.buzz-patch-work"
+rm -rf "$work"
+mkdir -p "$work"
+trap 'rm -rf "$work"' EXIT
+
+cd "$work"
+"$target" --appimage-extract >/dev/null || die "extract failed"
+
+hook="squashfs-root/apprun-hooks/linuxdeploy-plugin-gtk.sh"
+[[ -f "$hook" ]] || die "GTK hook missing at $hook - upstream layout changed"
+
+# Patch 1: honor a caller-set GDK_BACKEND.
+if grep -qE '^export GDK_BACKEND="\$\{GDK_BACKEND:-x11\}"' "$hook"; then
+  : # already patched inside the image
+elif grep -qE '^export GDK_BACKEND=x11' "$hook"; then
+  sed -i 's|^export GDK_BACKEND=x11.*$|export GDK_BACKEND="${GDK_BACKEND:-x11}" # PATCHED by buzz-appimage-patch: honor caller-provided backend|' "$hook"
+else
+  die "no GDK_BACKEND line in $hook - upstream changed, refusing to guess"
+fi
+grep -q 'GDK_BACKEND:-x11' "$hook" || die "GDK_BACKEND patch did not apply"
+
+# Patch 2: environment-cleaning xdg-open / xdg-mime.
+write_shim squashfs-root/usr/bin/xdg-open
+write_shim squashfs-root/usr/bin/xdg-mime
+
+# Provision the icons the .desktop entry refers to, so the dotfiles stay free of
+# binary blobs and a fresh machine self-populates. Standard size dirs only, and
+# deliberately NO index.theme is written here: a local hicolor index that isn't a
+# superset of the system one shadows it and breaks icons in GTK4 apps.
+for size in 32x32 128x128; do
+  src="squashfs-root/usr/share/icons/hicolor/$size/apps/buzz-desktop.png"
+  [[ -f "$src" ]] && install -Dm644 "$src" \
+    "$HOME/.local/share/icons/hicolor/$size/apps/buzz-desktop.png"
+done
+[[ -f squashfs-root/Buzz.png ]] && install -Dm644 squashfs-root/Buzz.png \
+  "$HOME/.local/share/icons/hicolor/256x256/apps/buzz-desktop.png"
+command -v gtk-update-icon-cache >/dev/null 2>&1 &&
+  gtk-update-icon-cache -f -t "$HOME/.local/share/icons/hicolor" >/dev/null 2>&1 || true
+
+head -c "$offset" "$target" >runtime.bin
+nice -n 19 mksquashfs squashfs-root fs.squashfs \
+  -root-owned -noappend -comp zstd -Xcompression-level 15 -b 131072 -quiet ||
+  die "mksquashfs failed"
+
+cat runtime.bin fs.squashfs >out.AppImage
+chmod +x out.AppImage
+
+# Validate before installing over the real thing.
+./out.AppImage --appimage-offset >/dev/null || die "repacked image is not runnable"
+rm -rf verify && mkdir verify && cd verify
+../out.AppImage --appimage-extract 'apprun-hooks/*' >/dev/null 2>&1
+grep -q 'GDK_BACKEND:-x11' squashfs-root/apprun-hooks/linuxdeploy-plugin-gtk.sh ||
+  die "validation failed: GDK_BACKEND patch missing from repacked image"
+cd "$work"
+
+# Same filesystem as the target, so this is atomic.
+mv -f out.AppImage "$target"
+chmod +x "$target"
+sha256sum "$target" | cut -d' ' -f1 >"$SHA_FILE"
+
+log "patched $target (pristine upstream kept at $UPSTREAM_COPY)"
+
+if pgrep -x buzz-desktop >/dev/null 2>&1; then
+  notify "Buzz updated" "Wayland + link-opening patches re-applied. Restart Buzz to pick them up."
+  log "buzz is running - notified that a restart is needed"
+fi
