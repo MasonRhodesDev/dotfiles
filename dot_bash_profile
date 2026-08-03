@@ -1,0 +1,5 @@
+# ~/.bash_profile — login shells: POSIX env first, then interactive config.
+# Terminals launch `bash --login` so GUI terminals and VT logins traverse
+# the identical path.
+[ -f "$HOME/.profile" ] && . "$HOME/.profile"
+[ -f "$HOME/.bashrc" ] && . "$HOME/.bashrc"

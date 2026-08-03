@@ -1,0 +1,25 @@
+# ble.sh configuration — https://github.com/akinomyoga/ble.sh
+
+# Vi keybindings (replaces fish_vi_key_bindings)
+bleopt default_keymap=vi
+
+# Muted gray autosuggestion, fish-like
+ble-face auto_complete='fg=242'
+
+# Vi-keymap options must wait for the keymap module (lazy-loaded at attach).
+function blerc/vim-load-hook {
+    # No mode indicator line — the oh-my-posh theme has no mode segment either
+    # (fish's FISH__BIND_MODE repaint machinery was vestigial and was dropped).
+    bleopt keymap_vi_mode_show=
+
+    # The fzf integration rebinds normal-mode C-r to 'i\C-r' (history search);
+    # C-r in normal mode is vim's redo — restore it. Insert-mode C-r stays
+    # atuin's fuzzy history.
+    ble-bind -m vi_nmap -f 'C-r' vi_nmap/redo
+}
+blehook/eval-after-load keymap_vi blerc/vim-load-hook
+
+# Alt+h/j/k/l must reach tmux-navigator (fish unbound these explicitly).
+# ble.sh vi keymaps leave them unbound by default; if a future update grabs
+# them, unbind here with e.g.:
+#   ble-bind -m vi_imap -f 'M-h' -
