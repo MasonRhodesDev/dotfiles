@@ -60,6 +60,45 @@ end)
 -- active profile is a script that calls hl.monitor()/hl.workspace_rule()
 -- directly, so we just execute it for side effects (idempotent on reload).
 ----------------------------------------------------------------------
+-- Helpers for profile scripts (globals — .active.lua is dofile'd into this
+-- same Lua state). Wayland fractional scaling only accepts scales k/120 that
+-- yield an integer logical size for the mode; anything else Hyprland snaps to
+-- the nearest valid value (logging a configerrors warning). mon.valid_scale
+-- does that snap up front so profiles can just state a target.
+mon = {}
+
+function mon.valid_scale(w, h, target)
+    local best, bestd = target, math.huge
+    for k = 120, 360 do -- scales 1.0 .. 3.0 in 1/120 steps
+        if (w * 120) % k == 0 and (h * 120) % k == 0 then
+            local d = math.abs(k / 120 - target)
+            if d < bestd then best, bestd = k / 120, d end
+        end
+    end
+    return best
+end
+
+-- Row layout: place entries left-to-right at y=0. Each entry gets the closest
+-- valid scale to its target and an x position accumulated from the previous
+-- entries' logical widths — no hardcoded offsets to keep in sync.
+-- Entry: { output=, w=, h=, hz=, scale=<target>, [transform=] }
+function mon.row(entries)
+    local x = 0
+    for _, e in ipairs(entries) do
+        local s = mon.valid_scale(e.w, e.h, e.scale)
+        hl.monitor({
+            output    = e.output,
+            mode      = e.w .. "x" .. e.h .. "@" .. e.hz,
+            position  = x .. "x0",
+            scale     = s,
+            transform = e.transform,
+        })
+        -- odd transforms rotate to portrait: logical width comes from e.h
+        local px = (e.transform and e.transform % 2 == 1) and e.h or e.w
+        x = x + math.floor(px / s + 0.5)
+    end
+end
+
 -- Fallback catch-all FIRST: rules replace by output name and last-added wins,
 -- so the profile's explicit rules (dofile'd below) override these, not the
 -- other way around.
