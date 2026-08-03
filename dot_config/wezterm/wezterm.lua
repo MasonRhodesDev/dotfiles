@@ -11,6 +11,11 @@ local config = {}
 -- handler, so SIGUSR1 just terminates it.)
 config.automatically_reload_config = false
 
+-- bash everywhere (2026-08 fish→bash migration); interactive UX comes from
+-- ble.sh + atuin + zoxide + fzf via ~/.bashrc.d. --login so GUI terminals
+-- and VT logins traverse the identical .bash_profile → .bashrc path.
+config.default_prog = { '/usr/bin/bash', '--login' }
+
 -- Improve Wayland stability during TTY switching
 config.enable_wayland = true
 config.front_end = "OpenGL"
