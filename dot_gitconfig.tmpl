@@ -28,3 +28,8 @@
 [includeIf "{{ .condition }}"]
 	path = ~/.gitconfig-{{ .identity }}
 {{ end -}}
+
+{{/* Machine-local, UNMANAGED settings (work identifiers, tool state) live in
+     ~/.gitconfig-local so they never enter this public repo. */ -}}
+[include]
+	path = ~/.gitconfig-local
