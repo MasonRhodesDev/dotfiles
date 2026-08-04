@@ -42,11 +42,23 @@ path_append() {
 # which is the only point that sees the final PATH — ~/.local/bin/env runs
 # after the ~/.bashrc.d loop.
 path_dedupe() {
-    local result= entry
+    local result= entry seen_fnm=0
     local IFS=:
     for entry in $PATH; do
         [ -n "$entry" ] || continue
         [ -d "$entry" ] || continue
+        # `eval "$(fnm env)"` in node.bashrc mints a fresh
+        # /run/user/*/fnm_multishells/<pid>_<timestamp>/bin for every shell and
+        # prepends it. Those dirs are distinct and all genuinely exist, so plain
+        # deduplication cannot collapse them and PATH grows by one entry per
+        # nesting level. fnm prepends, so the first one seen belongs to this
+        # shell; every later one is an inherited parent's and is dropped.
+        case $entry in
+            */fnm_multishells/*)
+                [ "$seen_fnm" -eq 1 ] && continue
+                seen_fnm=1
+                ;;
+        esac
         case ":$result:" in
             *":$entry:"*) continue ;;
         esac
