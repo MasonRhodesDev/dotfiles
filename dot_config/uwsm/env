@@ -1,0 +1,4 @@
+# Personal session env. DE-level vars (keyring, toolkit Wayland hints,
+# default wallpaper) ship in hypr-de's /etc/xdg/uwsm/env — uwsm sources the
+# whole XDG hierarchy and this user file wins on conflicts.
+export SSH_AUTH_SOCK="${XDG_RUNTIME_DIR}/ssh-agent.socket"
