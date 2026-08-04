@@ -1,6 +1,0 @@
-[Unit]
-Description=Repoint systemd user env at a live Wayland socket
-
-[Service]
-Type=oneshot
-ExecStart=%h/.local/bin/wayland-env-guard

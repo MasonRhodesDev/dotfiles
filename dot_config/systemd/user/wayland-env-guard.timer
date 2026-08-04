@@ -1,9 +1,0 @@
-[Unit]
-Description=Periodic Wayland env + portal stack health check
-
-[Timer]
-OnStartupSec=2min
-OnUnitActiveSec=5min
-
-[Install]
-WantedBy=timers.target
