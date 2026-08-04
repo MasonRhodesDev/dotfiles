@@ -134,7 +134,7 @@ description = "Wayland voice dictation tool"
 profile = "common"
 priority = 4
 version = "latest"
-github = "https://github.com/MasonRhodesDev/wayland-voice-dictation"
+github = "https://github.com/MasonRhodesDev/hyprland-voice-dictation"
 verify = "command -v voice-dictation"
 
 [hyprland]

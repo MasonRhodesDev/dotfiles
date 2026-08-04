@@ -46,9 +46,10 @@ docs/
 # tracking it just produces churn we'd never apply back.
 .config/btop/btop.conf
 
-# hyprstate manages this symlink at runtime based on connected monitors.
-# Tracking it would pin the wrong profile on other machines.
+# hyprstate manages these symlinks at runtime based on connected monitors.
+# Tracking them would pin the wrong profile on other machines.
 .config/hypr/profiles/.active.conf
+.config/hypr/profiles/.active.lua
 
 # lmtt regenerates this on every theme switch from the embedded template in
 # .config/lmtt/modules/mako.toml — that .toml is the source of truth.
