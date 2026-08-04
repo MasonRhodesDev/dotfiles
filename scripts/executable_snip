@@ -1,44 +1,36 @@
 #!/bin/bash
-# Capture-first screenshot with swappy annotation.
-# Pixels are locked in at keypress; the freeze overlay and slurp only pick
-# the crop region from the already-saved image, so nothing that happens
+# Freeze-first screenshot with swappy annotation.
+# hyprpicker freezes every output ~10ms after keypress, locking in the
+# pixels; slurp picks a region over the frozen overlay and grim then
+# captures that region from the overlay itself, so nothing that happens
 # during selection (dialogs closing, overlay fade-outs) can leak into the
-# shot.
+# shot. Trade-off vs the old capture-first pipeline: hyprpicker bakes the
+# mouse cursor into its frozen image, so shots include the cursor at its
+# keypress position.
 
-TMP=$(mktemp -d)
 FREEZE_PID=""
+SHOT=$(mktemp --suffix=.png)
 cleanup() {
     [ -n "$FREEZE_PID" ] && kill "$FREEZE_PID" 2>/dev/null
-    rm -rf "$TMP"
+    rm -f "$SHOT"
 }
 trap cleanup EXIT
 
-FULL="$TMP/full.png"
-grim "$FULL" || exit 1
-
-# Freeze the display so the selection matches the captured pixels
 hyprpicker -r -z &
 FREEZE_PID=$!
+
+# Give the freeze overlay a beat to map so slurp stacks above it
 sleep 0.02
 
 SELECTION=$(slurp -d 2>/dev/null)
 SLURP_EXIT=$?
-kill "$FREEZE_PID" 2>/dev/null
-FREEZE_PID=""
-
 [ $SLURP_EXIT -ne 0 ] && exit 1
 [ -z "$SELECTION" ] && exit 1
 
-# slurp reports logical layout coords ("X,Y WxH"); grim's full image is
-# rendered at the greatest output scale with its origin at the layout's
-# top-left corner. Map one onto the other.
-read -r LAYOUT_X LAYOUT_Y SCALE < <(hyprctl monitors -j |
-    jq -r '[(map(.x) | min), (map(.y) | min), (map(.scale) | max)] | @tsv')
-
-CROP=$(echo "$SELECTION" | awk -v ox="$LAYOUT_X" -v oy="$LAYOUT_Y" -v s="$SCALE" '
-    { split($1, p, ","); split($2, d, "x")
-      printf "%dx%d+%d+%d", d[1]*s + 0.5, d[2]*s + 0.5, (p[1]-ox)*s + 0.5, (p[2]-oy)*s + 0.5 }')
-[ -z "$CROP" ] && exit 1
+# Wait for slurp's dim overlay to leave the scene before capturing
+for _ in $(seq 1 50); do
+    hyprctl layers | grep -q "namespace: selection" || break
+done
 
 # Create swappy config for optimization
 mkdir -p ~/.config/swappy
@@ -56,6 +48,12 @@ fill_shape=false
 auto_save=false
 EOF
 
-magick "$FULL" -crop "$CROP" +repage - | swappy -f -
+# Capture from the frozen overlay, then unfreeze before swappy opens so
+# it isn't buried under (and its first click eaten by) hyprpicker
+grim -g "$SELECTION" "$SHOT" || exit 1
+kill "$FREEZE_PID" 2>/dev/null
+FREEZE_PID=""
+
+swappy -f "$SHOT"
 
 echo "💡 Swappy shortcuts: Ctrl+C (copy & quit), Ctrl+S (save), Escape (manual quit)"
