@@ -1,10 +1,10 @@
 #!/bin/bash
 # Managed by chezmoi — re-runs when any tracked service file changes.
+# DE services (hypridle, swaync, waybar, swaybg, udiskie, …) are enabled by
+# the hypr-de package's user preset + hypr-de-setup, not here.
 #
 # Service checksums (do not edit — used to detect changes):
-# udiskie:      {{ include "dot_config/systemd/user/udiskie.service" | sha256sum }}
-# swaybg:       {{ include "dot_config/systemd/user/swaybg.service" | sha256sum }}
-# api-keys:     {{ include "dot_config/systemd/user/api-keys.service" | sha256sum }}
+# api-keys:              {{ include "dot_config/systemd/user/api-keys.service" | sha256sum }}
 # browser-guard.path:    {{ include "dot_config/systemd/user/browser-default-guard.path" | sha256sum }}
 # browser-guard.service: {{ include "dot_config/systemd/user/browser-default-guard.service" | sha256sum }}
 # browser-guard.bin:     {{ include "dot_local/bin/executable_browser-default-guard" | sha256sum }}
@@ -13,21 +13,9 @@ set -euo pipefail
 
 systemctl --user daemon-reload
 
-# Upstream services that ship disabled — enable them.
-# (swaync removed; we use hyprnotice instead. hyprnotice's install.sh
-# enables its own user unit, so it doesn't appear in either list here.)
-for svc in hypridle hyprpolkitagent swaync; do
-    systemctl --user enable "$svc" 2>/dev/null || true
-done
-
-# All managed daemons
-SERVICES=(hypridle hyprpolkitagent swaync udiskie swaybg api-keys)
-
-for svc in "${SERVICES[@]}"; do
-    echo "→ $svc"
-    systemctl --user enable "$svc" 2>/dev/null || true
-    systemctl --user restart "$svc" || true
-done
+echo "→ api-keys"
+systemctl --user enable api-keys 2>/dev/null || true
+systemctl --user restart api-keys || true
 
 # Path-triggered guard that reasserts Chromium as the default browser whenever
 # Slack hijacks mimeapps.list. Enable/start the .path (not the .service — the

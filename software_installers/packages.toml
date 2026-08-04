@@ -17,6 +17,15 @@
 # COMMON — all machines
 # ============================================================================
 
+[hypr_de]
+description = "The desktop environment: hypr-de + hypr-de-gaming from COPR solaris765/hypr-de (Fedora) or the [mason] pacman repo (Arch). Pulls the entire Hyprland stack, bar, notifications, launcher, theming (lmtt/matugen), hyprstate, voice-dictation, logind-idle-control, waybar-workspace-buttons as dependencies. NOTE: needs a Lua-config-capable Hyprland (hand-built until packaged; hyprland-devbuild shim RPM satisfies the dep)."
+profile = "common"
+priority = 5
+version = "latest"
+github = "https://github.com/MasonRhodesDev/hypr-DE"
+verify = "command -v hypr-de-setup"
+
+
 [build_tools]
 description = "Build tools and compilers (make, gcc, cmake, pkg-config, etc.)"
 profile = "common"
@@ -113,39 +122,6 @@ version = "latest"
 github = "https://github.com/rust-lang/cargo"
 verify = "command -v cargo"
 
-[lmtt]
-description = "Linux multi-theme toggle — switches light/dark themes across all apps"
-profile = "common"
-priority = 4
-version = "latest"
-github = "https://github.com/MasonRhodesDev/linux-multi-theme-toggle"
-verify = "command -v lmtt"
-
-[logind_idle_control]
-description = "System idle control for Wayland/logind"
-profile = "common"
-priority = 4
-version = "latest"
-github = "https://github.com/MasonRhodesDev/logind-idle-control"
-verify = "command -v logind-idle-control"
-
-[voice_dictation]
-description = "Wayland voice dictation tool"
-profile = "common"
-priority = 4
-version = "latest"
-github = "https://github.com/MasonRhodesDev/hyprland-voice-dictation"
-verify = "command -v voice-dictation"
-
-[hyprland]
-description = "Hyprland Wayland compositor and ecosystem: hyprland, hyprlock, hypridle, hyprpicker, hyprcursor, hyprpolkitagent, xdg-desktop-portal-hyprland, waybar, fuzzel, swaybg, wl-clipboard, grim, slurp, satty, pavucontrol, udiskie, uwsm, SwayNotificationCenter (swaync)."
-profile = "common"
-priority = 5
-version = "latest"
-github = "https://github.com/hyprwm/Hyprland"
-website = "https://hyprland.org"
-verify = "command -v hyprland"
-depends_on = ["core_utils"]
 
 [hyprls]
 description = "Hyprland language server (LSP for hyprland config)"
@@ -154,24 +130,8 @@ priority = 5
 version = "latest"
 github = "https://github.com/hyprwm/hyprls"
 verify = "command -v hyprls"
-depends_on = ["hyprland"]
+depends_on = ["hypr_de"]
 
-[hyprpwcenter]
-description = "Hyprland password/authentication dialog"
-profile = "common"
-priority = 5
-version = "latest"
-github = "https://github.com/hyprwm/hyprpwcenter"
-verify = "command -v hyprpwcenter"
-depends_on = ["hyprland"]
-
-[matugen]
-description = "Material You color generation for theming"
-profile = "common"
-priority = 5
-version = "latest"
-github = "https://github.com/InioX/matugen"
-verify = "command -v matugen"
 
 [bemoji]
 description = "Emoji picker for Wayland (shell script, no package manager)"
@@ -181,14 +141,6 @@ version = "latest"
 github = "https://github.com/marty-oehme/bemoji"
 verify = "command -v bemoji"
 
-[waybar_workspace_buttons]
-description = "Event-driven Hyprland workspace buttons for Waybar (custom CFFI plugin)"
-profile = "common"
-priority = 6
-version = "latest"
-github = "https://github.com/MasonRhodesDev/waybar-workspace-buttons"
-verify = "test -f ~/.config/waybar/cffi/workspace_buttons.so"
-depends_on = ["hyprland"]
 
 [browsers]
 description = "Web browsers: chromium (default) and firefox"
@@ -252,21 +204,6 @@ version = "latest"
 github = "https://github.com/Morganamilo/paru"
 verify = "command -v paru"
 optional = true
-
-[hyprstate]
-description = "Hyprland session/power state machine: lid, monitor profiles, eDP, lock, suspend, GPU selection, root powerd (Framework 16)"
-profile = "common"
-priority = 13
-version = "latest"
-github = "https://github.com/MasonRhodesDev/hyprstate"
-# Install is handled deterministically by
-# .chezmoiscripts/run_once_after_30-install-hyprstate.sh:
-#   Fedora -> COPR solaris765/hyprstate ; Arch -> AUR (makepkg until published)
-verify = "command -v hyprstate"
-
-# ============================================================================
-# WORK — work machines only
-# ============================================================================
 
 [docker]
 description = "Docker container runtime and orchestration tools"
