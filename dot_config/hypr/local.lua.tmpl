@@ -1,0 +1,26 @@
+-- hypr-DE user overrides (chezmoi-managed, per-machine). Runs after
+-- /usr/share/hypr-de/hypr/main.lua — last-wins. Monitor layouts stay in
+-- ~/.config/hypr/profiles/ (see local.lua.example in the package).
+
+-- Personal window rules that don't belong in the distributable DE
+hl.window_rule({ name = "keep-tile",        match = { title = "^(keep.google.com_/)$" }, tile = true })
+hl.window_rule({ name = "crx-float",        match = { title = "^(_crx_nngceckbapebfimnlniiiahkandclblb)$" }, float = true })
+hl.window_rule({ name = "hyprdm",           match = { class = "^(hyprdm)$" }, float = true, center = true, size = "600 460" })
+hl.window_rule({ name = "android-emulator", match = { class = "^(Emulator)$" }, float = true })
+
+{{ if not .is_work -}}
+-- Gaming layer (hypr-de-gaming package)
+dofile("/usr/share/hypr-de/gaming/game-rules.lua")
+{{ end -}}
+
+-- Autostart
+hl.on("hyprland.start", function()
+    hl.exec_cmd("uwsm app -- claude-desktop.desktop")
+{{ if .is_work }}
+    hl.exec_cmd("uwsm app -- slack")
+{{ end }}
+{{ if not .is_work }}
+    hl.exec_cmd("uwsm app -- steam -cef-force-glx")
+    hl.exec_cmd("uwsm app -- discord")
+{{ end }}
+end)
