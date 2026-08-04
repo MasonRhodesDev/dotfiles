@@ -13,11 +13,16 @@ if [[ $- == *i* && -f ~/.local/share/blesh/ble.sh ]]; then
     source ~/.local/share/blesh/ble.sh --noattach
 fi
 
-# User specific environment
-if ! [[ "$PATH" =~ "$HOME/.local/bin:$HOME/bin:" ]]; then
-    PATH="$HOME/.local/bin:$HOME/bin:$PATH"
+# PATH helpers, loaded before anything here manipulates PATH. The ~/.bashrc.d
+# loop below re-sources this file, which is harmless — it only defines
+# functions. Every PATH mutation from here on goes through these.
+if [ -f ~/.bashrc.d/00-path-helpers.bashrc ]; then
+    . ~/.bashrc.d/00-path-helpers.bashrc
 fi
-export PATH
+
+# User specific environment (prepended in reverse, so ~/.local/bin ends up first)
+path_prepend "$HOME/bin"
+path_prepend "$HOME/.local/bin"
 
 # Uncomment the following line if you don't like systemctl's auto-paging feature:
 # export SYSTEMD_PAGER=
