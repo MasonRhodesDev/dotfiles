@@ -24,14 +24,18 @@ case ":$PATH:" in
   *) export PATH="$PNPM_HOME:$PATH" ;;
 esac
 
-# fnm (Fast Node Manager)
-FNM_PATH="{{ .chezmoi.homeDir }}/.local/share/fnm"
-if [ -d "$FNM_PATH" ]; then
-  export PATH="$FNM_PATH:$PATH"
-fi
+# TRANSITIONAL: this file exists only because fish cannot read ~/.bashrc.d.
+# It is parsed by fish via conf.d/environment.fish, which merely greps `export`
+# lines and expands $HOME/$PATH — shell conditionals and intermediate variables
+# are NOT evaluated there, so every entry above must stay a literal one-liner.
+# Once fish is retired this file can be deleted outright: every entry in it is
+# already covered by a ~/.bashrc.d topic file (see 00-path-helpers.bashrc).
+#
+# fnm is deliberately absent — it is set by ~/.bashrc.d/node.bashrc for bash and
+# ~/.config/fish/conf.d/fnm.fish for fish. Duplicating it here put a second copy
+# in PATH for both shells.
 
-# kimi-code (installer only wires up fish; keep it here so bash gets it too)
-KIMI_PATH="{{ .chezmoi.homeDir }}/.kimi-code/bin"
-if [ -d "$KIMI_PATH" ]; then
-  export PATH="$KIMI_PATH:$PATH"
-fi
+# kimi-code (installer only wires up fish; keep it here so bash gets it too).
+# APPENDED, not prepended: this dir also ships its own `fd`, which would
+# otherwise shadow /usr/bin/fd system-wide.
+export PATH="$PATH:{{ .chezmoi.homeDir }}/.kimi-code/bin"

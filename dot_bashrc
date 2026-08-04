@@ -46,5 +46,12 @@ export CLICKUP_TEAM_ID=$(secret-tool lookup application tars service clickup typ
 eval "$(direnv hook bash)"
 export LD_LIBRARY_PATH="$HOME/.local/lib:$LD_LIBRARY_PATH"
 
+# Normalize PATH last. Everything above this line may prepend to PATH —
+# including ~/.local/bin/env, which runs after the ~/.bashrc.d loop — so this
+# is the only point that sees the final value. Defined in
+# ~/.bashrc.d/00-path-helpers.bashrc; guarded so a missing ~/.bashrc.d cannot
+# break shell startup.
+declare -F path_dedupe >/dev/null && path_dedupe
+
 # ble.sh attach — must stay the LAST line of this file.
 [[ ${BLE_VERSION-} ]] && ble-attach
