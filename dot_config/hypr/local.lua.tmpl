@@ -8,6 +8,10 @@ hl.window_rule({ name = "crx-float",        match = { title = "^(_crx_nngceckbap
 hl.window_rule({ name = "hyprdm",           match = { class = "^(hyprdm)$" }, float = true, center = true, size = "600 460" })
 hl.window_rule({ name = "android-emulator", match = { class = "^(Emulator)$" }, float = true })
 
+-- Personal keybinds
+-- Audio output switcher (wofi list; SHIFT+XF86AudioPlay in main.lua opens hyprpwcenter)
+hl.bind("SUPER + XF86AudioPlay", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/wofi/change-default-audio-device.js WofiListAudioDevices"))
+
 {{ if not .is_work -}}
 -- Gaming layer (hypr-de-gaming package)
 dofile("/usr/share/hypr-de/gaming/game-rules.lua")
