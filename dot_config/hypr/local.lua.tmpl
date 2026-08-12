@@ -19,7 +19,6 @@ dofile("/usr/share/hypr-de/gaming/game-rules.lua")
 
 -- Autostart
 hl.on("hyprland.start", function()
-    hl.exec_cmd("uwsm app -- claude-desktop.desktop")
 {{ if .is_work }}
     hl.exec_cmd("uwsm app -- slack")
 {{ end }}
