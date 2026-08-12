@@ -10,3 +10,7 @@ mon.row({
 })
 
 hl.workspace_rule({ workspace = "1", monitor = "desc:Dell Inc. DELL S3422DWG HSRTS63", default = true })
+-- Gaming workspace (Big Picture lands here fullscreen) belongs on the ultrawide,
+-- not the portrait secondary — this profile is the only multi-monitor one where
+-- ws7 could stray.
+hl.workspace_rule({ workspace = "7", monitor = "desc:Dell Inc. DELL S3422DWG HSRTS63" })
