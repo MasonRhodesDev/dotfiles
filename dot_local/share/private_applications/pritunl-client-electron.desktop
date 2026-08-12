@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Pritunl Client
+Comment=Pritunl openvpn client
+Exec=/usr/lib/pritunl_client_electron/Pritunl --password-store=gnome-libsecret
+Terminal=false
+Type=Application
+StartupNotify=false
+Icon=pritunl_client_electron
+Categories=Network;TrayIcon;
+StartupWMClass=pritunl
