@@ -15,6 +15,11 @@ hl.bind("SUPER + XF86AudioPlay", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/
 {{ if not .is_work -}}
 -- Gaming layer (hypr-de-gaming package)
 dofile("/usr/share/hypr-de/gaming/game-rules.lua")
+
+-- Sharp XWayland on fractionally scaled monitors (dual-4k/laptop profiles):
+-- render at native pixels instead of compositor upscaling. Steam UI can
+-- compensate via -forcedesktopscaling / its UI scale slider if needed.
+hl.config({ xwayland = { force_zero_scaling = true } })
 {{ end -}}
 
 -- Autostart
