@@ -55,11 +55,7 @@ pi() {
 }
 
 codex() {
-    if [[ -n ${GT_ROLE-} ]]; then
-        # Gas Town workers go through the agent-town shim so its GT_ROLE
-        # model tiering keeps working; the header runner is skipped there.
-        command /home/mason/.local/bin/codex "$@"
-    elif [[ -n ${WEZTERM_PANE-} || -n ${KITTY_WINDOW_ID-} || $TERM == *kitty* ]]; then
+    if [[ -n ${WEZTERM_PANE-} || -n ${KITTY_WINDOW_ID-} || $TERM == *kitty* ]]; then
         # TERM=*kitty* without the pane vars = far end of an ssh session from
         # kitty; the runner's OSC still reaches the local terminal.
         command node /home/mason/scripts/codex-wezterm.ts "$@"
