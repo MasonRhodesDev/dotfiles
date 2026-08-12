@@ -61,9 +61,20 @@ _tty_tier() {
 # Ligatures/nerd glyphs need a shaping engine the kernel console will never
 # have. cage -s: VT switching is disabled by default (kiosk hardening) and
 # must be allowed explicitly or Ctrl+Alt+F# is swallowed.
+# Private runtime dir: aquamarine probes $XDG_RUNTIME_DIR for a connectable
+# wayland-* socket at compositor startup and nests a phantom WAYLAND-1 output
+# onto whatever it finds (hit 2026-08-06 — cage's wayland-0 leaked into the
+# main Hyprland session). Cage sockets its wayland display under tty-cage/;
+# the shell inside kitty gets the real dir back (herdr, dbus, systemctl --user
+# all need it) and a cleared WAYLAND_DISPLAY so nothing tries to be a GUI here.
 if [[ $_vt == /dev/tty2 && ! -e ~/.config/tty-no-gui ]] \
     && command -v cage >/dev/null && command -v kitty >/dev/null; then
-    _tty_tier 5 cage+kitty cage -s -- kitty
+    _rt=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
+    mkdir -pm700 "$_rt/tty-cage"
+    _tty_tier 5 cage+kitty env XDG_RUNTIME_DIR="$_rt/tty-cage" \
+        cage -s -- kitty -o "env=XDG_RUNTIME_DIR=$_rt" -o "env=WAYLAND_DISPLAY=" \
+                         -o update_check_interval=0
+    unset _rt
 fi
 
 # --- tier 2: tmux for scrollback (kernel VTs have none since 5.9) --------

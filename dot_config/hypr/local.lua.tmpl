@@ -20,7 +20,7 @@ dofile("/usr/share/hypr-de/gaming/game-rules.lua")
 -- Autostart
 hl.on("hyprland.start", function()
 {{ if .is_work }}
-    hl.exec_cmd("uwsm app -- slack")
+    hl.exec_cmd("uwsm app -- slack.desktop")
 {{ end }}
 {{ if not .is_work }}
     hl.exec_cmd("uwsm app -- steam -cef-force-glx")
