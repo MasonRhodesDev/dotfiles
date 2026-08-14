@@ -46,9 +46,8 @@ docs/
 # tracking it just produces churn we'd never apply back.
 .config/btop/btop.conf
 
-# hyprstate manages these symlinks at runtime based on connected monitors.
-# Tracking them would pin the wrong profile on other machines.
-.config/hypr/profiles/.active.conf
+# hyprstate manages this symlink at runtime based on connected monitors.
+# Tracking it would pin the wrong profile on other machines.
 .config/hypr/profiles/.active.lua
 
 # lmtt regenerates this on every theme switch from the embedded template in
@@ -68,7 +67,6 @@ docs/
 # Gaming/Steam: personal machines only. The bp-game-focus.service unit is
 # already gated inside its template; these gate the rest.
 {{ if .is_work }}
-.config/hypr/profiles/lg-tv.conf
 .config/hypr/scripts/bp-game-focus.py
 .config/hypr/scripts/steam-clean-shutdown.sh
 .config/systemd/user/app-.scope.d
