@@ -15,12 +15,17 @@ jobs:
         profile: ["true", "false"]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
 
       - name: Install chezmoi
         run: sh -c "$(curl -fsLS get.chezmoi.io)" -- -b "$HOME/.local/bin"
 
       - name: Render config template
+        env:
+          CHEZMOI_GIT_OVERRIDES: '[]'
+          CHEZMOI_IDENTITY_EMAIL_PERSONAL: ci-personal@example.invalid
+          CHEZMOI_IDENTITY_EMAIL_WORK: ci-work@example.invalid
+          CHEZMOI_IDENTITY_NAME: CI Template Check
         run: |
           export PATH="$HOME/.local/bin:$PATH"
           chezmoi init --source "$PWD" \
@@ -48,7 +53,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout full history
-        uses: actions/checkout@v4
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
           fetch-depth: 0
 
