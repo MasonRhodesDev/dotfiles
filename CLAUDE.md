@@ -58,9 +58,10 @@ Access with `{{ .variable }}` syntax. Check available data with `chezmoi data`.
 
 ## greetd Config (external)
 
-greetd config has been extracted to its own repo: https://github.com/MasonRhodesDev/greetd-config
+greetd configuration is owned by the packaged
+https://github.com/MasonRhodesDev/greetd_game_mode setup flow, with
+https://github.com/MasonRhodesDev/vigil as the greeter.
 
-- Location: `/opt/greetd-config` (owned `root:opt`)
-- Install: `sudo /opt/greetd-config/install.sh`
-- Update: `sudo /opt/greetd-config/install.sh --update`
-- Static files are symlinked into `/etc/greetd/` — edits in the repo take effect immediately
+- Provision: `sudo game-mode setup`
+- Package-owned templates are rendered into `/etc/greetd`
+- The archived `greetd-config` symlink installer is not an active path
