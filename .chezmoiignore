@@ -65,15 +65,11 @@ docs/
 .claude/settings.json
 .config/zed/settings.json
 
-# Gaming/Steam: personal machines only. The bp-game-focus.service unit is
-# already gated inside its template; these gate the rest.
+# Gaming/Steam: personal machines only.
 {{ if .is_work }}
 .config/hypr/profiles/lg-tv.conf
 .config/hypr/scripts/bp-game-focus.py
 .config/hypr/scripts/steam-clean-shutdown.sh
-.config/systemd/user/app-.scope.d
-.config/systemd/user/app-.scope.d/**
-.config/systemd/user/steam-clean-shutdown.service
 .config/environment.d/gaming.conf
 .local/bin/steam-set-launch-options
 .local/share/notes
