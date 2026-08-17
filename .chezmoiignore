@@ -51,6 +51,13 @@ docs/
 .config/hypr/profiles/.active.conf
 .config/hypr/profiles/.active.lua
 
+# Monitor-profile .lua files are BUILD ARTIFACTS: hyprstate regenerates them
+# from the sibling .toml (`hyprstate profile migrate`, and on demand during
+# `profile list`/`switch`), flattening mon.row into explicit hl.monitor calls
+# and dropping comments. The .toml is the source of truth — track that, and put
+# explanatory prose in it as `#` comments so regeneration can't eat it.
+.config/hypr/profiles/*.lua
+
 # lmtt regenerates this on every theme switch from the embedded template in
 # .config/lmtt/modules/mako.toml — that .toml is the source of truth.
 .config/mako/config
