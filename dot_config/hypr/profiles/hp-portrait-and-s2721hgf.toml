@@ -1,5 +1,16 @@
-description = "HP E243 rotated portrait (left) + Dell S2721HGF 1080p144 (middle)"
+description = "HP E243 rotated portrait (left) + Dell S2721HGF 1080p144 (middle) + built-in panel (right)."
 match = ["desc:HP Inc. HP E243 CNK7510Y4B", "desc:Dell Inc. DELL S2721HGF 85YFP83"]
+
+# Positions are explicit rather than row-derived: a row lays everything out at
+# y=0, but the HP is physically centered against the Dell rather than
+# bottom-aligned. transform 1 = 90deg, so the HP's logical footprint is
+# 1080x1920 and its 840px of extra height splits evenly above and below the
+# Dell -- hence the 420 y offset on the Dell and the eDP (= (1920 - 1080) / 2).
+# x offsets follow the logical widths: HP 1080, Dell 1920, eDP 2560/1.25 = 2048.
+#
+# Matches are serial-qualified on purpose. A loose `desc:BOE` / unqualified
+# match here would win on unrelated desks and strand the built-in panel in a
+# slot reserved for an absent monitor.
 
 [[monitor]]
 output = "desc:HP Inc. HP E243 CNK7510Y4B"
