@@ -1,0 +1,12 @@
+description = "Framework 16 internal panel only (no externals connected)."
+match = ["desc:BOE 0x0BC9"]
+
+[[monitor]]
+output = "eDP-2"
+mode = "2560x1600@165"
+scale = 1.25
+
+[[workspace]]
+workspace = "1"
+monitor = "eDP-2"
+default = true

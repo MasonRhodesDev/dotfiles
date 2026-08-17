@@ -1,0 +1,15 @@
+description = "BenQ LCD 1440p (left) + Dell P3221D 1440p (right)."
+match = ["desc:BNQ BenQ LCD 91F06464SL0", "desc:Dell Inc. DELL P3221D 15Q7X83"]
+
+[[monitor]]
+output = "desc:BNQ BenQ LCD 91F06464SL0"
+mode = "2560x1440@60"
+
+[[monitor]]
+output = "desc:Dell Inc. DELL P3221D 15Q7X83"
+mode = "2560x1440@60"
+
+[[workspace]]
+workspace = "1"
+monitor = "desc:BNQ BenQ LCD 91F06464SL0"
+default = true

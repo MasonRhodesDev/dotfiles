@@ -1,0 +1,22 @@
+description = "Dual Dell S2725QC 4K @ 120Hz + built-in, side-by-side, target 150%."
+match = ["desc:Dell Inc. DELL S2725QC 5DGMS84", "desc:Dell Inc. DELL S2725QC FFJMS84"]
+
+[[monitor]]
+output = "desc:Dell Inc. DELL S2725QC 5DGMS84"
+mode = "3840x2160@120"
+scale = 1.5
+
+[[monitor]]
+output = "desc:Dell Inc. DELL S2725QC FFJMS84"
+mode = "3840x2160@120"
+scale = 1.5
+
+[[monitor]]
+output = "eDP-2"
+mode = "2560x1600@165"
+scale = 1.5
+
+[[workspace]]
+workspace = "1"
+monitor = "desc:Dell Inc. DELL S2725QC 5DGMS84"
+default = true
