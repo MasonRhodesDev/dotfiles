@@ -12,6 +12,13 @@ hl.window_rule({ name = "android-emulator", match = { class = "^(Emulator)$" }, 
 -- Audio output switcher (wofi list; SHIFT+XF86AudioPlay in main.lua opens hyprpwcenter)
 hl.bind("SUPER + XF86AudioPlay", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/wofi/change-default-audio-device.js WofiListAudioDevices"))
 
+-- Swap main.lua's workspace-to-monitor directions: minus = next, equal = previous
+-- (hl.bind appends rather than replaces, so drop the package binds first)
+hl.unbind("SUPER + SHIFT + minus")
+hl.unbind("SUPER + SHIFT + equal")
+hl.bind("SUPER + SHIFT + minus", hl.dsp.workspace.move({ monitor = "+1" }), { desc = "Workspaces: Move workspace to next monitor" })
+hl.bind("SUPER + SHIFT + equal", hl.dsp.workspace.move({ monitor = "-1" }), { desc = "Workspaces: Move workspace to previous monitor" })
+
 {{ if not .is_work -}}
 -- Gaming layer (hypr-de-gaming package)
 dofile("/usr/share/hypr-de/gaming/game-rules.lua")
