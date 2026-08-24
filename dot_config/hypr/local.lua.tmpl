@@ -10,7 +10,17 @@ hl.window_rule({ name = "android-emulator", match = { class = "^(Emulator)$" }, 
 hl.workspace_rule({ workspace = "9", monitor = "eDP-2" })
 hl.window_rule({ name = "vigil-simulator", match = { title = "^(Vigil Simulation.*)$" }, workspace = "9 silent", float = true, center = true, size = "1280 800", no_initial_focus = true })
 
+-- Scratchpad routing + voice dictation (moved out of the hypr-de package)
+hl.window_rule({ name = "discord-special",  match = { class = "^(discord)$" }, workspace = "special:magic silent" })
+hl.window_rule({ name = "slack-special",    match = { class = "^(slack)$" }, workspace = "special:magic silent" })
+hl.window_rule({ name = "ytmusic-special",  match = { title = "^(YouTube Music)$" }, workspace = "special:magic silent" })
+hl.window_rule({ name = "voice-dictation",  match = { class = "^(dev.mason.dictation)$" }, float = true, pin = true, size = "200 50", move = "50%-100 95%", border_size = 0, no_blur = true, no_shadow = true, no_initial_focus = true, no_focus = true })
+
+-- FW16 F13-24 keys + caps-as-shift (moved out of the hypr-de package)
+hl.config({ input = { kb_options = "fkeys:basic_13-24,caps:shift" } })
+
 -- Personal keybinds
+hl.bind("CTRL + ALT + SHIFT + v", hl.dsp.exec_cmd("voice-dictation toggle"), { desc = "System: Voice dictation" })
 -- Audio output switcher (wofi list; SHIFT+XF86AudioPlay in main.lua opens hyprpwcenter)
 hl.bind("SUPER + XF86AudioPlay", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/wofi/change-default-audio-device.js WofiListAudioDevices"))
 
