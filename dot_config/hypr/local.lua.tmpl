@@ -7,8 +7,12 @@ hl.window_rule({ name = "keep-tile",        match = { title = "^(keep.google.com
 hl.window_rule({ name = "crx-float",        match = { title = "^(_crx_nngceckbapebfimnlniiiahkandclblb)$" }, float = true })
 hl.window_rule({ name = "hyprdm",           match = { class = "^(hyprdm)$" }, float = true, center = true, size = "600 460" })
 hl.window_rule({ name = "android-emulator", match = { class = "^(Emulator)$" }, float = true })
+hl.workspace_rule({ workspace = "9", monitor = "eDP-2" })
+hl.window_rule({ name = "vigil-simulator", match = { title = "^(Vigil Simulation.*)$" }, workspace = "9 silent", float = true, center = true, size = "1280 800", no_initial_focus = true })
 
 -- Personal keybinds
+hl.config({ misc = { allow_session_lock_restore = true } })
+
 -- Audio output switcher (wofi list; SHIFT+XF86AudioPlay in main.lua opens hyprpwcenter)
 hl.bind("SUPER + XF86AudioPlay", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/wofi/change-default-audio-device.js WofiListAudioDevices"))
 
