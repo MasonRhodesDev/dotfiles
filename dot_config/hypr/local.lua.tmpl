@@ -15,6 +15,7 @@ hl.window_rule({ name = "discord-special",  match = { class = "^(discord)$" }, w
 hl.window_rule({ name = "slack-special",    match = { class = "^(slack)$" }, workspace = "special:magic silent" })
 hl.window_rule({ name = "ytmusic-special",  match = { title = "^(YouTube Music)$" }, workspace = "special:magic silent" })
 hl.window_rule({ name = "voice-dictation",  match = { class = "^(dev.mason.dictation)$" }, float = true, pin = true, size = "200 50", move = "50%-100 95%", border_size = 0, no_blur = true, no_shadow = true, no_initial_focus = true, no_focus = true })
+hl.window_rule({ name = "zoom-annotate",    match = { class = "^(zoom)$", title = "^(annotate_toolbar)$" }, float = true, size = "1 1", move = "-9999 -9999", opacity = "0.0 override 0.0 override", border_size = 0, no_blur = true, no_shadow = true, no_initial_focus = true, no_focus = true })
 
 -- FW16 F13-24 keys + caps-as-shift (moved out of the hypr-de package)
 hl.config({ input = { kb_options = "fkeys:basic_13-24,caps:shift" } })
