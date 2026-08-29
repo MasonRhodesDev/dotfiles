@@ -1,0 +1,52 @@
+#!/bin/bash
+# prune-cargo-targets — reclaim Rust build caches that nothing is using.
+#
+# A `target/` directory grows without bound and never shrinks: every branch,
+# every dependency bump and every worktree leaves its artifacts behind. Six
+# repos here reached 144G, which filled the disk to 98% and, because /tmp is
+# tmpfs on this machine, took a shell down with it.
+#
+# The rule is age, not size: a target/ whose newest artifact has not been
+# touched in $DAYS days belongs to a repo nobody is building, and rebuilding
+# it costs minutes once. Anything touched more recently is left alone, so
+# this never lengthens the edit-compile loop you are actually in.
+#
+# Run with --dry-run to see what would go.
+set -euo pipefail
+
+ROOTS=("${CARGO_PRUNE_ROOTS:-$HOME/repos}")
+DAYS="${CARGO_PRUNE_DAYS:-14}"
+DRY_RUN=0
+[ "${1:-}" = "--dry-run" ] && DRY_RUN=1
+
+freed=0
+kept=0
+
+# -mindepth 2 so a bare $ROOT/target (a stray, not a repo's) is still seen,
+# while -prune stops us descending into a target/ we have already matched.
+while IFS= read -r -d '' target; do
+    repo=$(dirname "$target")
+    # Only a real Cargo project's build dir. A directory called "target" in
+    # some unrelated tree must not be deleted because it shares a name.
+    [ -f "$repo/Cargo.toml" ] || continue
+
+    # Newest mtime anywhere inside decides. `target/` itself is often stamped
+    # by a read, and the top-level entries by a `cargo metadata`, so neither
+    # is a reliable answer on its own.
+    if [ -n "$(find "$target" -newermt "-${DAYS} days" -print -quit 2>/dev/null)" ]; then
+        kept=$((kept + 1))
+        continue
+    fi
+
+    size=$(du -sh "$target" 2>/dev/null | cut -f1)
+    if [ "$DRY_RUN" = 1 ]; then
+        echo "would remove $target ($size)"
+    else
+        echo "removing $target ($size)"
+        rm -rf "$target"
+    fi
+    freed=$((freed + 1))
+done < <(find "${ROOTS[@]}" -mindepth 2 -maxdepth 4 -type d -name target -prune -print0 2>/dev/null)
+
+echo "prune-cargo-targets: ${freed} removed, ${kept} still in use (older than ${DAYS} days is stale)"
+df -h "$HOME" | tail -1

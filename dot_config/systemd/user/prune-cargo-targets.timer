@@ -1,0 +1,12 @@
+[Unit]
+Description=Weekly sweep of unused Rust build caches
+
+[Timer]
+OnCalendar=Sun *-*-* 04:00:00
+# Catch up a run missed while the machine was asleep or off - the disk fills
+# whether or not it was powered on at 4am.
+Persistent=true
+RandomizedDelaySec=1800
+
+[Install]
+WantedBy=timers.target

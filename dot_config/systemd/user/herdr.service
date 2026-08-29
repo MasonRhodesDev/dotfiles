@@ -1,9 +1,10 @@
 [Unit]
 Description=Herdr — persistent terminal workspace server for AI coding agents
-# Started with the graphical session so panes inherit a live Wayland/DBus env
-# (clipboard, notifications, xdg-open). Deliberately NOT PartOf that target:
-# the whole point of the server is to outlive compositor restarts and client
-# detach, so a Hyprland restart must not take the agent panes down with it.
+# Started at boot via linger + default.target so agents come up without a
+# graphical login. After=graphical-session.target is soft ordering only when a
+# compositor session exists; deliberately NOT PartOf that target so Hyprland
+# restarts do not tear down agent panes. Clipboard/xdg-open may be thin until
+# a Wayland session is up; D-Bus is still available via the user bus below.
 After=graphical-session.target
 # A second `herdr server` on a live socket exits 1 ("already running"). Cap the
 # retries so a socket conflict can't crash-loop the way cylon-orchestrator did.
@@ -12,10 +13,10 @@ StartLimitBurst=3
 
 [Service]
 Type=simple
-ExecStart=%h/.local/bin/herdr server
+ExecStart=/usr/bin/herdr server
 # Graceful shutdown via the API socket so session.json is flushed before the
 # cgroup is torn down (pane children die with the server either way).
-ExecStop=%h/.local/bin/herdr server stop
+ExecStop=/usr/bin/herdr server stop
 Restart=on-failure
 RestartSec=5
 Environment=PATH=%h/.local/bin:%h/.npm-global/bin:/usr/local/bin:/usr/bin:/bin
@@ -23,4 +24,4 @@ Environment=PATH=%h/.local/bin:%h/.npm-global/bin:/usr/local/bin:/usr/bin:/bin
 Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=%t/bus
 
 [Install]
-WantedBy=graphical-session.target
+WantedBy=default.target

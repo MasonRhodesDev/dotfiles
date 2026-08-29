@@ -6,11 +6,23 @@
 # the http/https/about/unknown scheme handlers — and pointing them at
 # slack.desktop. This restores the intended defaults whenever that happens.
 # Triggered by browser-default-guard.path on any change to mimeapps.list.
+#
+# Desktop file name differs by distro: Arch ships chromium.desktop, Fedora
+# ships chromium-browser.desktop. Prefer the file that exists.
 set -euo pipefail
 
 export PATH="/usr/bin:/bin:$PATH"
 
-want=chromium-browser.desktop
+want=
+if [ -f /usr/share/applications/chromium.desktop ]; then
+    want=chromium.desktop
+elif [ -f /usr/share/applications/chromium-browser.desktop ]; then
+    want=chromium-browser.desktop
+else
+    logger -t browser-default-guard "no Chromium desktop file found"
+    exit 1
+fi
+
 cur=$(xdg-mime query default x-scheme-handler/https 2>/dev/null || true)
 
 # Already correct → nothing to do. This early-exit is also what stops the

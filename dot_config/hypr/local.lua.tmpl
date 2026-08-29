@@ -11,6 +11,17 @@ hl.window_rule({ name = "android-emulator", match = { class = "^(Emulator)$" }, 
 -- Personal keybinds
 -- Audio output switcher (wofi list; SHIFT+XF86AudioPlay in main.lua opens hyprpwcenter)
 hl.bind("SUPER + XF86AudioPlay", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/wofi/change-default-audio-device.js WofiListAudioDevices"))
+-- hypruse panic: kill computer-use MCP if it takes the seat
+hl.bind("SUPER + SHIFT + BackSpace", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.local/bin/hypruse stop"))
+
+-- Wake DPMS on input so a VT return with outputs disabled can modeset
+-- (Aquamarine will not schedule frames while enabledState is false).
+hl.config({
+    misc = {
+        mouse_move_enables_dpms = true,
+        key_press_enables_dpms = true,
+    },
+})
 
 {{ if not .is_work -}}
 -- Gaming layer (hypr-de-gaming package)

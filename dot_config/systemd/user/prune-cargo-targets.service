@@ -1,0 +1,11 @@
+[Unit]
+Description=Reclaim Rust build caches nothing is using
+Documentation=man:cargo(1)
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/prune-cargo-targets
+# Deleting tens of gigabytes should never compete with whatever the user is
+# doing; this is housekeeping, not work anyone is waiting on.
+Nice=19
+IOSchedulingClass=idle

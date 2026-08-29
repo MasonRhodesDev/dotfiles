@@ -323,6 +323,14 @@ github = "https://github.com/SoftFever/OrcaSlicer"
 verify = "command -v orca-slicer"
 optional = true
 
+[olk]
+description = "Outlook CLI + MCP (Microsoft Graph) for personal Outlook.com mail/calendar"
+profile = "personal"
+priority = 25
+version = "latest"
+github = "https://github.com/rlrghb/olkcli"
+verify = "command -v olk"
+
 [social]
 description = "Discord communication app"
 profile = "personal"
