@@ -1,0 +1,11 @@
+[Unit]
+Description=Remove BlueZ bonds the peer no longer holds (stops connect/disconnect storms)
+After=dbus.socket
+
+[Service]
+ExecStart=%h/.local/bin/bt-stale-bond-guard
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
