@@ -8,8 +8,6 @@
 # browser-guard.path:    {{ include "dot_config/systemd/user/browser-default-guard.path" | sha256sum }}
 # browser-guard.service: {{ include "dot_config/systemd/user/browser-default-guard.service" | sha256sum }}
 # browser-guard.bin:     {{ include "dot_local/bin/executable_browser-default-guard" | sha256sum }}
-# bt-stale-bond-guard:   {{ include "dot_config/systemd/user/bt-stale-bond-guard.service" | sha256sum }}
-# bt-stale-bond-guard.bin: {{ include "dot_local/bin/executable_bt-stale-bond-guard" | sha256sum }}
 
 set -euo pipefail
 
@@ -25,8 +23,3 @@ systemctl --user restart api-keys || true
 echo "→ browser-default-guard.path"
 systemctl --user enable browser-default-guard.path 2>/dev/null || true
 systemctl --user restart browser-default-guard.path || true
-
-# Drops Bluetooth bonds whose peer rejects our key (Xbox controller storm).
-echo "→ bt-stale-bond-guard"
-systemctl --user enable bt-stale-bond-guard 2>/dev/null || true
-systemctl --user restart bt-stale-bond-guard || true
