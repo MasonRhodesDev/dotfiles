@@ -1,0 +1,8 @@
+# zz-exit-forensics: TEMPORARY diagnostic (2026-08-03) for the Gas Town era
+# vanishing-kitty-windows bug. Its HUP trap replaced bash's default hangup
+# behavior, so closing a kitty window never SIGHUP'd the foreground job —
+# btop then spun at 100% on the dead pty forever (zombie btops, fan spikes
+# blamed on the lock). The bug's cause (Gas Town) was removed 2026-08-04;
+# this guarantees the diagnostic is removed from every machine it was
+# copied to. Root-caused 2026-08-27.
+.bashrc.d/zz-exit-forensics.bashrc

@@ -50,6 +50,13 @@ docs/
 # Tracking it would pin the wrong profile on other machines.
 .config/hypr/profiles/.active.lua
 
+# Monitor-profile .lua files are BUILD ARTIFACTS: hyprstate regenerates them
+# from the sibling .toml (`hyprstate profile migrate`, and on demand during
+# `profile list`/`switch`), flattening mon.row into explicit hl.monitor calls
+# and dropping comments. The .toml is the source of truth — track that, and put
+# explanatory prose in it as `#` comments so regeneration can't eat it.
+.config/hypr/profiles/*.lua
+
 # lmtt regenerates this on every theme switch from the embedded template in
 # .config/lmtt/modules/mako.toml — that .toml is the source of truth.
 .config/mako/config
@@ -64,14 +71,10 @@ docs/
 .claude/settings.json
 .config/zed/settings.json
 
-# Gaming/Steam: personal machines only. The bp-game-focus.service unit is
-# already gated inside its template; these gate the rest.
+# Gaming/Steam: personal machines only.
 {{ if .is_work }}
 .config/hypr/scripts/bp-game-focus.py
 .config/hypr/scripts/steam-clean-shutdown.sh
-.config/systemd/user/app-.scope.d
-.config/systemd/user/app-.scope.d/**
-.config/systemd/user/steam-clean-shutdown.service
 .config/environment.d/gaming.conf
 .local/bin/steam-set-launch-options
 .local/share/notes

@@ -18,13 +18,11 @@
 	cg = "!f() { MSG=$(git-commit-gen) && git commit -F - <<< \"$MSG\"; }; f"
 [url "git@github.com:"]
 	insteadof = https://github.com/
-[safe]
-	directory = /opt/greetd-config
 
 {{/* Elective identity overrides (see git_identity_overrides in .chezmoi.toml.tmpl):
      each includes ~/.gitconfig-<identity> when its git includeIf condition matches,
      leaving the default [user] above in place everywhere else. */ -}}
-{{ range .git_identity_overrides -}}
+{{ range (dig "git_identity_overrides" (list) .) -}}
 [includeIf "{{ .condition }}"]
 	path = ~/.gitconfig-{{ .identity }}
 {{ end -}}

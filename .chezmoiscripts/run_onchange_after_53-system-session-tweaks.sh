@@ -53,8 +53,9 @@ auth sufficient pam_pcbiounlock.so
 # PAM configuration file for hyprlock
 auth        include     login' || true
 
-# greetd greeter device-access groups (drop-in). NB: the greetd *config* + PAM
-# live in the external /opt/greetd-config repo; this is just the unit drop-in.
+# greetd greeter device-access groups (drop-in). greetd_game_mode owns the
+# rendered configuration and Vigil owns the greeter; this remains a
+# machine-specific device-access overlay.
 install_file /etc/systemd/system/greetd.service.d/groups.conf \
 '[Service]
 SupplementaryGroups=seat video input render' \

@@ -19,3 +19,8 @@ paths = [
   # only relevant for full-history scans.
   '''e2e-testing/infrastructure/packer/.*\.pkr\.hcl''',
 ]
+commits = [
+  # Deleted documentation template containing example credentials and
+  # Authorization headers with placeholder values.
+  "d1f96d838a8b2d42609dbfae416d7eff2e763c35",
+]

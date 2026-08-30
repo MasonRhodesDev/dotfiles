@@ -131,19 +131,17 @@ chezmoi diff
 
 ## greetd Login Manager
 
-The greetd configuration has been extracted to its own standalone repo:
-
-**[MasonRhodesDev/greetd-config](https://github.com/MasonRhodesDev/greetd-config)** — cloned to `/opt/greetd-config`
+The packaged login stack is owned by
+**[greetd_game_mode](https://github.com/MasonRhodesDev/greetd_game_mode)**
+with **[Vigil](https://github.com/MasonRhodesDev/vigil)** as its greeter.
 
 ```bash
-# First install
-sudo /opt/greetd-config/install.sh
-
-# Update (uses saved options)
-sudo /opt/greetd-config/install.sh --update
+sudo game-mode setup
 ```
 
-Static config files are symlinked from the repo into `/etc/greetd/`, so edits in `/opt/greetd-config/` take effect immediately without re-running the installer.
+The setup command renders the package-owned templates into `/etc/greetd`.
+The retired `greetd-config` checkout and symlink installer are no longer part
+of the active desktop path.
 
 ## ⚠️ Important Notes
 
