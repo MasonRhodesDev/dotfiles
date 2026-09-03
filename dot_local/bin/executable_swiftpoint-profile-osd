@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Show the active Swiftpoint mouse profile as a Hyprland OSD.
+# Bound to the Z3 "pick up + roll right" gesture: the mouse sends F20
+# (Global > "Show Profile OSD" mapping in the X1 Control Panel), and
+# local.lua binds F20 to this script.
+set -u
+
+SOCK=/tmp/swiftpoint.x1.v2.command
+LOG="$HOME/.config/Swiftpoint X1 Control Panel/log.txt"
+
+prof=""
+# Primary: X1 API socket (needs X1API=true in the Control Panel settings.ini)
+if [ -S "$SOCK" ]; then
+    prof=$(python3 - <<'PY' 2>/dev/null
+import socket
+s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+s.settimeout(1)
+s.connect('/tmp/swiftpoint.x1.v2.command')
+s.sendall(b'profile get')
+print(s.recv(4096).decode().strip())
+PY
+    )
+fi
+# Fallback: last profile switch in the Control Panel log (needs VerboseLogging)
+if [ -z "$prof" ] && [ -r "$LOG" ]; then
+    prof=$(grep -a 'Switching to' "$LOG" | tail -n1 | sed 's/.*Switching to[[:space:]]*"\{0,1\}//; s/"$//')
+fi
+
+hyprctl notify -1 2500 "rgb(66ccff)" "  Mouse profile: ${prof:-unknown}"

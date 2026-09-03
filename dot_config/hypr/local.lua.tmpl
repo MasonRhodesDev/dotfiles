@@ -51,6 +51,10 @@ dofile("/usr/share/hypr-de/gaming/game-rules.lua")
 -- render at native pixels instead of compositor upscaling. Steam UI can
 -- compensate via -forcedesktopscaling / its UI scale slider if needed.
 hl.config({ xwayland = { force_zero_scaling = true } })
+
+-- Swiftpoint Z3: "pick up + roll right" gesture sends F20 (Control Panel
+-- Global mapping "Show Profile OSD") -> show active mouse profile on screen
+hl.bind("F20", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.local/bin/swiftpoint-profile-osd"), { desc = "Mouse: Show Swiftpoint profile" })
 {{ end -}}
 
 -- Autostart
