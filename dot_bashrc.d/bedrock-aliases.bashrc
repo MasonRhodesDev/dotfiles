@@ -14,15 +14,24 @@
 # (not in this public repo). Copy them from the developer managed-settings.json
 # in terraform-infrastructure on a new machine.
 
-_bedrock_sso_ensure() {
-    AWS_PROFILE=bedrock-developer aws sts get-caller-identity --query Account --output text >/dev/null 2>&1 && return 0
-    echo "bedrock: SSO session expired, running aws sso login --profile bedrock-developer" >&2
-    aws sso login --profile bedrock-developer
+_bedrock_sso_ensure() { # $1 = AWS profile (default bedrock-developer)
+    local p=${1:-bedrock-developer}
+    AWS_PROFILE=$p aws sts get-caller-identity --query Account --output text >/dev/null 2>&1 && return 0
+    echo "bedrock: SSO session expired, running aws sso login --profile $p" >&2
+    aws sso login --profile "$p"
 }
 
+# Bedrock account (developer role). Correct config, but the role denies codex's
+# Bedrock endpoints as of 2026-09-10, so this 403s until IAM changes.
 codex-bedrock() {
-    _bedrock_sso_ensure || return 1
+    _bedrock_sso_ensure bedrock-developer || return 1
     codex --profile bedrock "$@"
+}
+
+# Sandbox account via sbx-admin. Works today (no enforced guardrail there).
+codex-sandbox() {
+    _bedrock_sso_ensure sbx-admin || return 1
+    codex --profile sandbox "$@"
 }
 
 claude-bedrock() {
