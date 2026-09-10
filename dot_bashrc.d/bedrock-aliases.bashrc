@@ -21,8 +21,11 @@ _bedrock_sso_ensure() { # $1 = AWS profile (default bedrock-developer)
     aws sso login --profile "$p"
 }
 
-# Bedrock account (developer role). Correct config, but the role denies codex's
-# Bedrock endpoints as of 2026-09-10, so this 403s until IAM changes.
+# Bedrock account (developer role). Config is correct and signs correctly, but it
+# cannot work as of 2026-09-10 and an IAM change would not fix it: codex speaks
+# only the OpenAI Responses API, which rejects application inference profiles
+# (400), and the catalog is AIP-only by policy (LCO-208, LCO-448). Kept so the
+# 403 is reproducible; use codex-sandbox or claude-bedrock instead.
 codex-bedrock() {
     _bedrock_sso_ensure bedrock-developer || return 1
     codex --profile bedrock "$@"
