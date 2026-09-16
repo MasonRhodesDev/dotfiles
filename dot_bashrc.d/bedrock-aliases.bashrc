@@ -39,11 +39,15 @@ codex-bedrock() {
 # pi on the same Developer catalog. Default GPT-5.6 Terra, and the model picker
 # is scoped (--models) to exactly what the developer SSO role may invoke: the six
 # AIPs tagged roles="developer" in tf/envs/bedrock/bedrock-inference-profile.tf
-# (Sonnet 5, Opus 5, Haiku 4.5, GPT-5.6 Terra/Sol/Luna). The CRIS us.openai.*
-# grant is left out on purpose: it exists for codex's Responses path and would
-# bill off the AIP tag from pi. The account enforced guardrail evaluates GPT on
-# bare Converse (verified 2026-09-16: fake SSN prompt -> guardrail_intervened,
-# no guardrailConfig attached). A blocked reply poisons the session; start a new one.
+# (Sonnet 5, Opus 5, Haiku 4.5, GPT-5.6 Terra/Sol/Luna). They are listed in
+# ~/.pi/agent/models.json under readable ids (aip.claude-sonnet-5, ...) because
+# the picker prints ids; PI_BEDROCK_MODEL_MAP hands the real ARNs to the
+# bedrock-aip-map extension, which swaps them in per request. The CRIS
+# us.openai.* grant is left out on purpose: it exists for codex's Responses path
+# and would bill off the AIP tag from pi. The account enforced guardrail
+# evaluates GPT on bare Converse (verified 2026-09-16: fake SSN prompt ->
+# guardrail_intervened, no guardrailConfig attached). A blocked reply poisons
+# the session; start a new one.
 pi-bedrock() {
     local envfile="$HOME/.config/bedrock-aliases.env"
     if [[ ! -r $envfile ]]; then
@@ -55,13 +59,13 @@ pi-bedrock() {
     local BEDROCK_AIP_GPT_TERRA BEDROCK_AIP_GPT_SOL BEDROCK_AIP_GPT_LUNA
     # shellcheck source=/dev/null
     source "$envfile"
-    local scope="" a
-    for a in "$BEDROCK_AIP_GPT_TERRA" "$BEDROCK_AIP_GPT_SOL" "$BEDROCK_AIP_GPT_LUNA" \
-             "$BEDROCK_AIP_SONNET" "$BEDROCK_AIP_OPUS" "$BEDROCK_AIP_HAIKU"; do
-        scope+="${scope:+,}amazon-bedrock/$a"
-    done
-    AWS_PROFILE=bedrock-developer AWS_REGION=us-west-2 \
-        pi --provider amazon-bedrock --model "$BEDROCK_AIP_GPT_TERRA" --models "$scope" "$@"
+    local map
+    map=$(printf '{"aip.gpt-5.6-terra":"%s","aip.gpt-5.6-sol":"%s","aip.gpt-5.6-luna":"%s",' \
+            "$BEDROCK_AIP_GPT_TERRA" "$BEDROCK_AIP_GPT_SOL" "$BEDROCK_AIP_GPT_LUNA"
+          printf '"aip.claude-sonnet-5":"%s","aip.claude-opus-5":"%s","aip.claude-haiku-4-5":"%s"}' \
+            "$BEDROCK_AIP_SONNET" "$BEDROCK_AIP_OPUS" "$BEDROCK_AIP_HAIKU")
+    AWS_PROFILE=bedrock-developer AWS_REGION=us-west-2 PI_BEDROCK_MODEL_MAP="$map" \
+        pi --provider amazon-bedrock --model aip.gpt-5.6-terra --models "amazon-bedrock/aip.*" "$@"
 }
 
 # Sandbox account via sbx-admin. Works today (no enforced guardrail there).
