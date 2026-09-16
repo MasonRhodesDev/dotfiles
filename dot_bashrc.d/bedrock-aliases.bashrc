@@ -4,7 +4,7 @@
 # us-west-2) WITHOUT touching the default auth of either harness. Everything
 # is scoped to the child process:
 #   - codex: a separate profile file (~/.codex/bedrock.config.toml) using
-#     codex's native Amazon Bedrock provider with SigV4 from the SSO profile.
+#     codex's native amazon-bedrock-runtime provider with SigV4 from the SSO profile.
 #   - claude: Bedrock env vars set only for that invocation, with the
 #     personal ANTHROPIC_API_KEY unset so it cannot leak into the work call.
 # Plain `codex` and `claude` keep using the OpenAI subscription and the
@@ -21,11 +21,12 @@ _bedrock_sso_ensure() { # $1 = AWS profile (default bedrock-developer)
     aws sso login --profile "$p"
 }
 
-# Bedrock account (developer role). Config is correct and signs correctly, but it
-# cannot work as of 2026-09-10 and an IAM change would not fix it: codex speaks
-# only the OpenAI Responses API, which rejects application inference profiles
-# (400), and the catalog is AIP-only by policy (LCO-208, LCO-448). Kept so the
-# 403 is reproducible; use codex-sandbox or claude-bedrock instead.
+# Bedrock account (developer role). Works since 2026-09-16: LCO-506 granted the
+# role the CRIS profile us.openai.gpt-5.6-terra, which is what codex must name
+# because the Responses API rejects application inference profiles (400). The
+# profile file mirrors the Developer MDM payload in terraform-infrastructure
+# (tf/envs/bedrock/endpoint-management/codex/developer, LCO-448). Account
+# enforced guardrail applies; a blocked reply poisons the session, start a new one.
 codex-bedrock() {
     _bedrock_sso_ensure bedrock-developer || return 1
     codex --profile bedrock "$@"
