@@ -36,10 +36,14 @@ codex-bedrock() {
     codex --profile bedrock "$@"
 }
 
-# pi on the same Developer catalog, GPT-5.6 Terra by AIP ARN. The account
-# enforced guardrail evaluates GPT on bare Converse (verified 2026-09-16: fake
-# SSN prompt returned guardrail_intervened with no guardrailConfig attached), so
-# no pin is read client-side. A blocked reply poisons the session; start a new one.
+# pi on the same Developer catalog. Default GPT-5.6 Terra, and the model picker
+# is scoped (--models) to exactly what the developer SSO role may invoke: the six
+# AIPs tagged roles="developer" in tf/envs/bedrock/bedrock-inference-profile.tf
+# (Sonnet 5, Opus 5, Haiku 4.5, GPT-5.6 Terra/Sol/Luna). The CRIS us.openai.*
+# grant is left out on purpose: it exists for codex's Responses path and would
+# bill off the AIP tag from pi. The account enforced guardrail evaluates GPT on
+# bare Converse (verified 2026-09-16: fake SSN prompt -> guardrail_intervened,
+# no guardrailConfig attached). A blocked reply poisons the session; start a new one.
 pi-bedrock-codex() {
     local envfile="$HOME/.config/bedrock-aliases.env"
     if [[ ! -r $envfile ]]; then
@@ -47,11 +51,17 @@ pi-bedrock-codex() {
         return 1
     fi
     _bedrock_sso_ensure bedrock-developer || return 1
-    local BEDROCK_AIP_GPT_TERRA
+    local BEDROCK_AIP_PREFIX BEDROCK_AIP_SONNET BEDROCK_AIP_OPUS BEDROCK_AIP_HAIKU
+    local BEDROCK_AIP_GPT_TERRA BEDROCK_AIP_GPT_SOL BEDROCK_AIP_GPT_LUNA
     # shellcheck source=/dev/null
     source "$envfile"
+    local scope="" a
+    for a in "$BEDROCK_AIP_GPT_TERRA" "$BEDROCK_AIP_GPT_SOL" "$BEDROCK_AIP_GPT_LUNA" \
+             "$BEDROCK_AIP_SONNET" "$BEDROCK_AIP_OPUS" "$BEDROCK_AIP_HAIKU"; do
+        scope+="${scope:+,}amazon-bedrock/$a"
+    done
     AWS_PROFILE=bedrock-developer AWS_REGION=us-west-2 \
-        pi --provider amazon-bedrock --model "$BEDROCK_AIP_GPT_TERRA" "$@"
+        pi --provider amazon-bedrock --model "$BEDROCK_AIP_GPT_TERRA" --models "$scope" "$@"
 }
 
 # Sandbox account via sbx-admin. Works today (no enforced guardrail there).
