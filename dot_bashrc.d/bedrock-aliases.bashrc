@@ -1,4 +1,4 @@
-# Bedrock-scoped harness entry points: codex-bedrock, pi-bedrock-codex and claude-bedrock.
+# Bedrock-scoped harness entry points: codex-bedrock, pi-bedrock and claude-bedrock.
 #
 # Both run the work Bedrock developer catalog (SSO profile bedrock-developer,
 # us-west-2) WITHOUT touching the default auth of either harness. Everything
@@ -44,10 +44,10 @@ codex-bedrock() {
 # bill off the AIP tag from pi. The account enforced guardrail evaluates GPT on
 # bare Converse (verified 2026-09-16: fake SSN prompt -> guardrail_intervened,
 # no guardrailConfig attached). A blocked reply poisons the session; start a new one.
-pi-bedrock-codex() {
+pi-bedrock() {
     local envfile="$HOME/.config/bedrock-aliases.env"
     if [[ ! -r $envfile ]]; then
-        echo "pi-bedrock-codex: missing $envfile (see header of ~/.bashrc.d/bedrock-aliases.bashrc)" >&2
+        echo "pi-bedrock: missing $envfile (see header of ~/.bashrc.d/bedrock-aliases.bashrc)" >&2
         return 1
     fi
     _bedrock_sso_ensure bedrock-developer || return 1
