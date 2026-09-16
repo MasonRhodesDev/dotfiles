@@ -1,14 +1,18 @@
-# Bedrock-scoped harness entry points: codex-bedrock and claude-bedrock.
+# Bedrock-scoped harness entry points: codex-bedrock, pi-bedrock-codex and claude-bedrock.
 #
 # Both run the work Bedrock developer catalog (SSO profile bedrock-developer,
 # us-west-2) WITHOUT touching the default auth of either harness. Everything
 # is scoped to the child process:
 #   - codex: a separate profile file (~/.codex/bedrock.config.toml) using
 #     codex's native amazon-bedrock-runtime provider with SigV4 from the SSO profile.
+#   - pi: GPT-5.6 Terra through pi's built-in amazon-bedrock provider
+#     (Converse API, so it pins the AIP ARN like every other endpoint). The
+#     model entry lives in ~/.pi/agent/models.json; AWS_PROFILE/AWS_REGION are
+#     set for that process only and the bedrock-profile extension honours them.
 #   - claude: Bedrock env vars set only for that invocation, with the
 #     personal ANTHROPIC_API_KEY unset so it cannot leak into the work call.
-# Plain `codex` and `claude` keep using the OpenAI subscription and the
-# claude.ai login respectively.
+# Plain `codex`, `pi` and `claude` keep using the OpenAI subscription, pi's
+# default provider and the claude.ai login respectively.
 #
 # The application inference profile ARNs live in ~/.config/bedrock-aliases.env
 # (not in this public repo). Copy them from the developer managed-settings.json
@@ -30,6 +34,24 @@ _bedrock_sso_ensure() { # $1 = AWS profile (default bedrock-developer)
 codex-bedrock() {
     _bedrock_sso_ensure bedrock-developer || return 1
     codex --profile bedrock "$@"
+}
+
+# pi on the same Developer catalog, GPT-5.6 Terra by AIP ARN. The account
+# enforced guardrail evaluates GPT on bare Converse (verified 2026-09-16: fake
+# SSN prompt returned guardrail_intervened with no guardrailConfig attached), so
+# no pin is read client-side. A blocked reply poisons the session; start a new one.
+pi-bedrock-codex() {
+    local envfile="$HOME/.config/bedrock-aliases.env"
+    if [[ ! -r $envfile ]]; then
+        echo "pi-bedrock-codex: missing $envfile (see header of ~/.bashrc.d/bedrock-aliases.bashrc)" >&2
+        return 1
+    fi
+    _bedrock_sso_ensure bedrock-developer || return 1
+    local BEDROCK_AIP_GPT_TERRA
+    # shellcheck source=/dev/null
+    source "$envfile"
+    AWS_PROFILE=bedrock-developer AWS_REGION=us-west-2 \
+        pi --provider amazon-bedrock --model "$BEDROCK_AIP_GPT_TERRA" "$@"
 }
 
 # Sandbox account via sbx-admin. Works today (no enforced guardrail there).
