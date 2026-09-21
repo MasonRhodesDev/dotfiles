@@ -12,17 +12,28 @@
      Non-interactive bootstrap:
        chezmoi init --promptBool "Is this a work machine"=true */}}
 {{- $is_work := promptBoolOnce . "is_work" "Is this a work machine" (eq $hostname "mason-work") -}}
+
+{{/* Headless = reached over SSH only, no desktop session (e.g. the home-lab
+     dev CT). Declared the same way as is_work. It gates off the whole
+     Hyprland/GUI surface and everything that needs a keyring or a session
+     bus (.chezmoiignore), and makes the machine PULL-ONLY: a box where
+     agents run arbitrary code must never auto-push to this public repo.
+     Templates read it as `dig "headless" false .` so machines initialised
+     before this flag existed keep rendering without a re-init.
+     Non-interactive: chezmoi init --promptBool "Is this a headless machine (SSH only, no desktop)"=true */}}
+{{- $headless := promptBoolOnce . "headless" "Is this a headless machine (SSH only, no desktop)" false -}}
 [edit]
     command="nvim"
 [merge]
     command="nvim"
     args = ["-d"]
 [git]
-    autoCommit = true
-    autoPush = true
+    autoCommit = {{ not $headless }}
+    autoPush = {{ not $headless }}
 [data]
     wallpaper = {{ if $is_work }}"/home/mason/Pictures/forrest.png"{{ else }}"/home/mason/Pictures/landscape.png"{{ end }}
     is_work = {{ $is_work }}
+    headless = {{ $headless }}
 
 # Profile configuration
 [data.profile]

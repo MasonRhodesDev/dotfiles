@@ -102,3 +102,111 @@ bootstrap.sh
 # mcp-hub config: deliberately untracked (public repo; contains work email/paths)
 .config/mcphub
 .config/mcphub/**
+
+# Headless machines (SSH only — see `headless` in .chezmoi.toml.tmpl): no
+# desktop session, no keyring, no session bus. What is left is the shell,
+# git, ssh, nvim, tmux and the Claude config.
+{{ if dig "headless" false . }}
+# Desktop session and GUI apps
+.config/hypr
+.config/hypr/**
+.config/hypr-de
+.config/hypr-de/**
+.config/lmtt
+.config/lmtt/**
+.config/uwsm
+.config/uwsm/**
+.config/wireplumber
+.config/wireplumber/**
+.config/xdg-desktop-portal
+.config/xdg-desktop-portal/**
+.config/kitty
+.config/kitty/**
+.config/wezterm
+.config/wezterm/**
+.config/zed
+.config/zed/**
+.config/fontconfig
+.config/fontconfig/**
+.config/gtk-3.0
+.config/gtk-3.0/**
+.config/gtk-4.0
+.config/gtk-4.0/**
+.config/networkmanager-dmenu
+.config/networkmanager-dmenu/**
+.config/mimeapps.list
+.config/chromium-flags.conf
+.config/discord-flags.conf
+.config/electron-flags.conf
+.config/software-manifest.md
+.local/share/applications
+.local/share/applications/**
+.local/share/icons
+.local/share/icons/**
+.local/share/notes
+.local/share/notes/**
+.blerc
+# Login shell is bash; fish config is desktop-era and keyring-coupled.
+.config/fish
+.config/fish/**
+# Session environment for a graphical login; SSH shells never read it.
+.config/environment.d
+.config/environment.d/**
+# User units: all desktop/keyring services. herdr.service on a headless box
+# is owned by whatever provisions it (home-lab proxmox/dev/bootstrap.sh), and
+# dev.slice exists to protect a desktop from agents — on a dedicated box it
+# would only throttle the one thing the box is for.
+.config/systemd
+.config/systemd/**
+.bashrc.d/dev-slice.bashrc
+# Shell modules that assume a VT, a compositor or a GUI terminal. ssh.bashrc
+# would spawn one ssh-agent per shell here (no systemd agent socket in an SSH
+# login), and a headless box uses its own passphrase-less key directly.
+.bashrc.d/00-tty-console.bashrc
+.bashrc.d/05-uwsm-env.bashrc
+.bashrc.d/wezterm-shims.bashrc
+.bashrc.d/ydotool.bashrc
+.bashrc.d/android.bashrc
+.bashrc.d/cursor.bashrc
+.bashrc.d/ssh.bashrc
+# Desktop helper binaries and scripts; nvim-open and cb still make sense.
+.local/bin/browser-default-guard
+.local/bin/buzz-appimage-patch
+.local/bin/buzz-desktop
+.local/bin/claude-desktop-update
+.local/bin/import-api-keys
+.local/bin/list-session-env
+.local/bin/networkmanager-dmenu
+.local/bin/slack-mcp
+.local/bin/steam-set-launch-options
+.local/bin/swiftpoint-profile-osd
+.local/bin/chezmoi-refresh-identity
+scripts/terminal-header
+scripts/terminal-header/**
+scripts/*wezterm*
+scripts/terminal-session-task-stack.ts
+scripts/thermal-tripwire
+scripts/chezmoi-package-check.py
+scripts/swappy-*.md
+nix-environments
+nix-environments/**
+# Scripts: everything that configures hardware, a desktop session, a keyring
+# or this repo's push path. Left to run: jq, the bash login shell check.
+.chezmoiscripts/05-setup-bitwarden.sh
+.chezmoiscripts/05-install-fonts.sh
+.chezmoiscripts/34-claude-cowork-vm.sh
+.chezmoiscripts/35-sync-work-overlay.sh
+.chezmoiscripts/40-setup-git-hooks.sh
+.chezmoiscripts/50-nm-wifi-powersave.sh
+.chezmoiscripts/51-fw16-grub-cmdline.sh
+.chezmoiscripts/52-fw16-mt7922-wifi.sh
+.chezmoiscripts/53-system-session-tweaks.sh
+.chezmoiscripts/54-bluetooth-tweaks.sh
+.chezmoiscripts/54-third-party-repos.sh
+.chezmoiscripts/55-tty-console.sh
+.chezmoiscripts/98-check-packages-with-claude.sh
+.chezmoiscripts/99-track-system.sh
+.chezmoiscripts/remove-root-wezterm-config.sh
+enable-user-services.sh
+install-chromium-conf.sh
+{{ end }}

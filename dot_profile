@@ -1,6 +1,15 @@
 PATH="$HOME/.local/bin:$PATH"
 export npm_config_prefix="$HOME/.npm-global"
-. "$HOME/.cargo/env"
+[ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
+
+# Machine-local secrets for machines without a keyring (headless boxes): a
+# 0600 KEY=value file, never tracked. The same file can be given to systemd
+# user units with EnvironmentFile=.
+if [ -r "$HOME/.config/secrets.env" ]; then
+    set -a
+    . "$HOME/.config/secrets.env"
+    set +a
+fi
 
 # Session env vars (GNOME Keyring bucket: service=session-env). Loaded here
 # so any sh/bash/zsh login shell (SSH, TTY, ...) gets them. Fish is covered

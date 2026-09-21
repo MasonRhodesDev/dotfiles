@@ -1,4 +1,12 @@
-{{ if eq .system.hostname "mason-desktop" -}}
+{{ if dig "headless" false . -}}
+# Headless box: its own key, used directly. No agent — forwarding from a
+# desktop is useless once that desktop sleeps.
+Host *
+    IdentityFile ~/.ssh/id_ed25519
+    IdentitiesOnly yes
+    ServerAliveInterval 60
+    ServerAliveCountMax 3
+{{ else if eq .system.hostname "mason-desktop" -}}
 Host desk-controller desk-controller.lan desk-controller.local
     ConnectTimeout 10
     ServerAliveInterval 60

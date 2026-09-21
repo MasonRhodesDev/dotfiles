@@ -2,8 +2,12 @@
     name = {{ .identity.name }}
     email = {{ .identity.email }}
 
+{{/* No keyring on a headless machine; GitHub goes over SSH (insteadOf below). */ -}}
+{{ if not (dig "headless" false .) -}}
 [credential]
     credentialStore = secretservice
+
+{{ end -}}
 
 [credential "https://dev.azure.com"]
     useHttpPath = true
