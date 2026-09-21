@@ -87,6 +87,12 @@ docs/
 .local/share/applications/clickup-icon.png
 {{ end }}
 
+# Steam Big Picture => ultrawide only. Desktop-only; the module also no-ops
+# on any machine without that monitor.
+{{ if ne .chezmoi.hostname "mason-desktop" }}
+.config/hypr/bp-monitors.lua
+{{ end }}
+
 # Fresh-machine bootstrap (run from curl, stays in repo)
 bootstrap.sh
 .config/gtk-3.0/settings.ini

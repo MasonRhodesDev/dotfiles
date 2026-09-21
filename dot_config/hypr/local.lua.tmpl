@@ -67,3 +67,11 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("uwsm app -- discord")
 {{ end }}
 end)
+
+-- Steam Big Picture: ultrawide only while it runs (see bp-monitors.lua). A missing
+-- file is a no-op, so machines that don't deploy it are unaffected.
+do
+    local base = os.getenv("XDG_CONFIG_HOME")
+    if not base or base == "" then base = os.getenv("HOME") .. "/.config" end
+    pcall(dofile, base .. "/hypr/bp-monitors.lua")
+end
