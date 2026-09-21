@@ -81,7 +81,7 @@ docs/
 .local/share/notes/**
 {{ end }}
 
-# Work app entries (easytether stays shared — used on both machines)
+# Work app entries
 {{ if not .is_work }}
 .local/share/applications/slack.desktop
 .local/share/applications/clickup-icon.png
