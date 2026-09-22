@@ -1,0 +1,25 @@
+#!/bin/bash
+# Claude Code owns ~/.claude/settings.json and rewrites it constantly, so this
+# merges only the keys below into the live file and leaves everything else
+# (permissions, hooks, autoMode, plugins) machine-local and out of this repo.
+set -euo pipefail
+
+live=$(cat)
+[ -n "$live" ] || live='{}'
+
+jq --ascii-output --indent 2 '
+  {"$schema": "https://json.schemastore.org/claude-code-settings.json"}
+  + .
+  + {
+      advisorModel: "fable",
+      fallbackModel: ["opus"],
+      attribution: {commit: "", pr: ""},
+      autoUpdatesChannel: "stable",
+      cleanupPeriodDays: 365,
+      feedbackSurveyRate: 0
+    }
+  | .env = ((.env // {}) + {
+      BASH_MAX_OUTPUT_LENGTH: "30000",
+      MAX_MCP_OUTPUT_TOKENS: "25000"
+    })
+' <<<"$live"

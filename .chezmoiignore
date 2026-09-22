@@ -66,9 +66,10 @@ docs/
 # repo — so chezmoi must not manage this path on any machine.
 .claude/templates
 
-# App-owned settings: Claude Code and Zed rewrite these constantly (model
-# changes, plugin toggles, panel layout), so managing them is perpetual drift.
-.claude/settings.json
+# App-owned settings: Zed rewrites this constantly (panel layout), so
+# managing it is perpetual drift. ~/.claude/settings.json is also app-owned but
+# is managed by dot_claude/modify_settings.json, which merges only a fixed set
+# of keys into the live file.
 .config/zed/settings.json
 
 # Gaming/Steam: personal machines only.
