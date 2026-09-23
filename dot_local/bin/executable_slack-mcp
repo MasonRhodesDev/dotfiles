@@ -1,14 +1,57 @@
 #!/bin/sh
 # Thin wrapper around slack-mcp-server (korotovsky/slack-mcp-server).
-# Pulls the Slack user OAuth token from the GNOME Keyring at runtime so no
-# secret ever lands in ~/.claude.json or any other MCP config file.
+# Pulls Slack credentials from the GNOME Keyring at runtime so no secret ever
+# lands in ~/.claude.json or any other MCP config file.
+#
+# Two auth modes, in preference order:
+#   1. xoxp  — user OAuth token from an installed Slack app. Durable, survives
+#              logout, but installing the app needs workspace admin approval.
+#   2. xoxc + xoxd — the browser web-session pair. Needs no approval, but dies
+#              when the Slack web session ends, so expect to refresh it.
+# Fails loudly with neither: a server that starts and then 401s every call is
+# far harder to diagnose than one that refuses to boot.
 
 # When spawned by a daemon (mcp-hub) the session-bus address isn't inherited,
 # and secret-tool falls back to X11 autolaunch and fails.
 DBUS_SESSION_BUS_ADDRESS="${DBUS_SESSION_BUS_ADDRESS:-unix:path=/run/user/$(id -u)/bus}"
 export DBUS_SESSION_BUS_ADDRESS
 
-exec env \
-  SLACK_MCP_XOXP_TOKEN="$(secret-tool lookup service session-env account SLACK_USER_TOKEN)" \
-  SLACK_MCP_ADD_MESSAGE_TOOL="${SLACK_MCP_ADD_MESSAGE_TOOL:-true}" \
-  npx -y slack-mcp-server@latest "$@"
+kr() { secret-tool lookup service session-env account "$1" 2>/dev/null; }
+
+XOXP="$(kr SLACK_USER_TOKEN)"
+XOXC="$(kr SLACK_XOXC_TOKEN)"
+XOXD="$(kr SLACK_XOXD_TOKEN)"
+
+case "$XOXP" in
+  xoxp-*)
+    exec env \
+      SLACK_MCP_XOXP_TOKEN="$XOXP" \
+      SLACK_MCP_ADD_MESSAGE_TOOL="${SLACK_MCP_ADD_MESSAGE_TOOL:-true}" \
+      npx -y slack-mcp-server@latest "$@"
+    ;;
+esac
+
+case "$XOXC$XOXD" in
+  xoxc-*xoxd-*)
+    # Session tokens are fingerprinted. Slack's enterprise controls compare the
+    # User-Agent and TLS handshake against the browser that minted the token, and
+    # revoke on mismatch — which is why a bare client authenticates once and is
+    # dead a minute later. CUSTOM_TLS makes the handshake match the UA below.
+    exec env \
+      SLACK_MCP_XOXC_TOKEN="$XOXC" \
+      SLACK_MCP_XOXD_TOKEN="$XOXD" \
+      SLACK_MCP_USER_AGENT="${SLACK_MCP_USER_AGENT:-Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.7871.114 Safari/537.36}" \
+      SLACK_MCP_CUSTOM_TLS="${SLACK_MCP_CUSTOM_TLS:-true}" \
+      SLACK_MCP_ADD_MESSAGE_TOOL="${SLACK_MCP_ADD_MESSAGE_TOOL:-true}" \
+      npx -y slack-mcp-server@latest "$@"
+    ;;
+esac
+
+echo "slack-mcp: no usable Slack credential in the keyring (service=session-env)." >&2
+echo "  Wanted SLACK_USER_TOKEN=xoxp-..., or SLACK_XOXC_TOKEN=xoxc-... plus SLACK_XOXD_TOKEN=xoxd-..." >&2
+# Shape only, never the value: a diagnostic that prints the secret it is
+# complaining about just relocates the leak into logs and terminal scrollback.
+shape() { v="$1"; [ -z "$v" ] && { printf '<empty>'; return; }; printf '<%s chars, prefix %.4s...>' "${#v}" "$v"; }
+echo "  Found: SLACK_USER_TOKEN=$(shape "$XOXP")" >&2
+echo "         SLACK_XOXC_TOKEN=$(shape "$XOXC")  SLACK_XOXD_TOKEN=$(shape "$XOXD")" >&2
+exit 1
