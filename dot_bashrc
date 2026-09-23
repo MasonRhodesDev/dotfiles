@@ -54,6 +54,9 @@ fi
 command -v direnv >/dev/null 2>&1 && eval "$(direnv hook bash)"
 export LD_LIBRARY_PATH="$HOME/.local/lib:$LD_LIBRARY_PATH"
 
+# Pulumi CLI (installer drops it in ~/.pulumi/bin)
+[ -d "$HOME/.pulumi/bin" ] && export PATH="$PATH:$HOME/.pulumi/bin"
+
 # Normalize PATH last. Everything above this line may prepend to PATH —
 # including ~/.local/bin/env, which runs after the ~/.bashrc.d loop — so this
 # is the only point that sees the final value. Defined in

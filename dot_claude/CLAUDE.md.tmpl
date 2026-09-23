@@ -4,6 +4,14 @@
 {{ if and .is_work .work.claude_md }}
 {{ .work.claude_md }}
 {{ end }}
+## Writing
+- Never use em dashes or en dashes in any output: chat replies, code, comments, commit messages, PR titles and descriptions, Jira tickets, Confluence pages, docs, artifacts, emails, Slack. This covers U+2014 (em), U+2013 (en), U+2015 (horizontal bar), and the ASCII `--` and `---` when they stand in for prose punctuation. Double hyphens stay legal as code: CLI flags, Lua and SQL comments, CSS custom properties, HTML comment delimiters.
+- A dash in prose is an unnamed relation operator. It asserts that two chunks are related while deleting the word that says which relation it is. So the fix is to name the relation with a word (because, so, which means, then, and) or split into two sentences.
+- Do not substitute a colon, semicolon, or parenthesis to preserve the same unnamed juncture. That repaints the structure instead of removing it, and counts as a violation.
+- Never reproduce a dash glyph even when quoting: replace it with a codepoint placeholder like `[U+2014]`. Quoting is critique, not license to re-emit the character.
+- Enforcement: the `PreToolUse` hook at `~/.claude/hooks/no-dashes.sh` denies file writes containing the glyphs, and the `Stop` hook at `~/.claude/hooks/no-dashes-chat.py` rejects chat replies containing them. Auto-memory files under `~/.claude/projects/` are exempt because the harness mandates the dash in `MEMORY.md` index lines.
+- A dash in text attributed to Mason is a contamination marker of LLM output, not his voice (0.7% of 679 typed prompts). Critique it; never emulate it. See `~/repos/style-fingerprint/FINGERPRINT.md`.
+
 ## References
 - Mermaid/PDF generation: see `~/.claude/references/mermaid-pdf.md`
-- Hyprland / hyprwm ecosystem (C++ style guide, conventions, best practices): see `~/.claude/references/hyprland/` — start with `README.md`. Read before any C++ work touching hyprtoolkit, hyprlang, hyprutils, or Hyprland plugins.
+- Hyprland / hyprwm ecosystem (C++ style guide, conventions, best practices): see `~/.claude/references/hyprland/`, starting with `README.md`. Read before any C++ work touching hyprtoolkit, hyprlang, hyprutils, or Hyprland plugins.

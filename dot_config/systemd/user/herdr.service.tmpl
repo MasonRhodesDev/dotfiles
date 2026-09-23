@@ -1,3 +1,5 @@
+{{- $herdr := "/usr/bin/herdr" -}}
+{{- if not (stat "/usr/bin/herdr") -}}{{- $herdr = "%h/.local/bin/herdr" -}}{{- end -}}
 [Unit]
 Description=Herdr — persistent terminal workspace server for AI coding agents
 # Started at boot via linger + default.target so agents come up without a
@@ -13,10 +15,10 @@ StartLimitBurst=3
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/herdr server
+ExecStart={{ $herdr }} server
 # Graceful shutdown via the API socket so session.json is flushed before the
 # cgroup is torn down (pane children die with the server either way).
-ExecStop=/usr/bin/herdr server stop
+ExecStop={{ $herdr }} server stop
 Restart=on-failure
 RestartSec=5
 Environment=PATH=%h/.local/bin:%h/.npm-global/bin:/usr/local/bin:/usr/bin:/bin
