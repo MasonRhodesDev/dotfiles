@@ -60,7 +60,8 @@ hl.bind("F20", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.local/bin/swiftpoint-prof
 -- Autostart
 hl.on("hyprland.start", function()
 {{ if .is_work }}
-    hl.exec_cmd("uwsm app -- slack.desktop")
+    -- Slack starts from ~/.config/autostart/slack.desktop instead: that path is
+    -- systemd-ordered after sni-watcher, exec-once is not (tray icon race, 2026-09-29).
 {{ end }}
 {{ if not .is_work }}
     hl.exec_cmd("uwsm app -- steam -cef-force-glx")
