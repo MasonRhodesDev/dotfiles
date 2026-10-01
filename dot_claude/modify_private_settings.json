@@ -13,7 +13,7 @@ jq --ascii-output --indent 2 '
   + {
       model: "opus",
       advisorModel: "fable",
-      fallbackModel: ["opus"],
+      fallbackModel: ["sonnet"],
       effortLevel: "medium",
       fastModePerSessionOptIn: true,
       autoUpdatesChannel: "stable",
