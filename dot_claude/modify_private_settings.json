@@ -11,13 +11,16 @@ jq --ascii-output --indent 2 '
   {"$schema": "https://json.schemastore.org/claude-code-settings.json"}
   + .
   + {
+      model: "opus",
       advisorModel: "fable",
       fallbackModel: ["opus"],
-      attribution: {commit: "", pr: ""},
+      effortLevel: "medium",
+      fastModePerSessionOptIn: true,
       autoUpdatesChannel: "stable",
       cleanupPeriodDays: 365,
       feedbackSurveyRate: 0
     }
+  | .attribution = ((.attribution // {}) + {commit: "", pr: ""})
   | .env = ((.env // {}) + {
       BASH_MAX_OUTPUT_LENGTH: "30000",
       MAX_MCP_OUTPUT_TOKENS: "25000"
