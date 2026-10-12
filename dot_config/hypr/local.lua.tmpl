@@ -2,12 +2,19 @@
 -- /usr/share/hypr-de/hypr/main.lua — last-wins. Monitor layouts stay in
 -- ~/.config/hypr/profiles/ (see local.lua.example in the package).
 
+{{/* mason-air: M1 MacBook Air on Asahi (aarch64). One internal panel, an
+     Apple keyboard, and no Steam on ARM — so the Framework-16 key map, the
+     eDP-2 workspace pin and the whole gaming layer are all wrong there.
+     Monitor layout is deliberately NOT here: hyprstate owns
+     ~/.config/hypr/profiles/, which chezmoi does not track. */}}
+{{- $air := eq .chezmoi.hostname "mason-air" -}}
+
 -- Personal window rules that don't belong in the distributable DE
 hl.window_rule({ name = "keep-tile",        match = { title = "^(keep.google.com_/)$" }, tile = true })
 hl.window_rule({ name = "crx-float",        match = { title = "^(_crx_nngceckbapebfimnlniiiahkandclblb)$" }, float = true })
 hl.window_rule({ name = "hyprdm",           match = { class = "^(hyprdm)$" }, float = true, center = true, size = "600 460" })
 hl.window_rule({ name = "android-emulator", match = { class = "^(Emulator)$" }, float = true })
-hl.workspace_rule({ workspace = "9", monitor = "eDP-2" })
+{{ if not $air }}hl.workspace_rule({ workspace = "9", monitor = "eDP-2" }){{ end }}
 hl.window_rule({ name = "vigil-simulator", match = { title = "^(Vigil Simulation.*)$" }, workspace = "9 silent", float = true, center = true, size = "1280 800", no_initial_focus = true })
 
 -- Scratchpad routing + voice dictation (moved out of the hypr-de package)
@@ -18,7 +25,13 @@ hl.window_rule({ name = "voice-dictation",  match = { class = "^(dev.mason.dicta
 hl.window_rule({ name = "zoom-annotate",    match = { class = "^(zoom)$", title = "^(annotate_toolbar)$" }, float = true, size = "1 1", move = "-9999 -9999", opacity = "0.0 override 0.0 override", border_size = 0, no_blur = true, no_shadow = true, no_initial_focus = true, no_focus = true })
 
 -- FW16 F13-24 keys + caps-as-shift (moved out of the hypr-de package)
+{{ if $air -}}
+-- Apple internal keyboard: no F13-24 row, and Asahi already maps Cmd to
+-- Super. Keep caps-as-shift, drop the Framework fkeys map.
+hl.config({ input = { kb_options = "caps:shift" } })
+{{- else -}}
 hl.config({ input = { kb_options = "fkeys:basic_13-24,caps:shift" } })
+{{- end }}
 
 -- Personal keybinds
 hl.bind("CTRL + ALT + SHIFT + v", hl.dsp.exec_cmd("voice-dictation toggle"), { desc = "System: Voice dictation" })
@@ -43,7 +56,7 @@ hl.unbind("SUPER + SHIFT + equal")
 hl.bind("SUPER + SHIFT + minus", hl.dsp.workspace.move({ monitor = "+1" }), { desc = "Workspaces: Move workspace to next monitor" })
 hl.bind("SUPER + SHIFT + equal", hl.dsp.workspace.move({ monitor = "-1" }), { desc = "Workspaces: Move workspace to previous monitor" })
 
-{{ if not .is_work -}}
+{{ if and (not .is_work) (not $air) -}}
 -- Gaming layer (hypr-de-gaming package)
 dofile("/usr/share/hypr-de/gaming/game-rules.lua")
 
