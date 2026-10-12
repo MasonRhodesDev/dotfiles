@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Kill ssh-agent processes left behind in logind sessions whose login has
+# ended. Each one pins its session in "closing", and session-polling tools
+# (JumpCloud remote-assist) then churn through the stale list.
+set -u
+uid=$(id -u)
+reaped=0
+for pid in $(pgrep -u "$uid" -x ssh-agent); do
+  cg=$(sed 's#.*/##' "/proc/$pid/cgroup" 2>/dev/null) || continue
+  case "$cg" in
+    session-*.scope) ;;
+    *) continue ;;
+  esac
+  sid=${cg#session-}
+  sid=${sid%.scope}
+  [ "$(loginctl show-session "$sid" -p State --value 2>/dev/null)" = closing ] || continue
+  kill "$pid" 2>/dev/null && reaped=$((reaped + 1))
+done
+echo "reaped $reaped orphan ssh-agent(s)"

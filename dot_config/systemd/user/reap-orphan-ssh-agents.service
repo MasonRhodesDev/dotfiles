@@ -1,0 +1,7 @@
+[Unit]
+Description=Kill ssh-agents stranded in closing login sessions
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/reap-orphan-ssh-agents
+Nice=19
