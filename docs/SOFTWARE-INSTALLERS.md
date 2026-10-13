@@ -2,8 +2,8 @@
 
 The old numbered installer scripts (`executable_0X_*.sh`) were removed in
 March 2026 (commit 18c0cd9). Package management is now a declarative
-registry plus an LLM-driven audit — nothing here installs software
-automatically.
+registry plus an LLM-driven audit. Apart from the shell tools below,
+nothing here installs software automatically.
 
 ## How it works
 
@@ -33,6 +33,12 @@ gracefully when missing.
 
 ## Bootstrap on a new machine
 
-`chezmoi init --apply` runs the `run_once` scripts (jq, fonts, fish shell,
-hyprstate). Everything else is installed manually with `packages.toml` as the
-checklist — or by letting the package-check audit walk through it.
+`chezmoi init --apply` runs the `run_once` scripts (jq, fonts, bash as the
+login shell) and
+`.chezmoiscripts/run_onchange_after_06-install-shell-tools.sh.tmpl`, which
+installs everything interactive bash hooks into: ble.sh, oh-my-posh, atuin,
+zoxide, fzf, direnv and bash-completion. That one is automatic because every
+hook in `~/.bashrc.d` is guarded, so a machine without the tools gets plain
+bash and no error, and nobody notices the shell was never set up. Everything
+else is installed manually with `packages.toml` as the checklist, or by
+letting the package-check audit walk through it.
