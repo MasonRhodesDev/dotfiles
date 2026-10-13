@@ -111,6 +111,14 @@ priority = 3
 version = "latest"
 verify = "command -v iw"
 
+[firewalld]
+description = "firewalld: zone-based firewall with NetworkManager integration. Policy (public default without ssh, home zone for trusted Wi-Fi) is applied by .chezmoiscripts/run_onchange_after_59-asahi-firewalld.sh on Apple silicon laptops (mason-air)."
+profile = "common"
+priority = 3
+version = "latest"
+optional = true
+verify = "command -v firewall-cmd"
+
 [node_tooling]
 description = "Node.js toolchain: fnm (version manager) and bun (runtime/bundler)"
 profile = "common"
