@@ -3,6 +3,14 @@
 # Vi keybindings (replaces fish_vi_key_bindings)
 bleopt default_keymap=vi
 
+# Pin the character widths so ble.sh skips its startup probe. With either
+# option left at auto it prints a row of test glyphs and queries the cursor
+# position after each one, on every shell start. These are the values the
+# probe picks in kitty; if a terminal ever draws wide glyphs misaligned,
+# set both back to auto and read what it chooses with `bleopt char_width_`.
+bleopt char_width_mode=west
+bleopt char_width_version=16.0
+
 # Muted gray autosuggestion, fish-like
 ble-face auto_complete='fg=242'
 
