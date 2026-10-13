@@ -8,8 +8,7 @@
 # browser-guard.path:    {{ include "dot_config/systemd/user/browser-default-guard.path" | sha256sum }}
 # browser-guard.service: {{ include "dot_config/systemd/user/browser-default-guard.service" | sha256sum }}
 # browser-guard.bin:     {{ include "dot_local/bin/executable_browser-default-guard" | sha256sum }}
-# hypridle (mason-air):  {{ include "dot_config/hypr/hypridle.conf.tmpl" | sha256sum }}
-# hypridle drop-in:      {{ include "dot_config/systemd/user/hypridle.service.d/zz-mason-air-conf.conf.tmpl" | sha256sum }}
+# hypridle knobs:        {{ include "dot_config/hypr-de/hypridle.conf.tmpl" | sha256sum }}
 
 set -euo pipefail
 
@@ -26,10 +25,10 @@ echo "→ browser-default-guard.path"
 systemctl --user enable browser-default-guard.path 2>/dev/null || true
 systemctl --user restart browser-default-guard.path || true
 
-# mason-air only: hypridle runs a chezmoi-managed conf via a unit drop-in
-# (shorter idle suspend). Restart it when either file changed. Restarting
-# hypridle is safe for the locker: lock-cmd.sh runs it in its own scope.
-if [ -f "$HOME/.config/systemd/user/hypridle.service.d/zz-mason-air-conf.conf" ]; then
-    echo "→ hypridle (mason-air conf)"
+# Hosts with a hypr-DE idle knob file (mason-air): restart hypridle so the
+# launcher re-splices it. Safe for the locker: lock-cmd.sh runs it in its
+# own scope.
+if [ -f "$HOME/.config/hypr-de/hypridle.conf" ]; then
+    echo "→ hypridle (per-host knobs)"
     systemctl --user try-restart hypridle.service || true
 fi

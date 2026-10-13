@@ -6,3 +6,9 @@
 # this guarantees the diagnostic is removed from every machine it was
 # copied to. Root-caused 2026-08-27.
 .bashrc.d/zz-exit-forensics.bashrc
+
+# mason-air idle override, first shipped as a full copy of hypr-DE's
+# hypridle.conf plus a unit drop-in (2026-10-13). hypr-DE 0.2.37 grew the
+# ~/.config/hypr-de/hypridle.conf knob file, which replaced both.
+.config/hypr/hypridle.conf
+.config/systemd/user/hypridle.service.d/zz-mason-air-conf.conf

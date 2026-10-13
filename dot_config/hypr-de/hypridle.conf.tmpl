@@ -1,0 +1,8 @@
+{{- if eq .system.hostname "mason-air" -}}
+# hypr-DE per-host idle knobs (hypr-de >= 0.2.37 splices these in after the
+# packaged defaults; the policy itself stays in the package). mason-air is an
+# SSH client whose sessions live in remote tmux, so an idle, locked machine
+# should sleep soon: 5 min instead of the packaged 15. Lock (180) and blank
+# (30) keep their defaults.
+$suspend_timeout = 300
+{{- end -}}

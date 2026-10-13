@@ -96,7 +96,7 @@ docs/
 
 # mason-air (M1 Air, Asahi) is an SSH client, not an agent host: no local
 # daemons, timers, resource slices or FW16-only units. Its shorter idle
-# policy (hypridle override + unit drop-in) exists only there.
+# policy (the hypr-DE hypridle knob file) exists only there.
 {{ if eq .system.hostname "mason-air" }}
 .config/systemd/user/ollama.service
 .config/systemd/user/pane-summarizer.service
@@ -117,9 +117,7 @@ scripts/thermal-tripwire
 .config/environment.d/gaming.conf
 .local/bin/steam-set-launch-options
 {{ else }}
-.config/hypr/hypridle.conf
-.config/systemd/user/hypridle.service.d
-.config/systemd/user/hypridle.service.d/**
+.config/hypr-de/hypridle.conf
 {{ end }}
 
 # Fresh-machine bootstrap (run from curl, stays in repo)
