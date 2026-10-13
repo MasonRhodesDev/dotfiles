@@ -85,6 +85,7 @@ docs/
 # Work app entries
 {{ if not .is_work }}
 .local/share/applications/slack.desktop
+.config/autostart/slack.desktop
 .local/share/applications/clickup-icon.png
 {{ end }}
 

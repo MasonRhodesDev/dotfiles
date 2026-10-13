@@ -1,0 +1,28 @@
+# Override system Chromium .desktop to force native Wayland
+# Fedora's launcher script ignores ~/.config/chromium-flags.conf
+# This ensures GUI launches use native Wayland, bypassing the
+# broken wl->xwl DnD bridge (Hyprland issue #9637)
+[Desktop Entry]
+Version=1.0
+Name=Chromium Web Browser
+Comment=Access the Internet
+GenericName=Web Browser
+Exec=env -u CHROME_DESKTOP /usr/bin/chromium-browser --ozone-platform-hint=auto %U
+Terminal=false
+X-MultipleArgs=false
+Type=Application
+Icon=chromium-browser
+Categories=Network;WebBrowser;
+StartupWMClass=Chromium-browser
+Keywords=web;browser;internet;
+Actions=new-window;new-private-window;
+X-Desktop-File-Install-Version=0.28
+
+[Desktop Action new-window]
+Name=Open a New Window
+Exec=env -u CHROME_DESKTOP /usr/bin/chromium-browser --ozone-platform-hint=auto %U
+
+[Desktop Action new-private-window]
+Name=Open a New Private Window
+Exec=env -u CHROME_DESKTOP /usr/bin/chromium-browser --ozone-platform-hint=auto --incognito %U
+MimeType=x-scheme-handler/mailto;x-scheme-handler/unknown;x-scheme-handler/about;application/pdf;application/rdf+xml;application/rss+xml;application/xhtml+xml;application/xhtml_xml;application/xml;image/gif;image/jpeg;image/png;image/webp;text/html;text/xml;x-scheme-handler/http;x-scheme-handler/https;
