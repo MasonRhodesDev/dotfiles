@@ -1,0 +1,243 @@
+#!/usr/bin/env python3
+"""Keep the GNOME login keyring's password in sync with the login password.
+
+pam_gnome_keyring unlocks the login keyring at login. When the login password
+changes outside PAM (JumpCloud, a remote reset) the keyring stays locked because
+it is still encrypted with the old password. Re-keying needs the old password,
+so this helper asks for exactly one thing: the previous keyring password. The
+new password comes from the login itself: /etc/greetd/.. pam_exec runs
+keyring-stash-authtok, which writes the just-verified login password to
+/run/keyring-resync/<uid> (tmpfs). This script consumes and deletes that stash
+on every graphical login and uses it only when the keyring is locked.
+
+  keyring-resync            default: wait up to 20 s for PAM to unlock the
+                            keyring; if still locked, prompt and re-key
+  keyring-resync --wait N   change the wait
+  keyring-resync --force    always open gnome-keyring's own two-field
+                            change-password prompt (first-time setup)
+  keyring-resync --selftest run the single-entry re-key flow against a
+                            throwaway collection ("resync-test", original
+                            password "a", stash "b"); never touches "login"
+
+No password is logged. The stash is read once and unlinked before anything else.
+"""
+import os
+import subprocess
+import sys
+import time
+
+import gi
+
+gi.require_version("Gio", "2.0")
+from gi.repository import Gio, GLib
+
+SECRETS = "org.freedesktop.secrets"
+SERVICE_PATH = "/org/freedesktop/secrets"
+LOGIN = "/org/freedesktop/secrets/collection/login"
+GUILT = "org.gnome.keyring.InternalUnsupportedGuiltRiddenInterface"
+STASH = f"/run/keyring-resync/{os.getuid()}"
+STASH_MAX_AGE = 15 * 60
+SELFTEST = False
+
+bus = Gio.bus_get_sync(Gio.BusType.SESSION)
+
+
+def call(path, iface, method, args, reply_type=None):
+    return bus.call_sync(SECRETS, path, iface, method, args,
+                         GLib.VariantType(reply_type) if reply_type else None,
+                         Gio.DBusCallFlags.NONE, -1, None)
+
+
+def locked(path=LOGIN):
+    r = call(path, "org.freedesktop.DBus.Properties", "Get",
+             GLib.Variant("(ss)", ("org.freedesktop.Secret.Collection", "Locked")), "(v)")
+    return r.unpack()[0]
+
+
+def notify(msg):
+    subprocess.run(["notify-send", "-a", "keyring-resync", "Login keyring", msg], check=False)
+
+
+def take_stash():
+    """Read and unlink the PAM stash. Returns the password or None."""
+    try:
+        st = os.stat(STASH)
+    except FileNotFoundError:
+        return None
+    try:
+        with open(STASH, "rb") as f:
+            data = f.read(4096)
+    finally:
+        try:
+            os.unlink(STASH)
+        except OSError:
+            pass
+    if time.time() - st.st_mtime > STASH_MAX_AGE or not data:
+        return None
+    return data.decode("utf-8", "surrogateescape")
+
+
+def plain_session():
+    out, path = call(SERVICE_PATH, "org.freedesktop.Secret.Service", "OpenSession",
+                     GLib.Variant("(sv)", ("plain", GLib.Variant("s", ""))), "(vo)").unpack()
+    return path
+
+
+def secret(session, password):
+    return (session, b"", password.encode("utf-8", "surrogateescape"), "text/plain")
+
+
+def change_master(collection, old, new):
+    session = plain_session()
+    call(SERVICE_PATH, GUILT, "ChangeWithMasterPassword",
+         GLib.Variant("(o(oayays)(oayays))", (collection, secret(session, old), secret(session, new))))
+
+
+def unlock_via_control_socket(password):
+    subprocess.run(["gnome-keyring-daemon", "--unlock"], input=password.encode(),
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+
+
+def ask_old_password(warning=None):
+    gi.require_version("Gcr", "4")  # lazy: only needed when a prompt is actually shown
+    from gi.repository import Gcr
+    prompt = Gcr.SystemPrompt.open(-1, None)
+    try:
+        prompt.set_title("Login keyring")
+        if SELFTEST:
+            prompt.set_message("SELF-TEST on a throwaway collection: type the letter a")
+        else:
+            prompt.set_message("Your login password changed. Enter the previous password "
+                               "to move the keyring to the new one.")
+        prompt.set_description("The keyring is still encrypted with the old login password. "
+                               "The new password was verified at login and is applied automatically.")
+        prompt.set_password_new(False)
+        if warning:
+            prompt.set_warning(warning)
+        return prompt.password(None)
+    finally:
+        prompt.close(None)
+
+
+def rekey_single_entry(collection, new_password, verbose=False):
+    """Prompt for the old password (max 3 tries) and re-key to new_password."""
+    warning = None
+    for _ in range(3):
+        try:
+            old = ask_old_password(warning)
+        except (ValueError, ImportError, GLib.Error) as e:
+            # no gcr-4 typelib or no prompter on this machine: use the daemon's own prompt
+            if verbose:
+                print(f"gcr prompt unavailable ({e}); falling back to two-field prompt")
+            return rekey_two_field_prompt(collection)
+        if old is None:
+            if verbose:
+                print("prompt: cancelled")
+            return False
+        try:
+            change_master(collection, old, new_password)
+            return True
+        except GLib.Error as e:
+            if verbose:
+                print(f"prompt returned {len(old)} chars; re-key refused: {e.message}")
+            warning = "That was not the previous keyring password."
+    return False
+
+
+def rekey_two_field_prompt(collection):
+    """gnome-keyring's own change-password prompt (old + new + confirm)."""
+    prompt_path = call(SERVICE_PATH, GUILT, "ChangeWithPrompt",
+                       GLib.Variant("(o)", (collection,)), "(o)").unpack()[0]
+    loop = GLib.MainLoop()
+    outcome = {}
+
+    def on_completed(conn, sender, path, iface, signal, params):
+        outcome["dismissed"] = params.unpack()[0]
+        loop.quit()
+
+    bus.signal_subscribe(SECRETS, "org.freedesktop.Secret.Prompt", "Completed", prompt_path,
+                         None, Gio.DBusSignalFlags.NONE, on_completed)
+    call(prompt_path, "org.freedesktop.Secret.Prompt", "Prompt", GLib.Variant("(s)", ("",)))
+    GLib.timeout_add_seconds(600, loop.quit)
+    loop.run()
+    return not outcome.get("dismissed", True)
+
+
+def selftest():
+    session = plain_session()
+    path = call(SERVICE_PATH, GUILT, "CreateWithMasterPassword",
+                GLib.Variant("(a{sv}(oayays))",
+                             ({"org.freedesktop.Secret.Collection.Label": GLib.Variant("s", "resync-test")},
+                              secret(session, "a"))), "(o)").unpack()[0]
+    print("created", path)
+    try:
+        call(SERVICE_PATH, "org.freedesktop.Secret.Service", "Lock", GLib.Variant("(ao)", ([path],)))
+        print("locked:", locked(path))
+        print("prompt opens now: type the letter a")
+        ok = rekey_single_entry(path, "b", verbose=True)
+        print("rekey_single_entry ->", ok)
+        try:
+            change_master(path, "b", "b")
+            print("verify: collection now accepts 'b' as its password")
+        except GLib.Error as e:
+            print("verify FAILED:", e)
+            ok = False
+        return ok
+    finally:
+        call(path, "org.freedesktop.Secret.Collection", "Delete", None)
+        print("deleted", path)
+
+
+def main():
+    argv = sys.argv[1:]
+    if "--selftest" in argv:
+        global SELFTEST
+        SELFTEST = True
+        sys.exit(0 if selftest() else 1)
+    if "--force" in argv:
+        take_stash()
+        ok = rekey_two_field_prompt(LOGIN)
+        notify("Keyring password updated." if ok else "Password change cancelled.")
+        sys.exit(0 if ok else 1)
+
+    wait = int(argv[argv.index("--wait") + 1]) if "--wait" in argv else 20
+    deadline = time.monotonic() + wait
+    while time.monotonic() < deadline:
+        try:
+            if not locked():
+                take_stash()
+                sys.exit(0)
+        except GLib.Error:
+            pass
+        time.sleep(2)
+    try:
+        if not locked():
+            take_stash()
+            sys.exit(0)
+    except GLib.Error as e:
+        # no secret service or no login collection on this machine: nothing to sync
+        take_stash()
+        print(f"no login keyring available ({e.message}); nothing to do")
+        sys.exit(0)
+
+    new_password = take_stash()
+    if new_password is None:
+        notify("Still locked after login and no verified password from PAM. "
+               "Enter the old and new password.")
+        ok = rekey_two_field_prompt(LOGIN)
+    else:
+        ok = rekey_single_entry(LOGIN, new_password)
+        if ok and locked():
+            unlock_via_control_socket(new_password)
+    del new_password
+    if not ok:
+        notify("Keyring still locked. Run keyring-resync --force to retry.")
+        sys.exit(1)
+    if locked():
+        notify("Password changed but keyring still locked. Check the keyring daemon log.")
+        sys.exit(1)
+    notify("Keyring password synced to your login password and unlocked.")
+
+
+if __name__ == "__main__":
+    main()

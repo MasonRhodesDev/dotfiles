@@ -1,0 +1,11 @@
+[Unit]
+Description=Re-key the login keyring if it is still locked after login
+After=graphical-session.target gnome-keyring-daemon.service
+PartOf=graphical-session.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/keyring-resync --wait 20
+
+[Install]
+WantedBy=graphical-session.target
