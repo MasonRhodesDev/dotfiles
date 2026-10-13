@@ -29,6 +29,16 @@ hl.window_rule({ name = "zoom-annotate",    match = { class = "^(zoom)$", title 
 -- Apple internal keyboard: no F13-24 row, and Asahi already maps Cmd to
 -- Super. Keep caps-as-shift, drop the Framework fkeys map.
 hl.config({ input = { kb_options = "caps:shift" } })
+
+-- Apple fn row (hid_apple fnmode=1, see .chezmoiscripts/58-asahi-fnkeys.sh):
+-- F1/F2 brightness, F7..F12 media and volume already land on the XF86 binds
+-- in main.lua. The four macOS-only legends get their nearest equivalent here.
+-- These are ADDITIONS: the SUPER chords from main.lua stay for an external
+-- keyboard, the fn row is just the primary way in on this machine.
+hl.bind("XF86LaunchA",      hl.dsp.workspace.toggle_special("magic"), { desc = "Workspaces: Toggle scratchpad (F3 Mission Control)" })
+hl.bind("XF86Search",       hl.dsp.exec_cmd("pkill fuzzel || uwsm app -- fuzzel --config /usr/share/hypr-de/fuzzel/fuzzel.ini"), { desc = "Apps: App launcher (F4 Spotlight)" })
+hl.bind("XF86AudioMicMute", hl.dsp.exec_cmd("voice-dictation toggle"), { desc = "System: Voice dictation (F5 mic)" })
+hl.bind("XF86Sleep",        hl.dsp.exec_cmd("swaync-client -d -sw"), { locked = true, desc = "System: Do Not Disturb (F6 moon)" })
 {{- else -}}
 hl.config({ input = { kb_options = "fkeys:basic_13-24,caps:shift" } })
 {{- end }}
