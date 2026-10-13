@@ -32,7 +32,15 @@ install_file() { # $1=dest $2=content $3=mode
     echo "  installed $d"
 }
 
-install_file /etc/systemd/system-sleep/brcmfmac-reload \
+# systemd 262 runs hooks from /usr/lib/systemd/system-sleep/ only: the hook
+# first shipped under /etc/systemd/system-sleep/ and never fired (observed
+# 2026-10-13, F6 suspend wedged the firmware with the driver still loaded).
+if [ -f /etc/systemd/system-sleep/brcmfmac-reload ]; then
+    sudo rm -f /etc/systemd/system-sleep/brcmfmac-reload
+    echo "  removed stale /etc/systemd/system-sleep/brcmfmac-reload"
+fi
+
+install_file /usr/lib/systemd/system-sleep/brcmfmac-reload \
 '#!/bin/bash
 # Installed by chezmoi (run_onchange_after_56-asahi-bcm4378-sleep.sh).
 # Unload the BCM4378 Wi-Fi and Bluetooth drivers before sleep and load them
