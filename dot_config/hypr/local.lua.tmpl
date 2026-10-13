@@ -39,6 +39,11 @@ hl.bind("XF86LaunchA",      hl.dsp.workspace.toggle_special("magic"), { desc = "
 hl.bind("XF86Search",       hl.dsp.exec_cmd("pkill fuzzel || uwsm app -- fuzzel --config /usr/share/hypr-de/fuzzel/fuzzel.ini"), { desc = "Apps: App launcher (F4 Spotlight)" })
 hl.bind("XF86AudioMicMute", hl.dsp.exec_cmd("voice-dictation toggle"), { desc = "System: Voice dictation (F5 mic)" })
 hl.bind("XF86Sleep",        hl.dsp.exec_cmd("swaync-client -d -sw"), { locked = true, desc = "System: Do Not Disturb (F6 moon)" })
+-- Keyboard backlight (/sys/class/leds/kbd_backlight, 0..255). The M1 Air has
+-- no dedicated keys for it (macOS puts it in Control Center), so SUPER + the
+-- screen brightness keys drive it: Cmd+F1 down, Cmd+F2 up. Boots at 0.
+hl.bind("SUPER + XF86MonBrightnessDown", hl.dsp.exec_cmd("brightnessctl -q -d kbd_backlight set 10%- && notify-send -t 1500 -a osd-brightness -h string:x-canonical-private-synchronous:kbd -h int:value:$(brightnessctl -d kbd_backlight -m | cut -d, -f4 | tr -d %) 'Keyboard' ''"), { locked = true, repeating = true, desc = "Media: Keyboard backlight down (Cmd+F1)" })
+hl.bind("SUPER + XF86MonBrightnessUp",   hl.dsp.exec_cmd("brightnessctl -q -d kbd_backlight set +10% && notify-send -t 1500 -a osd-brightness -h string:x-canonical-private-synchronous:kbd -h int:value:$(brightnessctl -d kbd_backlight -m | cut -d, -f4 | tr -d %) 'Keyboard' ''"), { locked = true, repeating = true, desc = "Media: Keyboard backlight up (Cmd+F2)" })
 {{- else -}}
 hl.config({ input = { kb_options = "fkeys:basic_13-24,caps:shift" } })
 {{- end }}
