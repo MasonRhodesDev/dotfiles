@@ -96,13 +96,13 @@ optional = true
 verify = "fc-list | grep -qi harmonyos"
 
 [shell_tools]
-description = "Shell prompt: oh-my-posh"
+description = "Interactive bash, everything ~/.bashrc.d hooks into: oh-my-posh (prompt), ble.sh (line editor: autosuggestions, highlighting, vi mode; nightly release installed to ~/.local/share/blesh), atuin (history), zoxide (cd), fzf (key bindings), bash-completion (tab completion). Each hook is guarded, so a missing tool silently degrades to plain bash instead of failing. oh-my-posh and ble.sh are not packaged on Arch ARM: oh-my-posh via its install.sh into ~/.local/bin (needs unzip), ble.sh via its release tarball's --install."
 profile = "common"
 priority = 3
 version = "latest"
 github = "https://github.com/JanDeDobbeleer/oh-my-posh"
 website = "https://ohmyposh.dev"
-verify = "command -v oh-my-posh"
+verify = "command -v oh-my-posh && command -v atuin && command -v zoxide && command -v fzf && [ -f ~/.local/share/blesh/ble.sh ] && [ -f /usr/share/bash-completion/bash_completion ]"
 
 [node_tooling]
 description = "Node.js toolchain: fnm (version manager) and bun (runtime/bundler)"
