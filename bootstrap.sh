@@ -17,9 +17,10 @@ warn() { printf '\033[1;33m!! %s\033[0m\n' "$*"; }
 # --- distro detection -------------------------------------------------------
 . /etc/os-release
 case "$ID" in
-    arch)   PKG_INSTALL=(sudo pacman -S --needed --noconfirm) ;;
+    # Asahi Alarm (Arch Linux ARM on Apple Silicon) reports ID=archarm.
+    arch|archarm) PKG_INSTALL=(sudo pacman -S --needed --noconfirm) ;;
     fedora) PKG_INSTALL=(sudo dnf install -y) ;;
-    *) echo "Unsupported distro: $ID (arch/fedora only)" >&2; exit 1 ;;
+    *) echo "Unsupported distro: $ID (arch/archarm/fedora only)" >&2; exit 1 ;;
 esac
 
 # --- prerequisites ----------------------------------------------------------

@@ -14,7 +14,7 @@ echo "Installing jq..."
 
 {{- if eq .chezmoi.osRelease.id "fedora" }}
 sudo dnf install -y jq
-{{- else if eq .chezmoi.osRelease.id "arch" }}
+{{- else if or (eq .chezmoi.osRelease.id "arch") (eq .chezmoi.osRelease.id "archarm") }}
 sudo pacman -S --noconfirm jq
 {{- else }}
 echo "Unsupported distribution: {{ .chezmoi.osRelease.id }}"

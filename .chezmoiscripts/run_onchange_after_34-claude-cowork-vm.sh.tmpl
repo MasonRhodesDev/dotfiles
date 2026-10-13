@@ -13,6 +13,14 @@
 set -euo pipefail
 
 CONF=/etc/tmpfiles.d/claude-cowork-compat.conf
+{{/* Cowork's VM backend is x86-only: qemu-system-x86, edk2-ovmf and the
+     OVMF firmware images have no aarch64 counterpart, so on an ARM machine
+     this script could only ever fail with "target not found: edk2-ovmf". */}}
+{{ if ne .chezmoi.arch "amd64" -}}
+echo "Cowork VM backend is x86-only; nothing to do on {{ .chezmoi.arch }}."
+exit 0
+{{ end -}}
+
 {{ if .is_work -}}
 # --- Work machine: no Cowork BAA — remove the VM backend shims. ---
 if [ -e "$CONF" ] || [ -L /usr/libexec/virtiofsd ] \

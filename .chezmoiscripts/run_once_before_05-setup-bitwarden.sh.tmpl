@@ -16,7 +16,7 @@ fi
 # Install rbw if not present
 if ! command -v rbw &> /dev/null; then
     echo "📦 Installing rbw..."
-{{- if eq .chezmoi.osRelease.id "arch" }}
+{{- if or (eq .chezmoi.osRelease.id "arch") (eq .chezmoi.osRelease.id "archarm") }}
     if sudo pacman -S --noconfirm rbw 2>/dev/null; then
         echo "✅ Installed via pacman"
     else
