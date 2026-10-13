@@ -186,6 +186,9 @@ bootstrap.sh
 # would only throttle the one thing the box is for.
 .config/systemd
 .config/systemd/**
+.local/bin/keyring-resync
+.local/share/dbus-1
+.local/share/dbus-1/**
 .bashrc.d/dev-slice.bashrc
 # Shell modules that assume a VT, a compositor or a GUI terminal. ssh.bashrc
 # would spawn one ssh-agent per shell here (no systemd agent socket in an SSH
