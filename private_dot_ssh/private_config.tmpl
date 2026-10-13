@@ -25,6 +25,17 @@ Host *
     AddKeysToAgent yes
     IdentityFile ~/.ssh/id_ed25519
 {{ else -}}
+{{ if eq .system.hostname "mason-air" -}}
+# The dev box: where work runs from this thin client (see ~/.claude/CLAUDE.md).
+# herdr reaches it through its own saved machine profile, not this alias.
+Host dev
+    HostName 192.168.1.22
+    User mason
+    ConnectTimeout 10
+    ServerAliveInterval 60
+    ServerAliveCountMax 3
+
+{{ end -}}
 # SSM proxy for EC2 instances (used by DBeaver SSH tunnel)
 Host i-* mi-*
     ProxyCommand /home/mason/bin/ssm-proxy %h %p
