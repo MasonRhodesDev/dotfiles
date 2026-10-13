@@ -12,6 +12,14 @@
 - Enforcement: the `PreToolUse` hook at `~/.claude/hooks/no-dashes.sh` denies file writes containing the glyphs, and the `Stop` hook at `~/.claude/hooks/no-dashes-chat.py` rejects chat replies containing them. Auto-memory files under `~/.claude/projects/` are exempt because the harness mandates the dash in `MEMORY.md` index lines.
 - A dash in text attributed to Mason is a contamination marker of LLM output, not his voice (0.7% of 679 typed prompts). Critique it; never emulate it. See `~/repos/style-fingerprint/FINGERPRINT.md`.
 
+{{ if eq .system.hostname "mason-air" -}}
+## This machine (mason-air) is a thin client
+- mason-air is an M1 MacBook Air on battery. The dev box (herdr machine `dev`, SSH `mason@192.168.1.22`, repos under `~/repos`) is where work runs. Default to opening tasks there, not here.
+- Anything that builds, tests, installs tooling, runs a long agent turn, or edits a repo that exists on dev belongs on dev. Hand it to a Claude session in herdr: `herdr --machine dev tab create --workspace <id> --cwd '~/repos/<repo>' --label <name> --no-focus`, then `herdr --machine dev agent start <name> --kind claude --pane <pane_id>`, then `herdr --machine dev agent prompt <name> "<self-contained brief>"`. Discover workspace ids with `herdr --machine dev workspace list`; put a repo task in that repo's workspace when one exists, otherwise the `repos` workspace. Run `herdr --skill` first if the herdr skill is not in context.
+- A fresh agent on dev stops at Claude Code's folder trust prompt. Say so and let Mason accept it unless he has already authorised accepting on his behalf in this conversation.
+- Stays local: chezmoi source edits and applies for this machine, inspection of this laptop's hardware, power, Hyprland session and systemd units, and short reactive answers. Do not install daemons, timers, language toolchains or build dependencies here.
+- Prefer `ssh dev` for one-off remote commands and herdr agents for anything with more than a few steps. Keep local Claude turns short so the machine can suspend.
+{{ end -}}
 ## References
 - Mermaid/PDF generation: see `~/.claude/references/mermaid-pdf.md`
 - Hyprland / hyprwm ecosystem (C++ style guide, conventions, best practices): see `~/.claude/references/hyprland/`, starting with `README.md`. Read before any C++ work touching hyprtoolkit, hyprlang, hyprutils, or Hyprland plugins.
