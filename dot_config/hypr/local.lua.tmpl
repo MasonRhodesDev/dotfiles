@@ -76,7 +76,9 @@ hl.on("hyprland.start", function()
     -- Slack starts from ~/.config/autostart/slack.desktop instead: that path is
     -- systemd-ordered after sni-watcher, exec-once is not (tray icon race, 2026-09-29).
 {{ end }}
-{{ if not .is_work }}
+{{/* Neither Steam nor Discord has an aarch64 build; on mason-air these
+     only produced "Command not found" toasts at every login. */}}
+{{ if and (not .is_work) (not $air) }}
     hl.exec_cmd("uwsm app -- steam -cef-force-glx")
     hl.exec_cmd("uwsm app -- discord")
 {{ end }}
