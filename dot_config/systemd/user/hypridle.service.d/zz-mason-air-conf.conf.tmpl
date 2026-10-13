@@ -1,0 +1,9 @@
+{{- if eq .system.hostname "mason-air" -}}
+# hypr-DE's own drop-in pins hypridle to /usr/share/hypr-de/hypr/hypridle.conf.
+# On mason-air run the chezmoi-managed copy instead (shorter idle suspend).
+# Named zz-* so it sorts after the package drop-in (hypr-de.conf) and wins.
+# Managed by chezmoi; see ~/.config/hypr/hypridle.conf.
+[Service]
+ExecStart=
+ExecStart=/usr/bin/hypridle -c %h/.config/hypr/hypridle.conf
+{{- end -}}

@@ -104,6 +104,13 @@ github = "https://github.com/JanDeDobbeleer/oh-my-posh"
 website = "https://ohmyposh.dev"
 verify = "command -v oh-my-posh && command -v atuin && command -v zoxide && command -v fzf && [ -f ~/.local/share/blesh/ble.sh ] && [ -f /usr/share/bash-completion/bash_completion ]"
 
+[iw]
+description = "iw: per-interface Wi-Fi control. Used by the AC-state power save toggler that run_onchange_after_50-nm-wifi-powersave.sh installs on Apple silicon laptops (mason-air). Arch ARM does not pull it in by default."
+profile = "common"
+priority = 3
+version = "latest"
+verify = "command -v iw"
+
 [node_tooling]
 description = "Node.js toolchain: fnm (version manager) and bun (runtime/bundler)"
 profile = "common"

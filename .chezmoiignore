@@ -94,6 +94,34 @@ docs/
 .config/hypr/bp-monitors.lua
 {{ end }}
 
+# mason-air (M1 Air, Asahi) is an SSH client, not an agent host: no local
+# daemons, timers, resource slices or FW16-only units. Its shorter idle
+# policy (hypridle override + unit drop-in) exists only there.
+{{ if eq .system.hostname "mason-air" }}
+.config/systemd/user/ollama.service
+.config/systemd/user/pane-summarizer.service
+.config/systemd/user/mcp-hub.service
+.config/systemd/user/terminal-header.service
+.config/systemd/user/thermal-tripwire.service
+.config/systemd/user/claude-desktop-update.service
+.config/systemd/user/claude-desktop-update.timer
+.config/systemd/user/prune-cargo-targets.service
+.config/systemd/user/prune-cargo-targets.timer
+.config/systemd/user/buzz-appimage-patch.path
+.config/systemd/user/buzz-appimage-patch.service
+.config/systemd/user/dev.slice
+scripts/thermal-tripwire
+# No Steam on ARM: the same gaming set the work gate removes above.
+.config/hypr/scripts/bp-game-focus.py
+.config/hypr/scripts/steam-clean-shutdown.sh
+.config/environment.d/gaming.conf
+.local/bin/steam-set-launch-options
+{{ else }}
+.config/hypr/hypridle.conf
+.config/systemd/user/hypridle.service.d
+.config/systemd/user/hypridle.service.d/**
+{{ end }}
+
 # Fresh-machine bootstrap (run from curl, stays in repo)
 bootstrap.sh
 .config/gtk-3.0/settings.ini
