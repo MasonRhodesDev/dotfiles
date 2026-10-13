@@ -1,7 +1,8 @@
 #!/bin/bash
 # Claude Code owns ~/.claude/settings.json and rewrites it constantly, so this
 # merges only the keys below into the live file and leaves everything else
-# (permissions, hooks, autoMode, plugins) machine-local and out of this repo.
+# (permissions, hooks, autoMode, plugins, and the model, which /model and
+# fast mode rewrite) machine-local and out of this repo.
 set -euo pipefail
 
 live=$(cat)
@@ -11,7 +12,6 @@ jq --ascii-output --indent 2 '
   {"$schema": "https://json.schemastore.org/claude-code-settings.json"}
   + .
   + {
-      model: "opus[1m]",
       advisorModel: "fable",
       fallbackModel: ["sonnet"],
       effortLevel: "medium",

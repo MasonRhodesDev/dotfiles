@@ -47,6 +47,9 @@ esac
 if [ "$apple" = 1 ]; then
     # ---- Apple silicon: power save follows the AC state -------------------
     changed=0
+    APPLE_CONF=/etc/NetworkManager/conf.d/wifi-powersave.conf
+    # earlier revisions wrote the enable policy under the "off" file name
+    if [ -f "$CONF" ]; then sudo rm -f "$CONF"; changed=1; fi
 
     # iw does the per-interface toggle; Arch ARM does not pull it in by default.
     if ! command -v iw >/dev/null 2>&1 && command -v pacman >/dev/null 2>&1; then
@@ -60,7 +63,7 @@ if [ "$apple" = 1 ]; then
 # Managed by chezmoi: .chezmoiscripts/run_onchange_after_50-nm-wifi-powersave.sh
 wifi.powersave = 3
 EOF
-    install_file "$CONF" "$DESIRED" && changed=1
+    install_file "$APPLE_CONF" "$DESIRED" && changed=1
 
     install_file /usr/local/sbin/wifi-powersave-by-ac \
 '#!/bin/bash
