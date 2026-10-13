@@ -32,7 +32,6 @@ if ! lspci -nn 2>/dev/null | grep -qi 'BCM4378'; then
     echo "No BCM4378 adapter found, skipping"; exit 0
 fi
 
-changed=0
 install_file() { # $1=dest $2=content $3=mode
     local d="$1" m="${3:-0644}"
     if [ -f "$d" ] && [ "$(cat "$d")" = "$2" ]; then return 0; fi
@@ -40,7 +39,6 @@ install_file() { # $1=dest $2=content $3=mode
     printf '%s\n' "$2" | sudo tee "$d" >/dev/null
     sudo chmod "$m" "$d"
     echo "  installed $d"
-    changed=1
 }
 
 # systemd 262 runs hooks from /usr/lib/systemd/system-sleep/ only: the hook
@@ -134,7 +132,10 @@ window_count=0
 log "watching kernel log for brcmfmac wedge"
 journalctl -k -f -n 0 -o cat | grep --line-buffered -E "$pattern" | while read -r line; do
   now=$(date +%s)
-  if systemctl is-active --quiet systemd-suspend.service; then
+  # systemd-suspend.service is a oneshot and reads as "activating" while
+  # the hooks run, so gate on sleep.target: reached before the pre hook,
+  # stopped after the post hook finishes.
+  if systemctl is-active --quiet sleep.target; then
     continue   # sleep hook owns the driver right now
   fi
   lsmod | grep -q '^brcmfmac ' || continue
@@ -156,6 +157,8 @@ journalctl -k -f -n 0 -o cat | grep --line-buffered -E "$pattern" | while read -
 done
 EOF
 )
+watch_changed=0
+if ! [ -f /usr/local/sbin/brcmfmac-watch ] || [ "$(cat /usr/local/sbin/brcmfmac-watch)" != "$watch_body" ]; then watch_changed=1; fi
 install_file /usr/local/sbin/brcmfmac-watch "$watch_body" 0755
 
 unit_body=$(cat <<'EOF'
@@ -179,7 +182,7 @@ unit=/etc/systemd/system/brcmfmac-watch.service
 unit_changed=0
 if ! [ -f "$unit" ] || [ "$(cat "$unit")" != "$unit_body" ]; then unit_changed=1; fi
 install_file "$unit" "$unit_body" 0644
-if [ "$unit_changed" = 1 ]; then
+if [ "$unit_changed" = 1 ] || [ "$watch_changed" = 1 ]; then
     sudo systemctl daemon-reload
     sudo systemctl enable brcmfmac-watch.service >/dev/null 2>&1
     sudo systemctl restart brcmfmac-watch.service
