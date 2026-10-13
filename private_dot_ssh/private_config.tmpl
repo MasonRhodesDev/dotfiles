@@ -26,6 +26,12 @@ Host *
     IdentityFile ~/.ssh/id_ed25519
 {{ else -}}
 {{ if eq .system.hostname "mason-air" -}}
+# Away from home the tailnet is up (chezmoi script 60-tailscale) and the LAN
+# address is unreachable, so talk to dev over its tailscale IP. At home the
+# tailnet is down, this Match fails, and the LAN HostName below applies.
+Match host dev exec "tailscale status --json 2>/dev/null | grep -q '\"BackendState\": \"Running\"'"
+    HostName 100.77.209.8
+
 # The dev box: where work runs from this thin client (see ~/.claude/CLAUDE.md).
 # herdr reaches it through its own saved machine profile, not this alias.
 Host dev
