@@ -1,0 +1,20 @@
+# hyprstate power policy: base state -> profile (see POWER_SPEC.md in the
+# hyprstate repo). Profiles: power-saver | balanced | performance.
+# Manual override: `hyprstate power set <profile>` or click the waybar widget;
+# overrides auto-clear when the AC state changes.
+# battery* keys are inert on machines without a battery.
+#@ docked-ac = balanced
+#@ ac = balanced
+#@ battery = power-saver
+#@ battery-low = power-saver
+#@ battery-low-percent = 15
+{{- if eq .system.hostname "mason-air" }}
+# mason-air: no lid grace. hyprstate's lid route always holds a 30 s
+# countdown and, as of 2.7.4, reads hypr-DE's "Inhibited sleep" hypridle log
+# line as a live idle inhibitor, so every lid close lands in DEFERRED and
+# the laptop never sleeps. Declaring the lid absent drops hyprstate's
+# handle-lid-switch inhibitor and lets logind suspend on close immediately
+# (hypridle's before_sleep_cmd still locks first). Revisit once hyprstate
+# grows a lid-grace key.
+#@ lid = absent
+{{- end }}
