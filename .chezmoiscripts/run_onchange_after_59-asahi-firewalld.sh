@@ -7,8 +7,8 @@
 #   * default zone "public" (untrusted): inbound dropped except dhcpv6-client.
 #     ssh is removed from the stock public zone, so the laptop is not
 #     reachable on cafe / office Wi-Fi. Every new network lands here.
-#   * trusted home networks (TRUSTED below) go in the "home" zone, which
-#     keeps ssh, mdns and samba-client open. Zone is pinned on the NM
+#   * home networks (TRUSTED below) go in the "trusted" zone, which accepts
+#     all inbound traffic. Zone is pinned on the NM
 #     connection profile (connection.zone); NM owns interface-to-zone
 #     mapping, so firewall-cmd --change-interface is deliberately not used.
 # Outbound is never filtered, so the SSH path to dev is unaffected.
@@ -66,12 +66,12 @@ fi
 
 [ "$reload" = 1 ] && fc --reload
 
-# Pin a zone on every Wi-Fi profile: home for TRUSTED, public otherwise.
+# Pin a zone on every Wi-Fi profile: trusted for TRUSTED, public otherwise.
 changed=0
 while IFS=: read -r name type; do
     [ "$type" = "802-11-wireless" ] || continue
     want=public
-    for t in "${TRUSTED[@]}"; do [ "$name" = "$t" ] && want=home; done
+    for t in "${TRUSTED[@]}"; do [ "$name" = "$t" ] && want=trusted; done
     have=$(nmcli -g connection.zone connection show "$name" 2>/dev/null || true)
     if [ "$have" != "$want" ]; then
         sudo nmcli connection modify "$name" connection.zone "$want"
