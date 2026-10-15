@@ -38,7 +38,9 @@ hl.config({ input = { kb_options = "caps:shift" } })
 hl.bind("XF86LaunchA",      hl.dsp.exec_cmd("/usr/bin/hypr-de-snip"), { desc = "Screenshots: Region screenshot + annotate (F3 Mission Control)" })
 hl.bind("SHIFT + XF86LaunchA", hl.dsp.exec_cmd("/usr/bin/hypr-de-record"), { desc = "Screenshots: Screen recording (Shift+F3)" })
 hl.bind("XF86Search",       hl.dsp.exec_cmd("pkill fuzzel || uwsm app -- fuzzel --config /usr/share/hypr-de/fuzzel/fuzzel.ini"), { desc = "Apps: App launcher (F4 Spotlight)" })
-hl.bind("XF86AudioMicMute", hl.dsp.exec_cmd("voice-dictation toggle"), { desc = "System: Voice dictation (F5 mic)" })
+-- Push to talk: hold the mic key to record, release to transcribe and type.
+hl.bind("XF86AudioMicMute", hl.dsp.exec_cmd("voice-dictation start"), { desc = "System: Voice dictation push to talk, hold (F5 mic)" })
+hl.bind("XF86AudioMicMute", hl.dsp.exec_cmd("voice-dictation confirm"), { release = true, desc = "System: Voice dictation push to talk, release (F5 mic)" })
 hl.bind("XF86Sleep",        hl.dsp.exec_cmd("swaync-client -d -sw"), { locked = true, desc = "System: Do Not Disturb (F6 moon)" })
 -- Keyboard backlight (/sys/class/leds/kbd_backlight, 0..255). The M1 Air has
 -- no dedicated keys for it (macOS puts it in Control Center), so SUPER + the
