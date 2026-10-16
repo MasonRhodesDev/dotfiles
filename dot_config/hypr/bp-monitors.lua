@@ -14,6 +14,15 @@
 -- profiles/.active.lua), so hl.monitor's merge-by-name keeps position, scale
 -- and transform and re-enabling is just disabled=false.
 --
+-- hyprstate applies a profile with `hyprctl eval dofile(.active.lua)`, not a
+-- reload, and rendered profiles state disabled=false on every enabled output.
+-- Re-adding a rule moves it to the end of Hyprland's list, and the last
+-- matching rule wins, so a profile applied mid-override that names a monitor
+-- we disabled turns it back on. Normally that can't happen: hyprstate selects
+-- on the enabled monitors, so during Big Picture it picks ultrawide-only,
+-- which doesn't name the others. If it does happen (a selection racing the
+-- disable), monitor.added below re-disables the monitor.
+--
 -- `hyprctl reload` rebuilds the Lua state and clears the monitor rules, so
 -- state here dies on reload; the resync at the bottom re-applies the override
 -- if Big Picture is still open.
@@ -144,7 +153,12 @@ local function disable_others()
     for _, m in ipairs(targets) do
         local rule = rule_for(m, names)
         hl.monitor({ output = rule, disabled = true })
-        disabled[#disabled + 1] = { rule = rule, key = mon_key(m) }
+        -- A re-disable (a profile turned it back on) must not record it twice.
+        local known = false
+        for _, d in ipairs(disabled) do
+            if d.rule == rule then known = true end
+        end
+        if not known then disabled[#disabled + 1] = { rule = rule, key = mon_key(m) } end
         log("disabled " .. mon_key(m) .. " via " .. rule)
     end
     active = true
@@ -205,9 +219,9 @@ hl.on("window.open",    function() schedule_evaluate() end)
 hl.on("window.title",   function() schedule_evaluate() end)
 hl.on("window.close",   function() schedule_evaluate() end)
 hl.on("window.destroy", function() schedule_evaluate() end)
--- Not gated on `active`: after a reload the fresh profile rules re-enable the
--- monitors WE had disabled, and that monitor.added is what tells us to disable
--- them again. It is also how a monitor woken/plugged in during Big Picture, or
+-- Not gated on `active`: after a reload, or a profile eval that names them,
+-- the fresh profile rules re-enable the monitors WE had disabled, and that
+-- monitor.added is what tells us to disable them again. It is also how a monitor woken/plugged in during Big Picture, or
 -- the ultrawide dropping out, is noticed. With no Big Picture it is a no-op.
 hl.on("monitor.added",   function() schedule_evaluate() end)
 hl.on("monitor.removed", function() schedule_evaluate() end)
