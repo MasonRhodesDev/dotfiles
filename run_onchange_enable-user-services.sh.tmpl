@@ -8,6 +8,8 @@
 # browser-guard.path:    {{ include "dot_config/systemd/user/browser-default-guard.path" | sha256sum }}
 # browser-guard.service: {{ include "dot_config/systemd/user/browser-default-guard.service" | sha256sum }}
 # browser-guard.bin:     {{ include "dot_local/bin/executable_browser-default-guard" | sha256sum }}
+# lab-notify:            {{ include "dot_config/systemd/user/lab-notify.service" | sha256sum }}
+# lab-notify.bin:        {{ include "dot_local/bin/executable_lab-notify" | sha256sum }}
 # hypridle knobs:        {{ include "dot_config/hypr-de/hypridle.conf.tmpl" | sha256sum }}
 # keyring-resync:        {{ include "dot_config/systemd/user/keyring-resync.service" | sha256sum }}
 # keyring-resync.bin:    {{ include "dot_local/bin/executable_keyring-resync" | sha256sum }}
@@ -39,3 +41,10 @@ if [ -f "$HOME/.config/hypr-de/hypridle.conf" ]; then
     echo "→ hypridle (per-host knobs)"
     systemctl --user try-restart hypridle.service || true
 fi
+
+# Home lab Notify hub -> swaync popups with buttons and inline reply. Needs
+# LAB_NOTIFY_DEVICE_TOKEN in the keyring's session-env bucket (see
+# ~/.local/bin/lab-notify); without it the receiver exits and stays down.
+echo "→ lab-notify"
+systemctl --user enable lab-notify 2>/dev/null || true
+systemctl --user restart lab-notify || true
