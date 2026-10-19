@@ -86,8 +86,11 @@ local function sh_quote(s)
     return "'" .. (tostring(s):gsub("'", "'\\''")) .. "'"
 end
 
+-- The "--" matters: logger parses an argument that begins with a dash as an
+-- option and rejects the whole line, so every "-> STATE" transition message
+-- was silently dropped until 2026-10-19. The pcall hid the failure.
 local function log(msg)
-    pcall(hl.exec_cmd, "logger -t hypr-bp-monitors " .. sh_quote(msg))
+    pcall(hl.exec_cmd, "logger -t hypr-bp-monitors -- " .. sh_quote(msg))
 end
 
 local function has_prefix(s, p)
@@ -403,7 +406,21 @@ hl.on("monitor.layout_changed", function() schedule_evaluate() end)
 
 -- bp-focus pokes this when a session starts: no window or monitor event fires
 -- at that moment, and BP's exit criterion has just been met.
-BP_MONITORS = { schedule_evaluate = schedule_evaluate }
+local function status()
+    local snap = {}
+    for _, c in ipairs(snapshot) do snap[#snap + 1] = c.name end
+    local dis = {}
+    for _, d in ipairs(disabled) do dis[#dis + 1] = d.key end
+    return ("state=%s pending=%s kept=%s snapshot=[%s] disabled=[%s] bp=%s streaming=%s"):format(
+        state, tostring(pending), kept and kept.name or "nil",
+        table.concat(snap, ","), table.concat(dis, ","),
+        tostring(bp_present()), tostring(streaming()))
+end
+
+-- schedule_evaluate: bp-focus pokes it when a session starts, since no window
+-- or monitor event fires then. status: read the locked state without guessing
+-- from monitor shape; surface it with `hyprctl eval` into a file.
+BP_MONITORS = { schedule_evaluate = schedule_evaluate, status = status }
 
 local ok, err = pcall(evaluate)
 if not ok then log("error at load: " .. tostring(err)) end
