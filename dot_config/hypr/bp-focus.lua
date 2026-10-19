@@ -35,8 +35,14 @@ local BP_TITLE = "Steam Big Picture Mode"
 -- moments the answer matters: a game window appearing, and a special
 -- workspace appearing.
 local STREAM_LOG = os.getenv("HOME") .. "/.local/share/Steam/logs/streaming_log.txt"
-local STREAM_TAIL = 8192 -- bytes of log tail to scan
+local STREAM_TAIL = 8192 -- bytes scanned by the freshness fallback
 local STREAM_FRESH = 30  -- s; a marker this recent means a session is live
+-- Steam brackets every session with these, perfectly paired and alternating
+-- (verified across six sessions in one log). Whichever came last IS the
+-- current state, so this needs no freshness window at all.
+local STREAM_WINDOW = 524288 -- bytes scanned for the last boundary marker
+local STREAM_START  = ">>> Starting desktop stream"
+local STREAM_STOP   = ">>> Stopped desktop stream"
 
 local FOCUS_GRACE = 300  -- ms; let a game map and self-fullscreen first
 local FOCUS_RETRY = 1200 -- ms; second attempt, for splash -> main window chains
@@ -118,10 +124,9 @@ local function is_game(w)
     return under_steam_launch(w.pid)
 end
 
--- Latest marker in Steam's streaming log, as a unix time, or nil. The
--- host-side session heartbeats every ~5s while a client is connected, so a
--- recent marker is a live session and no explicit "session ended" line is
--- needed (there isn't a reliable one).
+-- Latest START-of-session marker in Steam's streaming log, as a unix time, or
+-- nil. Only a fallback now: see streaming() for why a freshness window cannot
+-- carry this on its own.
 local function stream_last_seen()
     local f = io.open(STREAM_LOG, "r")
     if not f then return nil end
@@ -150,7 +155,44 @@ local function stream_last_seen()
     return latest
 end
 
+-- True if the last stream boundary in the log was a start, nil if the scanned
+-- window held no boundary at all.
+local function stream_boundary_says_live()
+    local f = io.open(STREAM_LOG, "r")
+    if not f then return nil end
+    local size = f:seek("end")
+    f:seek("set", math.max(0, size - STREAM_WINDOW))
+    local text = f:read("*a") or ""
+    f:close()
+
+    local live, pos = nil, 1
+    while true do
+        local a = text:find(STREAM_START, pos, true)
+        local b = text:find(STREAM_STOP, pos, true)
+        if not a and not b then break end
+        if a and (not b or a < b) then
+            live, pos = true, a + #STREAM_START
+        else
+            live, pos = false, b + #STREAM_STOP
+        end
+    end
+    return live
+end
+
+-- A freshness window was tried first and does NOT work, because nothing in this
+-- log is periodic. The original markers (Connected UDP@, Maximum capture:,
+-- SynchronizeClientState) all fire at session start and are then buried by
+-- per-frame chatter within seconds. Measured 2026-10-19 during a live stream:
+-- zero marker hits in the last 8KB, with the newest marker 426 lines back, so
+-- this reported "not streaming" while a stream was running and bp-monitors
+-- therefore kept the wrong monitor twice. `dynamicbitrate` is no substitute
+-- either: 112 hits during a struggling stream, 0 during a healthy one.
 local function streaming()
+    local live = stream_boundary_says_live()
+    if live ~= nil then return live end
+    -- No boundary in the scanned window: a session longer than STREAM_WINDOW of
+    -- log, or a log that just rotated. The freshness test at least catches the
+    -- opening seconds of a session.
     local seen = stream_last_seen()
     return seen ~= nil and (os.time() - seen) < STREAM_FRESH
 end
