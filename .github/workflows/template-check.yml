@@ -29,7 +29,8 @@ jobs:
         run: |
           export PATH="$HOME/.local/bin:$PATH"
           chezmoi init --source "$PWD" \
-            --promptBool "Is this a work machine"=${{ matrix.profile }}
+            --promptBool "Is this a work machine"=${{ matrix.profile }} \
+            --promptBool "Is this a headless machine (SSH only, no desktop)"=false
           echo "### Config rendered (is_work=${{ matrix.profile }})" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Render all source templates
