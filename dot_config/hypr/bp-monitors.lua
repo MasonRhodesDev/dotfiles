@@ -121,6 +121,7 @@ local closing   = nil  -- address of the Big Picture window we asked to close
 local held      = false -- daemon is restarting Steam; BP must not release
 local held_logged = false
 local releasing = nil  -- { homes = {...}, keys = {...} } until every monitor is back
+local desk      = nil  -- { rules = { [rule] = "{ output = ... }" }, ws = { [id] = selector } } from the profile at snapshot time
 local eval_gen  = 0
 
 local sh_quote = C.sh_quote
@@ -171,17 +172,37 @@ local t_state   = timer() -- pending switch, close wait, hold: one per state
 local t_release = timer()
 local t_safety  = timer()
 
--- The rule names the active profile uses ("desc:Dell Inc. DELL S2721QS", ...).
-local function profile_rule_names()
-    local names = {}
+-- The active profile's monitor rules, verbatim, keyed by their output
+-- selector ("desc:Dell Inc. DELL S2721QS", ...), plus its workspace rules.
+-- Taken at snapshot time, when the active profile is the desk layout, so a
+-- release can put every monitor back exactly where that profile has it in
+-- one pass. hyprstate then finds the desk set already in its own layout and
+-- its re-apply is a no-op; before this, the kept monitor sat at the stream
+-- profile's 0,0 landscape while the others came back on top of it, and
+-- Hyprland warned about the overlap until hyprstate caught up.
+local function read_profile()
+    local rules, order, ws = {}, {}, {}
     local f = io.open(C.CONFIG_BASE .. "/hypr/profiles/.active.lua", "r")
-    if not f then return names end
+    if not f then return { rules = rules, order = order, ws = ws } end
     local text = f:read("*a")
     f:close()
-    for out in text:gmatch('hl%.monitor%(%s*{[^}]-output%s*=%s*"([^"]+)"') do
-        names[#names + 1] = out
+    for tbl in text:gmatch('hl%.monitor%(%s*(%b{})%s*%)') do
+        local out = tbl:match('output%s*=%s*"([^"]+)"')
+        if out then
+            rules[out] = tbl
+            order[#order + 1] = out
+        end
     end
-    return names
+    for tbl in text:gmatch('hl%.workspace_rule%(%s*(%b{})%s*%)') do
+        local id = tonumber(tbl:match('workspace%s*=%s*"(%d+)"'))
+        local mon = tbl:match('monitor%s*=%s*"([^"]+)"')
+        if id and mon then ws[id] = mon end
+    end
+    return { rules = rules, order = order, ws = ws }
+end
+
+local function profile_rule_names()
+    return (desk or read_profile()).order
 end
 
 -- Same rule the profile applies to this monitor, so disabled=true/false merges
@@ -216,6 +237,7 @@ end
 -- override, including a BP <-> STREAM switch.
 local function take_snapshot()
     snapshot = {}
+    desk = read_profile()
     for _, m in ipairs(hl.get_monitors()) do
         if m.enabled then
             snapshot[#snapshot + 1] = { name = m.name, key = mon_key(m),
@@ -310,6 +332,22 @@ local function apply_override(keep)
     return true
 end
 
+-- The monitor a workspace belongs on: the profile's workspace rule when it
+-- has one (the rule wins over wherever the workspace happened to be when the
+-- override began, which was often the kept monitor it had been evacuated to),
+-- else where it was observed.
+local function home_for(id, observed_key)
+    local sel = desk and desk.ws[id]
+    if sel then
+        for _, m in ipairs(hl.get_monitors()) do
+            if m.enabled and (m.name == sel or (has_prefix(sel, "desc:") and has_prefix(m.description, sel:sub(6)))) then
+                return m
+            end
+        end
+    end
+    return monitor_by_key(observed_key)
+end
+
 -- After a release, once the monitors are back: move workspaces home (Hyprland
 -- usually does this itself; this only moves one that is not already home)
 -- and hand XWayland primary back to hypr-de's own knob.
@@ -320,7 +358,7 @@ local function finish_release(why)
     t_release.cancel()
     if not kept then
         for id, key in pairs(r.homes) do
-            local mon = monitor_by_key(key)
+            local mon = home_for(id, key)
             local ws  = hl.get_workspace(id)
             if mon and ws and (not ws.monitor or ws.monitor.name ~= mon.name) then
                 hl.dispatch(hl.dsp.workspace.move({ workspace = id, monitor = mon.name }))
@@ -332,13 +370,33 @@ local function finish_release(why)
     if why then log(why) end
 end
 
--- Re-enable everything we disabled. The re-enable lands asynchronously and
--- fires monitor.layout_changed, which completes it in evaluate().
+-- Put every monitor back as the desk profile has it, in one pass: the kept
+-- monitor's geometry first (it may be sitting in the stream profile's
+-- landscape 0,0), then the ones we disabled. A rule the profile does not
+-- carry (a monitor it never mentions) is just re-enabled. The re-enable lands
+-- asynchronously and fires monitor.layout_changed, which completes it in
+-- evaluate().
 local function release()
-    for _, d in ipairs(disabled) do
-        hl.monitor({ output = d.rule, disabled = false })
-        log("re-enabled " .. d.key .. " via " .. d.rule)
+    local rules = desk and desk.rules or {}
+    local function restore(rule, key)
+        local tbl = rules[rule]
+        if tbl then
+            local chunk = load("return " .. tbl)
+            if chunk then
+                hl.monitor(chunk())
+                log("restored " .. key .. " via " .. rule)
+                return
+            end
+        end
+        hl.monitor({ output = rule, disabled = false })
+        log("re-enabled " .. key .. " via " .. rule)
     end
+    if kept then
+        local names = profile_rule_names()
+        local m = monitor_by_key(kept.key)
+        if m then restore(rule_for(m, names), kept.key) end
+    end
+    for _, d in ipairs(disabled) do restore(d.rule, d.key) end
     releasing = { homes = homes, keys = snapshot_keys() }
     disabled, homes, kept = {}, {}, nil
     t_release.arm(RELEASE_MAX_MS, function()
