@@ -22,11 +22,13 @@
 -- client raises a Big Picture window on this host that nobody here opened,
 -- and it lingers after the client disconnects; stepping back into BP on it
 -- left the desk on one monitor after every stream (2026-10-19 13:50:28). So
--- the window present when a session ends is remembered and ignored until it
--- closes. A Big Picture opened afresh at the desk is a new window and enters
--- BP as usual. The cost is deliberate: Big Picture opened at the desk and then
--- streamed also lands in NORMAL when the stream ends, and wants reopening to
--- get the ultrawide override back.
+-- session end closes that window and releases once it is gone, which keeps
+-- the rest generic: no per-window bookkeeping, and the ordinary BP entry and
+-- exit rules stay the only ones. A Big Picture opened at the desk and then
+-- streamed is closed the same way when the stream ends. Should Steam keep the
+-- window open past CLOSE_WAIT_MS we release anyway, log a WARNING, and the
+-- normal rule re-enters BP on it; that is visible in the journal rather than
+-- hidden behind an ignore list.
 --
 -- STREAM is reachable only from BP. A session with no Big Picture window
 -- leaves the monitors alone. Window title and open/close events, which storm
@@ -71,6 +73,10 @@ local REVERT_MS      = 8000
 -- Session end is read from Steam's log, so give it a moment to be sure rather
 -- than release on the first false reading.
 local STREAM_EXIT_MS = 5000
+-- Session end closes the Big Picture window; the close is asynchronous, so
+-- poll for it to be gone before releasing, and give up after this long.
+local CLOSE_POLL_MS  = 400
+local CLOSE_WAIT_MS  = 4000
 -- After re-enable, move workspaces back to the monitor they lived on. Hyprland
 -- normally does this itself when the monitor returns (observed); this is the
 -- backstop, and it only moves a workspace that is not already home.
@@ -90,7 +96,6 @@ local disabled  = {}   -- { { rule = "desc:...", key = mon_key } }
 local homes     = {}   -- workspace id -> mon_key of the monitor it lived on
 local eval_gen  = 0
 local timer_gen = 0    -- the single exit/poll/pending timer; re-arming cancels the old one
-local ignore_bp = nil  -- address of a BP window a session left behind; not an entry criterion
 
 local function sh_quote(s)
     return "'" .. (tostring(s):gsub("'", "'\\''")) .. "'"
@@ -178,17 +183,8 @@ local function bp_window()
     return nil
 end
 
--- True only for a Big Picture window that counts. The one a session left
--- behind is ignored until it is gone, at which point the ignore clears so a
--- later Big Picture is seen again.
 local function bp_present()
-    local w = bp_window()
-    if not w then
-        ignore_bp = nil
-        return false
-    end
-    if ignore_bp and w.address == ignore_bp then return false end
-    return true
+    return bp_window() ~= nil
 end
 
 local function monitor_by_key(key)
@@ -338,6 +334,33 @@ local function to_normal(why)
     log("-> NORMAL (" .. why .. ")")
 end
 
+-- Session over: close the Big Picture window the session used, wait for it
+-- to go, then release. Releasing while it is still up would re-enter BP on
+-- the next event, so the wait is the whole point.
+local function close_bp_then_normal()
+    local w = bp_window()
+    if not w then
+        to_normal("session over")
+        return
+    end
+    log("session over, closing Big Picture " .. tostring(w.address))
+    hl.dispatch(hl.dsp.window.close("address:" .. w.address))
+    local waited = 0
+    local function check()
+        if state ~= S_STREAM then return end
+        if not bp_window() then
+            to_normal("session over, Big Picture closed")
+        elseif waited >= CLOSE_WAIT_MS then
+            log("WARNING: Big Picture ignored the close after " .. waited .. "ms; releasing anyway")
+            to_normal("session over, Big Picture still open")
+        else
+            waited = waited + CLOSE_POLL_MS
+            arm(CLOSE_POLL_MS, check)
+        end
+    end
+    arm(CLOSE_POLL_MS, check)
+end
+
 -- Switching kept monitors goes through "everything on" (see header). The
 -- re-enable fires monitor.layout_changed, which brings us back here with
 -- pending set; we apply once every snapshot monitor is visible again.
@@ -397,9 +420,7 @@ evaluate = function()
                 if streaming() then
                     arm(POLL_MS, evaluate)
                 else
-                    local w = bp_window()
-                    if w then ignore_bp = w.address end
-                    to_normal("session over" .. (w and ", ignoring the Big Picture it left behind" or ""))
+                    close_bp_then_normal()
                 end
             end)
         end
