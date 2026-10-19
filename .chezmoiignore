@@ -50,10 +50,13 @@ docs/
 # Tracking it would pin the wrong profile on other machines.
 .config/hypr/profiles/.active.lua
 
-# Monitor profiles (~/.config/hypr/profiles/*.lua) are machine-local and the
-# hand-maintained SOURCE on each machine: they were dropped from this public
-# repo on 2026-08-19 on purpose. Do not keep a .toml beside one: hyprstate
-# regenerates the .lua from a sibling .toml and would overwrite the edits.
+# Monitor profiles: the .lua files here are RENDER ARTIFACTS. hyprstate reads
+# only TOML, from /etc/monitor-profiles (shared with the vigil greeter, the
+# reason the format is dialect-neutral) merged with ~/.config/hypr/profiles/
+# *.toml for session-only profiles, and rewrites every .lua on each load. The
+# system TOMLs are serial-free and live outside $HOME, so they are not
+# chezmoi's to manage; the user-dir TOMLs were dropped from this public repo
+# on 2026-08-19 on purpose.
 .config/hypr/profiles/*.lua
 
 # lmtt regenerates this on every theme switch from the embedded template in
