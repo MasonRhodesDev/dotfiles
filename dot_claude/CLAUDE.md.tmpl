@@ -12,6 +12,15 @@
 - Enforcement: the `PreToolUse` hook at `~/.claude/hooks/no-dashes.sh` denies file writes containing the glyphs, and the `Stop` hook at `~/.claude/hooks/no-dashes-chat.py` rejects chat replies containing them. Auto-memory files under `~/.claude/projects/` are exempt because the harness mandates the dash in `MEMORY.md` index lines.
 - A dash in text attributed to Mason is a contamination marker of LLM output, not his voice (0.7% of 679 typed prompts). Critique it; never emulate it. See `~/repos/style-fingerprint/FINGERPRINT.md`.
 
+## Portability (every project is developed as if it will be open sourced)
+- Structure every repo so a stranger could clone it and run it from the README alone, with no knowledge of my machines. Visibility stays private per the Git rules above; this is about structure, not publishing.
+- Before writing any value, classify it: project detail (belongs in the repo) or environment detail (belongs outside it). Environment details include: home paths and usernames, hostnames (lab nodes, dev box, tower, printers), LAN addresses and subnets, my domain and its subdomains, device nodes and serials, specific hardware (GPU, monitors, controllers), account names, API endpoints and tokens, notification topics, the distro or package manager I happen to use, and absolute paths into my other repos.
+- Environment details enter through one boundary: an env var, a CLI flag, or a config file whose committed form is a generic `.example` with a gitignored local override. Committed defaults are generic, localhost, or empty, never my values.
+- My values live in the gitignored local override, or in chezmoi when they are per-machine. They never live in the repo's defaults, scripts, CI, Dockerfiles, Nomad jobs, tests, fixtures, docs, comments, or commit messages.
+- Build and run tooling counts too. If a Makefile, script, justfile, or CI job only works on my box (assumes a tool is installed, a path exists, a service is reachable), that is the same leak as a hardcoded IP.
+- Before committing, scan the diff for the patterns above. A hit outside an example file or a gitignored override is a bug to fix, not a note to leave.
+- If a feature genuinely cannot be generic, say so explicitly and isolate it behind the boundary with a named option, rather than letting personal and general details blend in the same file.
+
 {{ if eq .system.hostname "mason-air" -}}
 ## This machine (mason-air) is a thin client
 - mason-air is an M1 MacBook Air on battery. The dev box (herdr machine `dev`, SSH `mason@192.168.1.22`, repos under `~/repos`) is where work runs. Default to opening tasks there, not here.
