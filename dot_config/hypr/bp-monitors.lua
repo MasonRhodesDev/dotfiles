@@ -16,8 +16,8 @@
 --   NORMAL -> BP      a Big Picture window appears        (window.open/title)
 --   BP     -> STREAM  a session is live                   (stream edge from the daemon)
 --   BP     -> NORMAL  Big Picture is gone                 (window.close), unless held
---   STREAM -> NORMAL  the session is over                 (stream edge), after the
---                     Big Picture window it used has closed (window.close)
+--   STREAM -> NORMAL  the session is over (stream edge), once Steam has
+--                     closed the Big Picture window it raised (window.close)
 --
 -- Every transition is driven by an event. There are no polls and no settle
 -- or grace delays: the only timers are FAILURE paths, each with a name, each
@@ -33,15 +33,16 @@
 --
 -- A session ending exits all the way to NORMAL, never back to BP. A remote
 -- client raises a Big Picture window on this host that nobody here opened,
--- and it lingers after the client disconnects; stepping back into BP on it
--- left the desk on one monitor after every stream (2026-10-19 13:50:28). So
--- session end closes that window and releases once it is gone, which keeps
--- the rest generic: no per-window bookkeeping, and the ordinary BP entry and
--- exit rules stay the only ones. A Big Picture opened at the desk and then
--- streamed is closed the same way when the stream ends. Should Steam keep the
--- window open past CLOSE_WAIT_MS we release anyway, log a WARNING, and the
--- normal rule re-enters BP on it; that is visible in the journal rather than
--- hidden behind an ignore list.
+-- and Steam closes it itself about 8s after the client disconnects (measured
+-- 2026-10-19 15:58:51 to 15:58:59, nobody at the desk). Releasing before
+-- that re-enters BP on the lingering window and leaves the desk on one
+-- monitor, which is what happened at 13:50 the same day. So session end
+-- waits for that window.close and only then releases, which keeps the rest
+-- generic: no per-window bookkeeping, and the ordinary BP entry and exit
+-- rules stay the only ones. A compositor close request was tried first and
+-- Steam ignores it. Should Steam keep the window past BP_EXIT_MAX_MS we
+-- release anyway, log a WARNING, and the normal rule re-enters BP on it;
+-- that is visible in the journal rather than hidden behind an ignore list.
 --
 -- STREAM is reachable only from BP. A session with no Big Picture window
 -- leaves the monitors alone. Window title and open/close events, which storm
@@ -103,7 +104,7 @@ local COALESCE_MS    = 50
 
 -- FAILURE timeouts. None of these is part of a normal cycle; each one firing
 -- is logged as a WARNING because it means an event never arrived.
-local CLOSE_MAX_MS   = 4000  -- Steam ignored our close of the Big Picture window
+local BP_EXIT_MAX_MS = 15000 -- Steam did not close Big Picture after a session ended (it takes ~8s)
 local PENDING_MAX_MS = 6000  -- a monitor never came back during a BP <-> STREAM switch
 local RELEASE_MAX_MS = 6000  -- a monitor never came back after a release
 local HOLD_MAX_MS    = 90000 -- the daemon said "restarting Steam" and never said done
@@ -117,7 +118,7 @@ local kept      = nil  -- snapshot entry the current override keeps
 local snapshot  = {}   -- { name, key, w, h, keep } taken before anything was disabled
 local disabled  = {}   -- { { rule = "desc:...", key = mon_key } }
 local homes     = {}   -- workspace id -> mon_key of the monitor it lived on
-local closing   = nil  -- address of the Big Picture window we asked to close
+local closing   = nil  -- address of the Big Picture window Steam is expected to close
 local held      = false -- daemon is restarting Steam; BP must not release
 local held_logged = false
 local releasing = nil  -- { homes = {...}, keys = {...} } until every monitor is back
@@ -444,21 +445,20 @@ local function to_normal(why)
     log("-> NORMAL (" .. why .. ")")
 end
 
--- Session over: close the Big Picture window the session used. Its
--- window.close event completes the exit in evaluate(); releasing while it is
--- still up would re-enter BP on the next event.
-local function close_bp()
+-- Session over: Steam closes the Big Picture window itself. Its window.close
+-- event completes the exit in evaluate(); releasing while it is still up
+-- would re-enter BP on the next event.
+local function await_bp_exit()
     local w = bp_window()
     if not w then
         to_normal("session over")
         return
     end
     closing = w.address
-    log("session over, closing Big Picture " .. tostring(w.address))
-    hl.dispatch(hl.dsp.window.close("address:" .. w.address))
-    t_state.arm(CLOSE_MAX_MS, function()
+    log("session over, waiting for Steam to close Big Picture " .. tostring(w.address))
+    t_state.arm(BP_EXIT_MAX_MS, function()
         if state == S_STREAM and closing then
-            log("WARNING: Big Picture ignored the close after " .. CLOSE_MAX_MS .. "ms; releasing anyway")
+            log("WARNING: Big Picture still open " .. BP_EXIT_MAX_MS .. "ms after the session ended; releasing anyway")
             to_normal("session over, Big Picture still open")
         end
     end)
@@ -517,7 +517,7 @@ evaluate = function()
         if closing then
             if not bp_present() then to_normal("session over, Big Picture closed") end
         elseif not streaming() then
-            close_bp()
+            await_bp_exit()
         end
     end
 end
