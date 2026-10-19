@@ -63,8 +63,23 @@
           identity isn't already stored — so a locked/headless init never blocks;
           it just falls back to stored values or the prompt)
      Normal `chezmoi apply` never touches rbw at all. */}}
+{{- /* CI poison guard. .github/workflows/template-check.yml renders this
+     template with CHEZMOI_IDENTITY_* and CHEZMOI_GIT_OVERRIDES set to
+     placeholders, and those env vars outrank everything below. Inheriting that
+     environment in a real init therefore bakes the placeholders in for good,
+     because from then on a stored key beats both the Bitwarden seed and the
+     prompt on every later init. That happened on mason-desktop and stayed
+     invisible until an apply rewrote git authorship to
+     ci-personal@example.invalid, and the same residue set overrides_json to
+     "[]", which silently dropped every includeIf stanza. So a stored block
+     carrying the CI markers is treated as absent, letting rbw repopulate it.
+     work_claude_md and work_overlay_repo are left unguarded on purpose: CI
+     never sets them, and empty is their legitimate value. */ -}}
+{{- $stored := dig "identity" (dict) . -}}
+{{- $poisoned := or (contains "example.invalid" (dig "email_personal" "" $stored)) (contains "example.invalid" (dig "email_work" "" $stored)) (eq (dig "name" "" $stored) "CI Template Check") -}}
+{{- if $poisoned }}{{ warnf "stored identity carries CI placeholder values; ignoring it and re-seeding from Bitwarden (unlock rbw first if this warning repeats)\n" }}{{ end -}}
 {{- $fields := dict -}}
-{{- if and (lookPath "rbw") (not (hasKey . "identity")) (not (env "CHEZMOI_IDENTITY_NAME")) -}}
+{{- if and (lookPath "rbw") (or $poisoned (not (hasKey . "identity"))) (not (env "CHEZMOI_IDENTITY_NAME")) -}}
 {{-   if eq (output "sh" "-c" "rbw unlocked >/dev/null 2>&1 && echo yes || true" | trim) "yes" -}}
 {{-     $fields = rbwFields "chezmoi-data" -}}
 {{-   end -}}
@@ -75,13 +90,15 @@
 {{- $seedOverrides := dig "git_overrides" "value" "" $fields -}}
 {{- $seedClaudeMd := dig "work_claude_md" "value" "" $fields -}}
 {{- $seedOverlay := dig "work_overlay_repo" "value" "" $fields -}}
-{{- $name := or (env "CHEZMOI_IDENTITY_NAME") (promptStringOnce . "identity.name" "Full name (git author)" $seedName) -}}
-{{- $emailWork := or (env "CHEZMOI_IDENTITY_EMAIL_WORK") (promptStringOnce . "identity.email_work" "Work email" $seedWork) -}}
-{{- $emailPersonal := or (env "CHEZMOI_IDENTITY_EMAIL_PERSONAL") (promptStringOnce . "identity.email_personal" "Personal email" $seedPersonal) -}}
+{{- $name := or (env "CHEZMOI_IDENTITY_NAME") (and $poisoned $seedName) (promptStringOnce . "identity.name" "Full name (git author)" $seedName) -}}
+{{- $emailWork := or (env "CHEZMOI_IDENTITY_EMAIL_WORK") (and $poisoned $seedWork) (promptStringOnce . "identity.email_work" "Work email" $seedWork) -}}
+{{- $emailPersonal := or (env "CHEZMOI_IDENTITY_EMAIL_PERSONAL") (and $poisoned $seedPersonal) (promptStringOnce . "identity.email_personal" "Personal email" $seedPersonal) -}}
 
 {{- /* Structured private data: prefer a fresh Bitwarden seed, else reuse the
        value already stored in this config (so re-init without rbw still works). */ -}}
-{{- $overridesJson := or (env "CHEZMOI_GIT_OVERRIDES") $seedOverrides (dig "git" "overrides_json" "" .) -}}
+{{- $storedOverrides := "" -}}
+{{- if not $poisoned }}{{ $storedOverrides = dig "git" "overrides_json" "" . }}{{ end -}}
+{{- $overridesJson := or (env "CHEZMOI_GIT_OVERRIDES") $seedOverrides $storedOverrides -}}
 {{- $claudeMd := or (env "CHEZMOI_WORK_CLAUDE_MD") $seedClaudeMd (dig "work" "claude_md" "" .) -}}
 {{- $overlayRepo := or (env "CHEZMOI_WORK_OVERLAY_REPO") $seedOverlay (dig "work" "overlay_repo" "" .) -}}
 {{- $overrides := list (dict "condition" "gitdir:~/repos/" "identity" "personal") -}}
