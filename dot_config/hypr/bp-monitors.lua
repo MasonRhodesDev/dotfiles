@@ -13,10 +13,23 @@
 -- before anything was disabled. A state is left only when its own exit
 -- criterion holds, and the exit criteria are deliberately narrow:
 --
---   NORMAL -> BP      a Big Picture window appears
---   BP     -> STREAM  a session is live
---   BP     -> NORMAL  Big Picture has been gone for REVERT_MS
---   STREAM -> NORMAL  the session has been over for STREAM_EXIT_MS
+--   NORMAL -> BP      a Big Picture window appears        (window.open/title)
+--   BP     -> STREAM  a session is live                   (stream edge from the daemon)
+--   BP     -> NORMAL  Big Picture is gone                 (window.close), unless held
+--   STREAM -> NORMAL  the session is over                 (stream edge), after the
+--                     Big Picture window it used has closed (window.close)
+--
+-- Every transition is driven by an event. There are no polls and no settle
+-- or grace delays: the only timers are FAILURE paths, each with a name, each
+-- logging a WARNING when it fires, because firing means an event that should
+-- have arrived did not. A 50ms coalesce on event bursts is the one exception
+-- and it waits for nothing; a game launch retitles its window dozens of times
+-- a second and one evaluate per burst is plenty.
+--
+-- "Held": the daemon restarts Steam to recover from a CEF crash storm, which
+-- closes and reopens Big Picture. It says so (BP_MONITORS.hold(true/false))
+-- around the restart, and BP stays locked through it instead of flapping the
+-- monitors. Without that signal, Big Picture closing releases at once.
 --
 -- A session ending exits all the way to NORMAL, never back to BP. A remote
 -- client raises a Big Picture window on this host that nobody here opened,
@@ -83,27 +96,18 @@ local KEEP_DESC = read_keep()
 -- STREAM still keeps the largest 16:9 panel. Said once at load so a machine
 -- that forgot the knob file does not look like a silent failure.
 
-local SETTLE_MS      = 1500  -- window/monitor event -> evaluate
-local POLL_MS        = 10000 -- BP and STREAM re-check their exit criterion
--- Steam's crash-storm recovery (bp-game-focus.py) restarts it: up to ~30s
--- shutdown plus relaunch. 8s means a restart flaps the monitors once; that is
--- accepted rather than holding the second monitors off for a minute.
-local REVERT_MS      = 8000
--- Session end is read from Steam's log, so give it a moment to be sure rather
--- than release on the first false reading.
-local STREAM_EXIT_MS = 5000
--- Session end closes the Big Picture window; the close is asynchronous, so
--- poll for it to be gone before releasing, and give up after this long.
-local CLOSE_POLL_MS  = 400
-local CLOSE_WAIT_MS  = 4000
--- After re-enable, move workspaces back to the monitor they lived on. Hyprland
--- normally does this itself when the monitor returns (observed); this is the
--- backstop, and it only moves a workspace that is not already home.
-local REHOME_MS      = 2500
--- A pending switch waits for every snapshot monitor to come back. If one never
--- does (cable pulled mid-switch), proceed with what is enabled rather than
--- parking the machine.
-local PENDING_MAX_MS = 6000
+
+-- Event bursts (a launching game retitles constantly) collapse to one
+-- evaluate. This waits for nothing: it is the gap between two events.
+local COALESCE_MS    = 50
+
+-- FAILURE timeouts. None of these is part of a normal cycle; each one firing
+-- is logged as a WARNING because it means an event never arrived.
+local CLOSE_MAX_MS   = 4000  -- Steam ignored our close of the Big Picture window
+local PENDING_MAX_MS = 6000  -- a monitor never came back during a BP <-> STREAM switch
+local RELEASE_MAX_MS = 6000  -- a monitor never came back after a release
+local HOLD_MAX_MS    = 90000 -- the daemon said "restarting Steam" and never said done
+local SAFETY_MS      = 30000 -- an exit criterion was met and no event reported it
 
 local S_NORMAL, S_BP, S_STREAM = "NORMAL", "BP", "STREAM"
 
@@ -113,8 +117,11 @@ local kept      = nil  -- snapshot entry the current override keeps
 local snapshot  = {}   -- { name, key, w, h, keep } taken before anything was disabled
 local disabled  = {}   -- { { rule = "desc:...", key = mon_key } }
 local homes     = {}   -- workspace id -> mon_key of the monitor it lived on
+local closing   = nil  -- address of the Big Picture window we asked to close
+local held      = false -- daemon is restarting Steam; BP must not release
+local held_logged = false
+local releasing = nil  -- { homes = {...}, keys = {...} } until every monitor is back
 local eval_gen  = 0
-local timer_gen = 0    -- the single exit/poll/pending timer; re-arming cancels the old one
 
 local sh_quote = C.sh_quote
 local log = C.logger("hypr-bp-monitors")
@@ -146,22 +153,28 @@ end
 
 local function later(ms, fn) C.later(ms, fn, log) end
 
--- One timer at a time. Arming cancels whatever was armed before, so a
--- transition never races a stale poll or revert from the previous state.
-local function arm(ms, fn)
-    timer_gen = timer_gen + 1
-    local mine = timer_gen
-    later(ms, function()
-        if mine == timer_gen then fn() end
-    end)
+-- A named one-shot timer: arming replaces the previous arming, cancel drops
+-- it. One per failure path, so a state change cancels exactly the timeouts
+-- that no longer apply.
+local function timer()
+    local gen = 0
+    return {
+        arm = function(ms, fn)
+            gen = gen + 1
+            local mine = gen
+            later(ms, function() if mine == gen then fn() end end)
+        end,
+        cancel = function() gen = gen + 1 end,
+    }
 end
+local t_state   = timer() -- pending switch, close wait, hold: one per state
+local t_release = timer()
+local t_safety  = timer()
 
 -- The rule names the active profile uses ("desc:Dell Inc. DELL S2721QS", ...).
 local function profile_rule_names()
     local names = {}
-    local base = os.getenv("XDG_CONFIG_HOME")
-    if not base or base == "" then base = os.getenv("HOME") .. "/.config" end
-    local f = io.open(base .. "/hypr/profiles/.active.lua", "r")
+    local f = io.open(C.CONFIG_BASE .. "/hypr/profiles/.active.lua", "r")
     if not f then return names end
     local text = f:read("*a")
     f:close()
@@ -211,11 +224,17 @@ local function take_snapshot()
     end
 end
 
-local function all_snapshot_enabled()
-    for _, c in ipairs(snapshot) do
-        if not monitor_by_key(c.key) then return false end
+local function all_enabled(keys)
+    for _, k in ipairs(keys) do
+        if not monitor_by_key(k) then return false end
     end
-    return #snapshot > 0
+    return #keys > 0
+end
+
+local function snapshot_keys()
+    local keys = {}
+    for _, c in ipairs(snapshot) do keys[#keys + 1] = c.key end
+    return keys
 end
 
 -- Largest 16:9 area the panel can show, from its MODE. hl.get_monitors()
@@ -291,32 +310,59 @@ local function apply_override(keep)
     return true
 end
 
-local function rehome(pending_homes)
-    if kept then return end -- an override came back before we got here
-    for id, key in pairs(pending_homes) do
-        local mon = monitor_by_key(key)
-        local ws  = hl.get_workspace(id)
-        if mon and ws and (not ws.monitor or ws.monitor.name ~= mon.name) then
-            hl.dispatch(hl.dsp.workspace.move({ workspace = id, monitor = mon.name }))
-            log("re-homed workspace " .. id .. " to " .. key)
+-- After a release, once the monitors are back: move workspaces home (Hyprland
+-- usually does this itself; this only moves one that is not already home)
+-- and hand XWayland primary back to hypr-de's own knob.
+local function finish_release(why)
+    local r = releasing
+    if not r then return end
+    releasing = nil
+    t_release.cancel()
+    if not kept then
+        for id, key in pairs(r.homes) do
+            local mon = monitor_by_key(key)
+            local ws  = hl.get_workspace(id)
+            if mon and ws and (not ws.monitor or ws.monitor.name ~= mon.name) then
+                hl.dispatch(hl.dsp.workspace.move({ workspace = id, monitor = mon.name }))
+                log("re-homed workspace " .. id .. " to " .. key)
+            end
         end
     end
+    hl.exec_cmd("/usr/lib/hypr-de/set-xwayland-primary.sh")
+    if why then log(why) end
 end
 
+-- Re-enable everything we disabled. The re-enable lands asynchronously and
+-- fires monitor.layout_changed, which completes it in evaluate().
 local function release()
     for _, d in ipairs(disabled) do
         hl.monitor({ output = d.rule, disabled = false })
         log("re-enabled " .. d.key .. " via " .. d.rule)
     end
-    local pending_homes = homes
+    releasing = { homes = homes, keys = snapshot_keys() }
     disabled, homes, kept = {}, {}, nil
-    later(REHOME_MS, function() rehome(pending_homes) end)
-    -- Hand XWayland primary back to hypr-de's own knob. Deferred because the
-    -- re-enable has not landed yet and the script sees only enabled monitors.
-    later(REHOME_MS, function() hl.exec_cmd("/usr/lib/hypr-de/set-xwayland-primary.sh") end)
+    t_release.arm(RELEASE_MAX_MS, function()
+        finish_release("WARNING: a released monitor never came back within "
+            .. RELEASE_MAX_MS .. "ms; finishing with what is enabled")
+    end)
 end
 
-local evaluate -- forward, the timers below call it
+local evaluate -- forward
+
+-- The safety check is a failure path, not a poll: if it ever changes state,
+-- the exit criterion was met and no event told us. Re-armed while an override
+-- is active so the next miss is caught too.
+local function arm_safety()
+    t_safety.arm(SAFETY_MS, function()
+        if state == S_NORMAL then return end
+        local before = state
+        evaluate()
+        if state ~= before or pending then
+            log("WARNING: safety check left " .. before .. "; an event was missed")
+        end
+        arm_safety()
+    end)
+end
 
 local function enter(target)
     local keep = (target == S_STREAM) and choose_stream() or choose_bp()
@@ -327,42 +373,37 @@ local function enter(target)
         return
     end
     state, pending = target, nil
+    t_state.cancel()
     log("-> " .. state .. " keeping " .. keep.key)
-    arm(POLL_MS, evaluate)
+    arm_safety()
 end
 
 local function to_normal(why)
     release()
-    state, pending, snapshot = S_NORMAL, nil, {}
-    timer_gen = timer_gen + 1 -- NORMAL is event driven; drop any poll
+    state, pending, snapshot, closing = S_NORMAL, nil, {}, nil
+    t_state.cancel()
+    t_safety.cancel()
     log("-> NORMAL (" .. why .. ")")
 end
 
--- Session over: close the Big Picture window the session used, wait for it
--- to go, then release. Releasing while it is still up would re-enter BP on
--- the next event, so the wait is the whole point.
-local function close_bp_then_normal()
+-- Session over: close the Big Picture window the session used. Its
+-- window.close event completes the exit in evaluate(); releasing while it is
+-- still up would re-enter BP on the next event.
+local function close_bp()
     local w = bp_window()
     if not w then
         to_normal("session over")
         return
     end
+    closing = w.address
     log("session over, closing Big Picture " .. tostring(w.address))
     hl.dispatch(hl.dsp.window.close("address:" .. w.address))
-    local waited = 0
-    local function check()
-        if state ~= S_STREAM then return end
-        if not bp_window() then
-            to_normal("session over, Big Picture closed")
-        elseif waited >= CLOSE_WAIT_MS then
-            log("WARNING: Big Picture ignored the close after " .. waited .. "ms; releasing anyway")
+    t_state.arm(CLOSE_MAX_MS, function()
+        if state == S_STREAM and closing then
+            log("WARNING: Big Picture ignored the close after " .. CLOSE_MAX_MS .. "ms; releasing anyway")
             to_normal("session over, Big Picture still open")
-        else
-            waited = waited + CLOSE_POLL_MS
-            arm(CLOSE_POLL_MS, check)
         end
-    end
-    arm(CLOSE_POLL_MS, check)
+    end)
 end
 
 -- Switching kept monitors goes through "everything on" (see header). The
@@ -372,15 +413,17 @@ local function switch_to(target)
     release()
     pending = target
     log("-> " .. target .. " pending; released, waiting for all monitors")
-    arm(PENDING_MAX_MS, function()
+    t_state.arm(PENDING_MAX_MS, function()
         if pending == target then
-            log("pending " .. target .. " timed out; applying with what is enabled")
+            log("WARNING: pending " .. target .. " timed out after " .. PENDING_MAX_MS .. "ms; applying with what is enabled")
             enter(target)
         end
     end)
 end
 
 evaluate = function()
+    if releasing and all_enabled(releasing.keys) then finish_release() end
+
     -- The kept monitor went away mid-override: never leave the desk blank.
     -- Checked against LIVE monitors; the snapshot still lists it.
     if kept and not monitor_by_key(kept.key) then
@@ -389,7 +432,7 @@ evaluate = function()
     end
 
     if pending then
-        if all_snapshot_enabled() then enter(pending) end
+        if all_enabled(snapshot_keys()) then enter(pending) end
         return
     end
 
@@ -404,29 +447,19 @@ evaluate = function()
         if streaming() then
             switch_to(S_STREAM)
         elseif not bp_present() then
-            arm(REVERT_MS, function()
-                if state == S_BP and not bp_present() then
-                    to_normal("Big Picture gone")
-                else
-                    arm(POLL_MS, evaluate)
-                end
-            end)
-        else
-            arm(POLL_MS, evaluate)
+            if held then
+                if not held_logged then log("Big Picture gone while Steam restarts; holding BP") end
+                held_logged = true
+            else
+                to_normal("Big Picture gone")
+            end
         end
 
     elseif state == S_STREAM then
-        if streaming() then
-            arm(POLL_MS, evaluate)
-        else
-            arm(STREAM_EXIT_MS, function()
-                if state ~= S_STREAM then return end
-                if streaming() then
-                    arm(POLL_MS, evaluate)
-                else
-                    close_bp_then_normal()
-                end
-            end)
+        if closing then
+            if not bp_present() then to_normal("session over, Big Picture closed") end
+        elseif not streaming() then
+            close_bp()
         end
     end
 end
@@ -434,9 +467,30 @@ end
 local function schedule_evaluate()
     eval_gen = eval_gen + 1
     local mine = eval_gen
-    later(SETTLE_MS, function()
+    later(COALESCE_MS, function()
         if mine == eval_gen then evaluate() end
     end)
+end
+
+-- The daemon brackets a crash-recovery Steam restart with hold(true) and
+-- hold(false). HOLD_MAX_MS is the failure path for a daemon that died between
+-- the two.
+local function hold(on)
+    held, held_logged = (on and true or false), false
+    if held then
+        log("hold: Steam restarting, BP will not release")
+        t_state.arm(HOLD_MAX_MS, function()
+            if held then
+                log("WARNING: hold never released after " .. HOLD_MAX_MS .. "ms; releasing")
+                held = false
+                schedule_evaluate()
+            end
+        end)
+    else
+        log("hold released")
+        t_state.cancel()
+        schedule_evaluate()
+    end
 end
 
 -- XWayland sets the title late, so window.title matters as much as window.open.
@@ -447,28 +501,28 @@ hl.on("window.destroy", function() schedule_evaluate() end)
 hl.on("monitor.added",   function() schedule_evaluate() end)
 hl.on("monitor.removed", function() schedule_evaluate() end)
 -- A monitor re-enabled by RULE is not a monitor.added, but it does change the
--- layout. This is the event that completes a pending switch, and the one that
--- lets a reload mid-override recover (config.reloaded never reaches a handler
--- registered during that same load, verified).
+-- layout. This is the event that completes a release or a pending switch, and
+-- the one that lets a reload mid-override recover (config.reloaded never
+-- reaches a handler registered during that same load, verified).
 hl.on("monitor.layout_changed", function() schedule_evaluate() end)
 
--- bp-focus pokes this when a session starts: no window or monitor event fires
--- at that moment, and BP's exit criterion has just been met.
 local function status()
     local snap = {}
     for _, c in ipairs(snapshot) do snap[#snap + 1] = c.name end
     local dis = {}
     for _, d in ipairs(disabled) do dis[#dis + 1] = d.key end
-    return ("state=%s pending=%s kept=%s snapshot=[%s] disabled=[%s] bp=%s streaming=%s"):format(
-        state, tostring(pending), kept and kept.name or "nil",
+    return ("state=%s pending=%s kept=%s held=%s closing=%s releasing=%s snapshot=[%s] disabled=[%s] bp=%s streaming=%s"):format(
+        state, tostring(pending), kept and kept.name or "nil", tostring(held),
+        tostring(closing), tostring(releasing ~= nil),
         table.concat(snap, ","), table.concat(dis, ","),
         tostring(bp_present()), tostring(streaming()))
 end
 
--- schedule_evaluate: bp-focus pokes it when a session starts, since no window
--- or monitor event fires then. status: read the locked state without guessing
--- from monitor shape; surface it with `hyprctl eval` into a file.
-BP_MONITORS = { schedule_evaluate = schedule_evaluate, status = status }
+-- schedule_evaluate: bp-focus pokes it on a stream edge, since no window or
+-- monitor event fires then. hold: see above. status: read the locked state
+-- without guessing from monitor shape; surface it with `hyprctl eval` into a
+-- file.
+BP_MONITORS = { schedule_evaluate = schedule_evaluate, hold = hold, status = status }
 
 local ok, err = pcall(evaluate)
 if not ok then log("error at load: " .. tostring(err)) end

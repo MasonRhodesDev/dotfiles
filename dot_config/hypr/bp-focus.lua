@@ -58,8 +58,9 @@ local STREAM_WINDOW = 1200000
 local STREAM_START  = "Streaming started to "
 local STREAM_STOP   = "PipeWire: Deinitializing streaming"
 
-local FOCUS_GRACE = 300  -- ms; let a game map and self-fullscreen first
-local FOCUS_RETRY = 1200 -- ms; second attempt, for splash -> main window chains
+-- Event bursts (a launching game retitles constantly) collapse to one pass.
+-- This waits for nothing; it is the gap between two events.
+local COALESCE_MS = 50
 local USER_SPECIAL = 3   -- s; a special toggled by keybind is the user's, hands off
 
 -- Set by the keybinds below. A special workspace becoming visible within
@@ -274,21 +275,17 @@ local function apply_game_props(force)
     log("games focus_on_activate=" .. tostring(on))
 end
 
--- Bring a game to the front and keep it there. Focus is what Steam's capture
--- follows, so this is the step that makes streaming show the game.
+-- Bring a game to the front. Focus is what Steam's capture follows, so this
+-- is the step that makes streaming show the game. Fullscreen is asserted when
+-- the window actually becomes active (M.on_active), not on a timer: a game
+-- that self-fullscreens on map needs nothing, and one that does not gets it
+-- the moment focus lands.
 local function prioritise(addr, reason)
     local w = window_by_address(addr)
     if not w then return end
     log("prioritising " .. (w.class or "?") .. " (" .. reason .. ")")
     focus_address(addr)
     dismiss_specials("game priority")
-    later(FOCUS_GRACE, function()
-        local g = window_by_address(addr)
-        if not g then return end
-        local aw = hl.get_active_window()
-        if not aw or aw.address ~= addr then focus_address(addr) end
-        if (g.fullscreen or 0) ~= 2 then fullscreen_on() end
-    end)
 end
 
 local function newest_game()
@@ -329,33 +326,52 @@ function M.consider(w, reason)
     if handled[w.address] then return end
     handled[w.address] = true
     prioritise(w.address, reason)
-    later(FOCUS_RETRY, function() prioritise(w.address, reason .. " retry") end)
+end
+
+-- One apply_game_props per event burst.
+local props_gen = 0
+local function props_soon()
+    props_gen = props_gen + 1
+    local mine = props_gen
+    later(COALESCE_MS, function() if mine == props_gen then apply_game_props() end end)
 end
 
 function M.on_open(w)
-    if type(w) == "userdata" then
-        M.consider(w, "opened")
-    else
-        later(FOCUS_GRACE, function() M.consider(newest_game(), "opened") end)
-    end
-    later(FOCUS_GRACE, apply_game_props)
+    M.consider(type(w) == "userdata" and w or newest_game(), "opened")
+    props_soon()
 end
 
 function M.on_title(w)
     if type(w) == "userdata" then M.consider(w, "titled") end
-    later(FOCUS_GRACE, apply_game_props)
+    props_soon()
 end
 
 function M.on_close(w)
     if type(w) == "userdata" and w.address then handled[w.address] = nil end
-    later(FOCUS_GRACE, apply_game_props)
+    props_soon()
 end
 
--- Big Picture regaining focus after a fullscreen game exited: Hyprland allows
--- one fullscreen per workspace, so the game had un-fullscreened BP.
+-- Focus landing is the event that decides fullscreen, replacing the old
+-- grace-and-retry timers:
+--   a game we prioritised becomes active and is not fullscreen: make it so
+--   Big Picture becomes active while a game is being streamed: Steam (or a
+--     splash -> main window chain) re-raised it; the game goes back in front,
+--     because Steam captures the foreground window
+--   Big Picture becomes active with no game: re-fullscreen it (a fullscreen
+--     game exiting un-fullscreened BP, Hyprland allows one per workspace)
 function M.on_active(w)
     if type(w) ~= "userdata" then return end
-    if C.is_bp(w) and (w.fullscreen or 0) ~= 2 then
+    if is_game(w) then
+        if handled[w.address] and game_session() and (w.fullscreen or 0) ~= 2 then
+            fullscreen_on()
+        end
+        return
+    end
+    if not C.is_bp(w) then return end
+    local g = streaming() and newest_game()
+    if g and handled[g.address] then
+        prioritise(g.address, "Big Picture raised over a streamed game")
+    elseif (w.fullscreen or 0) ~= 2 then
         fullscreen_on()
     end
 end
@@ -396,11 +412,7 @@ function M.guide()
     if bp then
         focus_address(bp.address)
         dismiss_specials("guide -> big picture")
-        later(FOCUS_GRACE, function()
-            local b = bp_window()
-            if b and (b.fullscreen or 0) ~= 2 then fullscreen_on() end
-        end)
-        return "bp"
+        return "bp" -- on_active re-fullscreens it when focus lands
     end
     log("guide: nothing to go to, launching Big Picture")
     hl.exec_cmd(C.STEAM_LAUNCH .. " steam://open/bigpicture")

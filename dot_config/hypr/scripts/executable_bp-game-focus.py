@@ -41,6 +41,7 @@ Read-only `hyprctl -j` queries are still used directly; those never broke.
 """
 
 import asyncio
+import ctypes
 import json
 import os
 import re
@@ -157,9 +158,16 @@ def ensure_webhelper_patch() -> None:
 
 def restart_steam(reason: str) -> None:
     """Clean-shutdown + relaunch Steam, detached so it survives this daemon.
-    Used to recover from a CEF GPU-crash storm that left BP in software."""
+    Used to recover from a CEF GPU-crash storm that left BP in software.
+
+    Big Picture closes and reopens during this. bp-monitors.lua is told
+    (hold) so it keeps the monitor override locked through the restart
+    instead of releasing on the close and re-applying on the reopen. The
+    release is a bash EXIT trap so a failed relaunch still lets go."""
     log(f"auto-recover: restarting Steam ({reason})")
+    lua("if BP_MONITORS then BP_MONITORS.hold(true) end")
     script = (
+        "trap \"hyprctl eval 'if BP_MONITORS then BP_MONITORS.hold(false) end' >/dev/null 2>&1\" EXIT; "
         f"{STEAM_SHUTDOWN}; "
         "pgrep -x steam >/dev/null && { pkill -x steam; sleep 2; }; "
         f"{STEAM_LAUNCH}"
@@ -245,10 +253,62 @@ async def gamepad_scanner(guide: Guide) -> None:
         await asyncio.sleep(3)
 
 
+class DirWatch:
+    """inotify on a directory, surfaced as an asyncio.Event that is set on any
+    change inside it. A tail waits on this instead of sleeping between reads,
+    so a line Steam writes reaches us in the same tick. Spurious wakeups are
+    fine: the tail just finds no new line. Falls back to a 1s sleep if inotify
+    is unavailable (the old behaviour), and says so once."""
+
+    IN_MODIFY, IN_CREATE, IN_MOVED_FROM, IN_MOVED_TO, IN_DELETE = 0x2, 0x100, 0x40, 0x80, 0x200
+    IN_NONBLOCK, IN_CLOEXEC = 0o4000, 0o2000000
+    _watches: dict[str, "DirWatch"] = {}
+
+    @classmethod
+    def for_dir(cls, path: str) -> "DirWatch":
+        w = cls._watches.get(path)
+        if w is None:
+            w = cls._watches[path] = cls(path)
+        return w
+
+    def __init__(self, path: str) -> None:
+        self.changed = asyncio.Event()
+        self.fd = -1
+        try:
+            libc = ctypes.CDLL(None, use_errno=True)
+            fd = libc.inotify_init1(self.IN_NONBLOCK | self.IN_CLOEXEC)
+            if fd < 0:
+                raise OSError(ctypes.get_errno(), "inotify_init1")
+            mask = self.IN_MODIFY | self.IN_CREATE | self.IN_MOVED_FROM | self.IN_MOVED_TO | self.IN_DELETE
+            if libc.inotify_add_watch(fd, path.encode(), mask) < 0:
+                os.close(fd)
+                raise OSError(ctypes.get_errno(), "inotify_add_watch")
+            self.fd = fd
+            asyncio.get_running_loop().add_reader(fd, self._readable)
+        except OSError as e:
+            log(f"inotify unavailable for {path} ({e}); tails fall back to 1s polling")
+
+    def _readable(self) -> None:
+        try:
+            os.read(self.fd, 65536)  # drain; which file changed does not matter
+        except BlockingIOError:
+            pass
+        self.changed.set()
+
+    async def wait(self) -> None:
+        if self.fd < 0:
+            await asyncio.sleep(1.0)
+            return
+        self.changed.clear()
+        await self.changed.wait()
+
+
 async def tail(path: str, on_line, retry: float = 2.0) -> None:
-    """Follow a Steam log across rotation/truncation, calling on_line(str)."""
+    """Follow a Steam log across rotation/truncation, calling on_line(str).
+    Between lines it waits on the directory's inotify, not a timer."""
     f = None
     inode = None
+    watch = DirWatch.for_dir(os.path.dirname(path))
     while True:
         try:
             if f is None:
@@ -268,7 +328,7 @@ async def tail(path: str, on_line, retry: float = 2.0) -> None:
                     f.close()
                     f = None
                     continue
-                await asyncio.sleep(1.0)
+                await watch.wait()
                 continue
             on_line(line)
         except FileNotFoundError:
