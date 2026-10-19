@@ -1,0 +1,15 @@
+[Unit]
+Description=Cleanly shut down Steam before session teardown
+# Active while the graphical session is up; its ExecStop runs during teardown.
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/true
+ExecStop=%h/.config/hypr/scripts/steam-clean-shutdown.sh
+TimeoutStopSec=35s
+
+[Install]
+WantedBy=graphical-session.target

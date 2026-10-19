@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# The one place Steam's desktop launch is defined. Every caller (Hyprland
+# autostart, the guide button, crash recovery) goes through here so the flags
+# cannot drift between them.
+#
+#   steam-launch                        start Steam
+#   steam-launch steam://open/bigpicture   start or switch into Big Picture
+#
+# -cef-force-glx: Steam's CEF under XWayland picks a broken GL path otherwise
+# (software-rendered Big Picture; see steam-notes).
+exec uwsm app -- steam -cef-force-glx "$@"

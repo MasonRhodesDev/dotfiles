@@ -103,26 +103,25 @@ hl.on("hyprland.start", function()
 {{/* Neither Steam nor Discord has an aarch64 build; on mason-air these
      only produced "Command not found" toasts at every login. */}}
 {{ if and (not .is_work) (not $air) }}
-    hl.exec_cmd("uwsm app -- steam -cef-force-glx")
+    hl.exec_cmd(os.getenv("HOME") .. "/.local/bin/steam-launch")
     hl.exec_cmd("uwsm app -- discord")
 {{ end }}
 end)
 
--- Steam Big Picture: ultrawide only while it runs (see bp-monitors.lua). A missing
--- file is a no-op, so machines that don't deploy it are unaffected.
+-- Steam Big Picture modules, each a no-op when its file is absent so machines
+-- that do not deploy them are unaffected. Order matters: bp-focus exports
+-- BP_FOCUS.streaming, which bp-monitors reads.
+--   bp-focus.lua    game priority while streaming or in Big Picture, special
+--                   workspaces only on user action
+--   bp-monitors.lua one monitor while Big Picture runs, the 16:9 panel while
+--                   a stream is live
 do
     local base = os.getenv("XDG_CONFIG_HOME")
     if not base or base == "" then base = os.getenv("HOME") .. "/.config" end
-    pcall(dofile, base .. "/hypr/bp-monitors.lua")
-end
-
--- Steam Big Picture / game focus policy (see bp-focus.lua). Owns what
--- bp-game-focus.py used to attempt with pre-Lua `hyprctl dispatch` strings,
--- which have failed with exit 7 since the Lua migration: game priority while
--- streaming or in Big Picture, and special workspaces only on user action.
--- A missing file is a no-op.
-do
-    local base = os.getenv("XDG_CONFIG_HOME")
-    if not base or base == "" then base = os.getenv("HOME") .. "/.config" end
-    pcall(dofile, base .. "/hypr/bp-focus.lua")
+    for _, name in ipairs({ "bp-focus", "bp-monitors" }) do
+        local ok, err = pcall(dofile, base .. "/hypr/" .. name .. ".lua")
+        if not ok and not tostring(err):find("No such file", 1, true) then
+            hl.exec_cmd("logger -t hypr-local -- " .. ("'%s: %s'"):format(name, tostring(err):gsub("'", "")))
+        end
+    end
 end

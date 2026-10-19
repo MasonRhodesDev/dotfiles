@@ -3,7 +3,7 @@
 -- This replaces the focus half of ~/.config/hypr/scripts/bp-game-focus.py.
 -- That daemon drove Hyprland with `hyprctl dispatch focuswindow address:...`,
 -- `hyprctl dispatch fullscreen 0` and `hyprctl dispatch togglespecialworkspace`
--- — pre-Lua dispatcher syntax. Since the Lua migration `hyprctl dispatch`
+-- which is pre-Lua dispatcher syntax. Since the Lua migration `hyprctl dispatch`
 -- EVALUATES ITS ARGUMENT AS LUA, so every one of those calls has failed with
 -- exit 7 ("')' expected near ..."), silently, into a log nobody reads. The
 -- daemon has therefore focused nothing, fullscreened nothing and dismissed no
@@ -28,8 +28,8 @@
 -- business). Those stay in the daemon, which now asks this module to act
 -- rather than dispatching behind its back: BP_FOCUS.guide().
 
-local BP_CLASS = "steam"
-local BP_TITLE = "Steam Big Picture Mode"
+local C = BP_COMMON or dofile((os.getenv("XDG_CONFIG_HOME") or (os.getenv("HOME") .. "/.config")) .. "/hypr/bp-common.lua")
+local BP_CLASS = C.BP_CLASS
 
 -- Steam's own Remote Play log. Read on demand (never polled) at the only two
 -- moments the answer matters: a game window appearing, and a special
@@ -40,8 +40,6 @@ local STREAM_LOG = os.getenv("HOME") .. "/.local/share/Steam/logs/streaming_log.
 -- behind in the rotated file). A session that straddles the rotation has no
 -- boundary in the current file at all, so the scan falls through to this one.
 local STREAM_LOG_PREV = STREAM_LOG:gsub("%.txt$", ".previous.txt")
-local STREAM_TAIL = 8192 -- bytes scanned by the freshness fallback
-local STREAM_FRESH = 30  -- s; a marker this recent means a session is live
 -- Steam brackets every SESSION with these, paired 1:1 with client connections
 -- (7 and 7 across one log). Whichever came last IS the current state, so this
 -- needs no freshness window at all.
@@ -69,20 +67,13 @@ local USER_SPECIAL = 3   -- s; a special toggled by keybind is the user's, hands
 -- yanking it up and gets dismissed.
 local last_user_special = 0
 
-local function log(msg)
-    pcall(hl.exec_cmd, "logger -t hypr-bp-focus '" .. tostring(msg):gsub("'", "") .. "'")
-end
+local log = C.logger("hypr-bp-focus")
 
 ----------------------------------------------------------------------
 -- STATE ------------------------------------------------------------
 ----------------------------------------------------------------------
 
-local function bp_window()
-    for _, w in ipairs(hl.get_windows()) do
-        if w.class == BP_CLASS and w.title == BP_TITLE then return w end
-    end
-    return nil
-end
+local bp_window = C.bp_window
 
 -- Mirrors the game matching in /usr/share/hypr-de/gaming/game-rules.lua, plus
 -- Steam's launch reaper for native games that set their own class (Minecraft
@@ -140,37 +131,6 @@ local function is_game(w)
     return under_steam_launch(w.pid)
 end
 
--- Latest START-of-session marker in Steam's streaming log, as a unix time, or
--- nil. Only a fallback now: see streaming() for why a freshness window cannot
--- carry this on its own.
-local function stream_last_seen()
-    local f = io.open(STREAM_LOG, "r")
-    if not f then return nil end
-    local size = f:seek("end")
-    f:seek("set", math.max(0, size - STREAM_TAIL))
-    local tail = f:read("*a") or ""
-    f:close()
-
-    -- Only timestamps on lines carrying a session marker count; the last one
-    -- wins (the tail is in chronological order).
-    local latest
-    for line in tail:gmatch("[^\n]+") do
-        if line:find("Connected UDP@", 1, true)
-            or line:find("Maximum capture:", 1, true)
-            or line:find("SynchronizeClientState", 1, true) then
-            local y, mo, d, h, mi, s =
-                line:match("^%[(%d%d%d%d)%-(%d%d)%-(%d%d) (%d%d):(%d%d):(%d%d)%]")
-            if y then
-                latest = os.time({
-                    year = tonumber(y), month = tonumber(mo), day = tonumber(d),
-                    hour = tonumber(h), min = tonumber(mi), sec = tonumber(s),
-                })
-            end
-        end
-    end
-    return latest
-end
-
 -- True if the last stream boundary in the log was a start, nil if the scanned
 -- window held no boundary at all.
 local function last_boundary_in(path)
@@ -205,26 +165,20 @@ local function stream_boundary_says_live()
 end
 
 -- A freshness window was tried first and does NOT work, because nothing in this
--- log is periodic. The original markers (Connected UDP@, Maximum capture:,
--- SynchronizeClientState) all fire at session start and are then buried by
--- per-frame chatter within seconds. Measured 2026-10-19 during a live stream:
--- zero marker hits in the last 8KB, with the newest marker 426 lines back, so
--- this reported "not streaming" while a stream was running and bp-monitors
--- therefore kept the wrong monitor twice. `dynamicbitrate` is no substitute
--- either: 112 hits during a struggling stream, 0 during a healthy one.
+-- log is periodic. The start-of-session markers (Connected UDP@, Maximum
+-- capture:, SynchronizeClientState) are buried by per-frame chatter within
+-- seconds: measured 2026-10-19 during a live stream, zero hits in the last
+-- 8KB with the newest marker 426 lines back, so it reported "not streaming"
+-- mid-stream and bp-monitors kept the wrong monitor twice. No boundary in
+-- either file (two rotations inside one session) reads as not streaming;
+-- the old freshness fallback could not have answered that case either.
 local function streaming()
-    local live = stream_boundary_says_live()
-    if live ~= nil then return live end
-    -- No boundary in the scanned window: a session longer than STREAM_WINDOW of
-    -- log, or a log that just rotated. The freshness test at least catches the
-    -- opening seconds of a session.
-    local seen = stream_last_seen()
-    return seen ~= nil and (os.time() - seen) < STREAM_FRESH
+    return stream_boundary_says_live() == true
 end
 
 -- The two conditions under which the game owns the screen and nothing else may
 -- take it: Big Picture is up, or a stream is live. "Big Picture is up" means
--- the window EXISTS, not that it has focus — matching bp-monitors.lua, so a
+-- the window EXISTS, not that it has focus, which matches bp-monitors.lua, so a
 -- game launched from Big Picture keeps priority after BP loses focus.
 local function game_session()
     return bp_window() ~= nil or streaming()
@@ -234,12 +188,7 @@ end
 -- ACTIONS ----------------------------------------------------------
 ----------------------------------------------------------------------
 
-local function later(ms, fn)
-    hl.timer(function()
-        local ok, err = pcall(fn)
-        if not ok then log("error: " .. tostring(err)) end
-    end, { timeout = ms, type = "oneshot" })
-end
+local function later(ms, fn) C.later(ms, fn, log) end
 
 local function window_by_address(addr)
     for _, w in ipairs(hl.get_windows()) do
@@ -261,7 +210,7 @@ end
 
 -- Dismiss every special workspace currently visible. toggle_special acts on the
 -- FOCUSED monitor, so a special shown elsewhere needs that monitor focused
--- first — focus is restored afterwards. (During Big Picture bp-monitors.lua
+-- first, and focus is restored afterwards. (During Big Picture bp-monitors.lua
 -- leaves one monitor enabled, so the loop usually runs once.)
 local function dismiss_specials(reason)
     local restore = hl.get_active_monitor()
@@ -274,7 +223,7 @@ local function dismiss_specials(reason)
             local sp = hl.get_active_special_workspace()
             if sp and sp.name then
                 -- Name the culprit. What yanks special:magic up on Big Picture
-                -- entry was never identified — this is the trace that answers
+                -- entry was never identified, so this is the trace that answers
                 -- it on the next occurrence: whoever holds focus at dismissal
                 -- time is who grabbed it.
                 local aw = hl.get_active_window()
@@ -406,7 +355,7 @@ end
 -- one fullscreen per workspace, so the game had un-fullscreened BP.
 function M.on_active(w)
     if type(w) ~= "userdata" then return end
-    if w.class == BP_CLASS and w.title == BP_TITLE and (w.fullscreen or 0) ~= 2 then
+    if C.is_bp(w) and (w.fullscreen or 0) ~= 2 then
         fullscreen_on()
     end
 end
@@ -432,8 +381,11 @@ end
 function M.on_rules() later(50, apply_game_props) end
 
 -- The gamepad guide button is the one thing that cannot be config: Lua has no
--- evdev access. bp-game-focus.py calls this instead of dispatching behind our
--- back with a syntax Hyprland stopped understanding.
+-- evdev access. bp-game-focus.py calls this on a press and nothing else; the
+-- decision of where to go, including launching Big Picture when there is
+-- nothing to go to, is made here so the daemon needs no window list of its
+-- own. Never the desktop Steam window: it lives on special:magic, so focusing
+-- it would yank the special workspace up, the opposite of intent.
 function M.guide()
     local g = newest_game()
     if g then
@@ -450,20 +402,26 @@ function M.guide()
         end)
         return "bp"
     end
-    return "none" -- daemon launches Big Picture; on_open brings it forward
+    log("guide: nothing to go to, launching Big Picture")
+    hl.exec_cmd(C.STEAM_LAUNCH .. " steam://open/bigpicture")
+    return "launch" -- on_open brings it forward when the window appears
 end
 
--- Called by the daemon when it sees a stream start, so a game already running
--- in the background is pulled forward instead of waiting for a new window.
-function M.stream_started()
+-- Called by the daemon when it sees a session boundary in Steam's log (it
+-- tails the same two marker lines streaming() reads; the daemon owns the
+-- tail because Lua has no file watch, the Lua owns the meaning). On a start,
+-- a game already running in the background is pulled forward instead of
+-- waiting for a new window. Either edge pokes bp-monitors: it keeps a
+-- DIFFERENT monitor while streaming and otherwise re-evaluates only on window
+-- and monitor events, which a session starting or ending under an open Big
+-- Picture does not produce. Guarded because a machine without bp-monitors
+-- leaves the global nil.
+function M.stream_event(live)
     apply_game_props(true)
-    local g = newest_game()
-    if g then prioritise(g.address, "stream started") end
-    -- bp-monitors keeps a DIFFERENT monitor while streaming (16:9 instead of
-    -- the ultrawide), and it only re-evaluates on window and monitor events. A
-    -- stream that begins while Big Picture is already up produces neither, so
-    -- poke it. Guarded because a machine that does not deploy bp-monitors
-    -- leaves the global nil.
+    if live then
+        local g = newest_game()
+        if g then prioritise(g.address, "stream started") end
+    end
     if BP_MONITORS and BP_MONITORS.schedule_evaluate then
         pcall(BP_MONITORS.schedule_evaluate)
     end
@@ -500,7 +458,7 @@ BP_FOCUS = M
 if not BP_FOCUS_HOOKED then
     BP_FOCUS_HOOKED = true
     -- If `hyprctl reload` does NOT wipe Lua globals, this flag would survive
-    -- and the reloaded module would register no hooks at all — silently inert,
+    -- and the reloaded module would register no hooks at all, silently inert,
     -- the exact failure mode that hid the broken daemon for months. Clearing it
     -- on unload makes re-hooking correct either way.
     hl.on("config.unload", function() BP_FOCUS_HOOKED = nil end)

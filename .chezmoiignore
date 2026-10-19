@@ -50,11 +50,10 @@ docs/
 # Tracking it would pin the wrong profile on other machines.
 .config/hypr/profiles/.active.lua
 
-# Monitor-profile .lua files are BUILD ARTIFACTS: hyprstate regenerates them
-# from the sibling .toml (`hyprstate profile migrate`, and on demand during
-# `profile list`/`switch`), flattening mon.row into explicit hl.monitor calls
-# and dropping comments. The .toml is the source of truth — track that, and put
-# explanatory prose in it as `#` comments so regeneration can't eat it.
+# Monitor profiles (~/.config/hypr/profiles/*.lua) are machine-local and the
+# hand-maintained SOURCE on each machine: they were dropped from this public
+# repo on 2026-08-19 on purpose. Do not keep a .toml beside one: hyprstate
+# regenerates the .lua from a sibling .toml and would overwrite the edits.
 .config/hypr/profiles/*.lua
 
 # lmtt regenerates this on every theme switch from the embedded template in
@@ -76,6 +75,10 @@ docs/
 {{ if .is_work }}
 .config/hypr/scripts/bp-game-focus.py
 .config/hypr/scripts/steam-clean-shutdown.sh
+.config/systemd/user/bp-game-focus.service
+.config/systemd/user/steam-clean-shutdown.service
+.config/systemd/user/app-.scope.d
+.local/bin/steam-launch
 .config/environment.d/gaming.conf
 .local/bin/steam-set-launch-options
 .local/share/notes
@@ -115,6 +118,10 @@ scripts/thermal-tripwire
 # No Steam on ARM: the same gaming set the work gate removes above.
 .config/hypr/scripts/bp-game-focus.py
 .config/hypr/scripts/steam-clean-shutdown.sh
+.config/systemd/user/bp-game-focus.service
+.config/systemd/user/steam-clean-shutdown.service
+.config/systemd/user/app-.scope.d
+.local/bin/steam-launch
 .config/environment.d/gaming.conf
 .local/bin/steam-set-launch-options
 {{ else }}

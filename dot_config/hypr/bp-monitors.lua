@@ -60,9 +60,28 @@
 -- evaluate then enters the most specific applicable state directly from a
 -- complete snapshot. One flap on a reload mid-override, then correct.
 
-local KEEP_DESC = os.getenv("BP_KEEP_MONITOR_DESC") or "Dell Inc. DELL S3422DWG"
-local BP_CLASS  = "steam"
-local BP_TITLE  = "Steam Big Picture Mode"
+local C = BP_COMMON or dofile((os.getenv("XDG_CONFIG_HOME") or (os.getenv("HOME") .. "/.config")) .. "/hypr/bp-common.lua")
+
+-- The monitor Big Picture keeps is the same one hypr-DE makes the XWayland
+-- primary, read from that knob file so there is one definition of "the
+-- gaming monitor" on this machine. The knob holds a model substring
+-- ("S3422DWG"); it is matched against the EDID description here and against
+-- hyprctl's model field there. BP_KEEP_MONITOR_DESC overrides for a test.
+local function read_keep()
+    local env = os.getenv("BP_KEEP_MONITOR_DESC")
+    if env and env ~= "" then return env end
+    local f = io.open(C.CONFIG_BASE .. "/hypr-de/xwayland-primary", "r")
+    if not f then return nil end
+    local line = f:read("*l") or ""
+    f:close()
+    line = line:gsub("%s+", "")
+    if line == "" then return nil end
+    return line
+end
+local KEEP_DESC = read_keep()
+-- Without a keep monitor, BP is a no-op (never blank the desk on a guess) and
+-- STREAM still keeps the largest 16:9 panel. Said once at load so a machine
+-- that forgot the knob file does not look like a silent failure.
 
 local SETTLE_MS      = 1500  -- window/monitor event -> evaluate
 local POLL_MS        = 10000 -- BP and STREAM re-check their exit criterion
@@ -97,16 +116,9 @@ local homes     = {}   -- workspace id -> mon_key of the monitor it lived on
 local eval_gen  = 0
 local timer_gen = 0    -- the single exit/poll/pending timer; re-arming cancels the old one
 
-local function sh_quote(s)
-    return "'" .. (tostring(s):gsub("'", "'\\''")) .. "'"
-end
-
--- The "--" matters: logger parses an argument that begins with a dash as an
--- option and rejects the whole line, so every "-> STATE" transition message
--- was silently dropped until 2026-10-19. The pcall hid the failure.
-local function log(msg)
-    pcall(hl.exec_cmd, "logger -t hypr-bp-monitors -- " .. sh_quote(msg))
-end
+local sh_quote = C.sh_quote
+local log = C.logger("hypr-bp-monitors")
+if not KEEP_DESC then log("no keep monitor configured (hypr-de/xwayland-primary); Big Picture leaves monitors alone") end
 
 local function has_prefix(s, p)
     return type(s) == "string" and p ~= "" and s:sub(1, #p) == p
@@ -121,7 +133,9 @@ local function mon_key(m)
 end
 
 local function is_keep(m)
-    return m.name == KEEP_DESC or has_prefix(m.description, KEEP_DESC)
+    if not KEEP_DESC then return false end
+    return m.name == KEEP_DESC
+        or (type(m.description) == "string" and m.description:find(KEEP_DESC, 1, true) ~= nil)
 end
 
 local function streaming()
@@ -130,12 +144,7 @@ local function streaming()
     return ok and live == true
 end
 
-local function later(ms, fn)
-    hl.timer(function()
-        local ok, err = pcall(fn)
-        if not ok then log("error: " .. tostring(err)) end
-    end, { timeout = ms, type = "oneshot" })
-end
+local function later(ms, fn) C.later(ms, fn, log) end
 
 -- One timer at a time. Arming cancels whatever was armed before, so a
 -- transition never races a stale poll or revert from the previous state.
@@ -176,12 +185,7 @@ local function rule_for(m, names)
     return "desc:" .. m.description
 end
 
-local function bp_window()
-    for _, w in ipairs(hl.get_windows()) do
-        if w.class == BP_CLASS and w.title == BP_TITLE then return w end
-    end
-    return nil
-end
+local bp_window = C.bp_window
 
 local function bp_present()
     return bp_window() ~= nil
