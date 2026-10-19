@@ -35,14 +35,30 @@ local BP_TITLE = "Steam Big Picture Mode"
 -- moments the answer matters: a game window appearing, and a special
 -- workspace appearing.
 local STREAM_LOG = os.getenv("HOME") .. "/.local/share/Steam/logs/streaming_log.txt"
+-- Steam rotates the log to this at about 1MB, mid-session if that is when it
+-- fills (observed 2026-10-19 13:43, with the live session's start marker left
+-- behind in the rotated file). A session that straddles the rotation has no
+-- boundary in the current file at all, so the scan falls through to this one.
+local STREAM_LOG_PREV = STREAM_LOG:gsub("%.txt$", ".previous.txt")
 local STREAM_TAIL = 8192 -- bytes scanned by the freshness fallback
 local STREAM_FRESH = 30  -- s; a marker this recent means a session is live
--- Steam brackets every session with these, perfectly paired and alternating
--- (verified across six sessions in one log). Whichever came last IS the
--- current state, so this needs no freshness window at all.
-local STREAM_WINDOW = 524288 -- bytes scanned for the last boundary marker
-local STREAM_START  = ">>> Starting desktop stream"
-local STREAM_STOP   = ">>> Stopped desktop stream"
+-- Steam brackets every SESSION with these, paired 1:1 with client connections
+-- (7 and 7 across one log). Whichever came last IS the current state, so this
+-- needs no freshness window at all.
+--
+-- NOT ">>> Starting/Stopped desktop stream". Those are per capture SOURCE, and
+-- Steam logs "Stopped desktop stream" when it switches from desktop capture to
+-- the game overlay as a title launches, with the session very much alive
+-- (9 and 9 in the same log, against 7 sessions). Using them made streaming()
+-- flip false the moment a game started, which released the monitor override
+-- mid-stream on 2026-10-19 at 13:36:12. No "Deinitializing" fired at that
+-- moment, which is the proof the session markers are the right pair.
+-- Scan a WHOLE file. Steam rotates at about 1MB (the rotated copy measured
+-- 1,048,509 bytes), so this is bounded by Steam's own cap, and a smaller
+-- window missed a session start buried under 512KB of per-frame chatter.
+local STREAM_WINDOW = 1200000
+local STREAM_START  = "Streaming started to "
+local STREAM_STOP   = "PipeWire: Deinitializing streaming"
 
 local FOCUS_GRACE = 300  -- ms; let a game map and self-fullscreen first
 local FOCUS_RETRY = 1200 -- ms; second attempt, for splash -> main window chains
@@ -157,8 +173,8 @@ end
 
 -- True if the last stream boundary in the log was a start, nil if the scanned
 -- window held no boundary at all.
-local function stream_boundary_says_live()
-    local f = io.open(STREAM_LOG, "r")
+local function last_boundary_in(path)
+    local f = io.open(path, "r")
     if not f then return nil end
     local size = f:seek("end")
     f:seek("set", math.max(0, size - STREAM_WINDOW))
@@ -177,6 +193,15 @@ local function stream_boundary_says_live()
         end
     end
     return live
+end
+
+-- The current file is newer, so its last boundary wins when it has one. Only
+-- when it has none (just rotated, or a session that straddles the rotation)
+-- does the rotated file decide.
+local function stream_boundary_says_live()
+    local live = last_boundary_in(STREAM_LOG)
+    if live ~= nil then return live end
+    return last_boundary_in(STREAM_LOG_PREV)
 end
 
 -- A freshness window was tried first and does NOT work, because nothing in this
