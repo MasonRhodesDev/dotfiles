@@ -78,6 +78,12 @@ hl.bind("SUPER + SHIFT + equal", hl.dsp.workspace.move({ monitor = "-1" }), { de
 -- Gaming layer (hypr-de-gaming package)
 dofile("/usr/share/hypr-de/gaming/game-rules.lua")
 
+-- Keep games rendering at a steady 60fps when their workspace is hidden —
+-- Elden Ring's online watchdog kicks the session if fps collapses while
+-- tabbed away (hidden workspaces otherwise get no frame callbacks at all).
+hl.config({ misc = { render_unfocused_fps = 60 } })
+hl.window_rule({ name = "games-render-unfocused", match = { class = "^(steam_app_\\d+)$" }, render_unfocused = true })
+
 -- Sharp XWayland on fractionally scaled monitors (dual-4k/laptop profiles):
 -- render at native pixels instead of compositor upscaling. Steam UI can
 -- compensate via -forcedesktopscaling / its UI scale slider if needed.
@@ -108,4 +114,15 @@ do
     local base = os.getenv("XDG_CONFIG_HOME")
     if not base or base == "" then base = os.getenv("HOME") .. "/.config" end
     pcall(dofile, base .. "/hypr/bp-monitors.lua")
+end
+
+-- Steam Big Picture / game focus policy (see bp-focus.lua). Owns what
+-- bp-game-focus.py used to attempt with pre-Lua `hyprctl dispatch` strings,
+-- which have failed with exit 7 since the Lua migration: game priority while
+-- streaming or in Big Picture, and special workspaces only on user action.
+-- A missing file is a no-op.
+do
+    local base = os.getenv("XDG_CONFIG_HOME")
+    if not base or base == "" then base = os.getenv("HOME") .. "/.config" end
+    pcall(dofile, base .. "/hypr/bp-focus.lua")
 end

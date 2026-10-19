@@ -216,6 +216,23 @@ hl.on("monitor.removed", function() schedule_evaluate() end)
 -- reports the monitors we had disabled as disabled (the fresh rules re-enable
 -- them a moment later), so there is nothing to act on yet: the monitor.added
 -- events above do the work, and this deferred pass is the backstop.
+-- A reload DURING Big Picture used to lose the override, verified 2026-10-18
+-- with a clean `hyprctl reload`: the fresh profile rules re-enabled DP-1 and
+-- HDMI-A-1 and nothing disabled them again — no log line at all, so neither
+-- the monitor.added handlers nor the deferred backstop below ran. Re-enabling a
+-- monitor by RULE is not a monitor.added, and a timer scheduled while the
+-- config is still being parsed does not survive the end of that load.
+-- The fix has to be an event that fires BY ITSELF after the reload. Tried and
+-- rejected: config.reloaded never reached a handler registered during that same
+-- load (verified with a clean reload — no log line). monitor.added does not fire
+-- for a monitor re-enabled by RULE. The window.* hooks above are registered
+-- fine but nothing was opening or retitling windows, so nothing woke them.
+-- Enabling an output DOES change the layout, so this is the signal that cannot
+-- be missed. Converges rather than loops: our own disable_others() changes the
+-- layout too, but the next pass finds the other monitors already disabled, so
+-- targets is empty and it returns without touching anything.
+hl.on("monitor.layout_changed", function() schedule_evaluate() end)
+
 local ok, err = pcall(evaluate)
 if not ok then log("error at load: " .. tostring(err)) end
 schedule_evaluate()
