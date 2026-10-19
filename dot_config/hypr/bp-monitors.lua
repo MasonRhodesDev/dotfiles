@@ -219,7 +219,22 @@ local function disable_others()
     for _, m in ipairs(hl.get_monitors()) do
         if m.enabled and m.name ~= keep.name then targets[#targets + 1] = m end
     end
-    if #targets == 0 then return end
+    if #targets == 0 then
+        -- Nothing left to disable while Big Picture is up means someone else
+        -- already shaped the layout, so we cannot record what to re-enable and
+        -- the override would never revert. That happened on 2026-10-19 when the
+        -- streaming PROFILE declared the other monitors off: a config reload
+        -- wiped this module's state, the monitors stayed dark, and the desk was
+        -- stuck on one display until it was switched back by hand. The profile
+        -- no longer declares them, so this should not recur; log it rather than
+        -- returning in silence, because the failure is otherwise invisible.
+        if not active then
+            log("WARNING only " .. keep.name .. " is enabled and we disabled "
+                .. "nothing, so no revert is possible; check whether a profile "
+                .. "is holding the other monitors off")
+        end
+        return
+    end
 
     -- Where workspaces live NOW, before Hyprland evacuates them onto the ultrawide.
     for _, ws in ipairs(hl.get_workspaces()) do
