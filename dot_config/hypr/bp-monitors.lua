@@ -19,14 +19,6 @@
 -- if Big Picture is still open.
 
 local KEEP_DESC = os.getenv("BP_KEEP_MONITOR_DESC") or "Dell Inc. DELL S3422DWG"
--- hyprstate profile to request once the streaming monitor is the only one left.
--- Disabling the others is normally enough, because hyprstate re-resolves on the
--- topology change and this profile is the only priority-1 match for that set
--- (observed doing exactly that for ultrawide-only). Asking by name as well
--- removes the dependency on that priority arithmetic staying correct as
--- profiles are added. hyprstate logs it as "ingested external switch" and
--- adopts it, so the two mechanisms agree rather than fight. Empty disables it.
-local STREAM_PROFILE = os.getenv("BP_STREAM_PROFILE") or "stream-16x9"
 local BP_CLASS  = "steam"
 local BP_TITLE  = "Steam Big Picture Mode"
 
@@ -262,13 +254,15 @@ local function disable_others()
     log("kept " .. active_key .. " (streaming=" .. tostring(streaming())
         .. "); xwayland primary -> " .. keep.name)
     active = true
-
-    -- Only when the streaming monitor won, i.e. not the normal desk override,
-    -- which hyprstate already resolves to ultrawide-only on its own.
-    if STREAM_PROFILE ~= "" and not keep.keep then
-        hl.exec_cmd("hyprstate profile switch " .. sh_quote(STREAM_PROFILE))
-        log("requested hyprstate profile " .. STREAM_PROFILE)
-    end
+    -- Rotation and the rest of the kept monitor's geometry are hyprstate's job:
+    -- with the others disabled, the `stream-16x9` profile is the only match for
+    -- the remaining set and hyprstate selects it on the topology change, exactly
+    -- as it selects ultrawide-only for the desk override. NEVER request a
+    -- profile from here. Applying a profile re-renders the monitor config, a
+    -- monitor the profile does not mention defaults to enabled, so a request
+    -- re-enables the two just disabled, which fires layout_changed, which lands
+    -- back here. That looped every three seconds for the length of a stream on
+    -- 2026-10-19.
 end
 
 local function rehome(pending)
