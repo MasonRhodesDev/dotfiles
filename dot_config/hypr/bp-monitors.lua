@@ -16,8 +16,17 @@
 --   NORMAL -> BP      a Big Picture window appears
 --   BP     -> STREAM  a session is live
 --   BP     -> NORMAL  Big Picture has been gone for REVERT_MS
---   STREAM -> BP      the session has been over for STREAM_EXIT_MS and BP remains
---   STREAM -> NORMAL  the session has been over for STREAM_EXIT_MS and BP is gone
+--   STREAM -> NORMAL  the session has been over for STREAM_EXIT_MS
+--
+-- A session ending exits all the way to NORMAL, never back to BP. A remote
+-- client raises a Big Picture window on this host that nobody here opened,
+-- and it lingers after the client disconnects; stepping back into BP on it
+-- left the desk on one monitor after every stream (2026-10-19 13:50:28). So
+-- the window present when a session ends is remembered and ignored until it
+-- closes. A Big Picture opened afresh at the desk is a new window and enters
+-- BP as usual. The cost is deliberate: Big Picture opened at the desk and then
+-- streamed also lands in NORMAL when the stream ends, and wants reopening to
+-- get the ultrawide override back.
 --
 -- STREAM is reachable only from BP. A session with no Big Picture window
 -- leaves the monitors alone. Window title and open/close events, which storm
@@ -81,6 +90,7 @@ local disabled  = {}   -- { { rule = "desc:...", key = mon_key } }
 local homes     = {}   -- workspace id -> mon_key of the monitor it lived on
 local eval_gen  = 0
 local timer_gen = 0    -- the single exit/poll/pending timer; re-arming cancels the old one
+local ignore_bp = nil  -- address of a BP window a session left behind; not an entry criterion
 
 local function sh_quote(s)
     return "'" .. (tostring(s):gsub("'", "'\\''")) .. "'"
@@ -161,11 +171,24 @@ local function rule_for(m, names)
     return "desc:" .. m.description
 end
 
-local function bp_present()
+local function bp_window()
     for _, w in ipairs(hl.get_windows()) do
-        if w.class == BP_CLASS and w.title == BP_TITLE then return true end
+        if w.class == BP_CLASS and w.title == BP_TITLE then return w end
     end
-    return false
+    return nil
+end
+
+-- True only for a Big Picture window that counts. The one a session left
+-- behind is ignored until it is gone, at which point the ignore clears so a
+-- later Big Picture is seen again.
+local function bp_present()
+    local w = bp_window()
+    if not w then
+        ignore_bp = nil
+        return false
+    end
+    if ignore_bp and w.address == ignore_bp then return false end
+    return true
 end
 
 local function monitor_by_key(key)
@@ -373,10 +396,10 @@ evaluate = function()
                 if state ~= S_STREAM then return end
                 if streaming() then
                     arm(POLL_MS, evaluate)
-                elseif bp_present() then
-                    switch_to(S_BP)
                 else
-                    to_normal("session over, Big Picture gone")
+                    local w = bp_window()
+                    if w then ignore_bp = w.address end
+                    to_normal("session over" .. (w and ", ignoring the Big Picture it left behind" or ""))
                 end
             end)
         end
