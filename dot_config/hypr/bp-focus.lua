@@ -392,6 +392,14 @@ function M.stream_started()
     apply_game_props(true)
     local g = newest_game()
     if g then prioritise(g.address, "stream started") end
+    -- bp-monitors keeps a DIFFERENT monitor while streaming (16:9 instead of
+    -- the ultrawide), and it only re-evaluates on window and monitor events. A
+    -- stream that begins while Big Picture is already up produces neither, so
+    -- poke it. Guarded because a machine that does not deploy bp-monitors
+    -- leaves the global nil.
+    if BP_MONITORS and BP_MONITORS.schedule_evaluate then
+        pcall(BP_MONITORS.schedule_evaluate)
+    end
     return "ok"
 end
 
@@ -409,6 +417,10 @@ function M.status()
         #(function() local t = {} for _, w in ipairs(hl.get_windows()) do
             if is_game(w) then t[#t + 1] = w end end return t end)())
 end
+
+-- bp-monitors asks this to decide which monitor to keep. Exposed rather than
+-- duplicated: the log tail parser and its freshness window live here only.
+M.streaming = streaming
 
 BP_FOCUS = M
 

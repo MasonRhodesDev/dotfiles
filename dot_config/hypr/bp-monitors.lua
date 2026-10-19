@@ -31,12 +31,25 @@ local REVERT_MS = 8000
 -- normally does this itself when the monitor returns (observed); this is the
 -- backstop, and it only moves a workspace that is not already home.
 local REHOME_MS = 2500
+-- Streaming state comes from a log tail with a freshness window, so no event
+-- announces a stream ENDING. While one is live, re-check on a timer; the poll
+-- stops rescheduling as soon as streaming goes false.
+local STREAM_POLL_MS = 10000
 
 local active      = false -- override currently applied
 local disabled    = {}    -- { { rule = "desc:...", key = mon_key } }
 local homes       = {}    -- workspace id -> mon_key of the monitor it lived on
 local eval_gen    = 0
 local revert_gen  = 0
+local stream_gen  = 0
+local active_key  = nil  -- mon_key of the monitor the active override kept
+-- Candidate monitors as they were BEFORE the override disabled anything:
+-- { name, key, w, h, keep }. hl.get_monitors() does not report a monitor we
+-- disabled, so once the override is applied the alternatives are invisible and
+-- the kept monitor could never be reconsidered. Verified 2026-10-19: a stream
+-- that began one second after the override was applied left bp-monitors on the
+-- ultrawide, because by then DP-1 was no longer in get_monitors().
+local candidates  = {}
 
 local function sh_quote(s)
     return "'" .. (tostring(s):gsub("'", "'\\''")) .. "'"
@@ -60,6 +73,53 @@ end
 
 local function is_keep(m)
     return m.name == KEEP_DESC or has_prefix(m.description, KEEP_DESC)
+end
+
+local function streaming()
+    if not (BP_FOCUS and BP_FOCUS.streaming) then return false end
+    local ok, live = pcall(BP_FOCUS.streaming)
+    return ok and live == true
+end
+
+-- Largest 16:9 area the panel can show, computed from its MODE. hl.get_monitors()
+-- reports the mode, not the rotated logical size: the portrait S2721QS reads
+-- 3840x2160 with transform 3. A 21:9 panel is bounded by its height, a taller
+-- one by its width.
+local function area_16x9(c)
+    local w, h = c.w, c.h
+    if not w or not h or w <= 0 or h <= 0 then return 0 end
+    local fw = math.min(w, math.floor(h * 16 / 9))
+    local fh = math.min(h, math.floor(w * 9 / 16))
+    return fw * fh
+end
+
+-- The candidate set: the pre-override snapshot while an override is active,
+-- otherwise the live monitors. Returns plain tables either way so callers
+-- cannot accidentally depend on userdata accessors.
+local function candidate_list()
+    if active and #candidates > 0 then return candidates end
+    local out = {}
+    for _, m in ipairs(hl.get_monitors()) do
+        if m.enabled then
+            out[#out + 1] = { name = m.name, key = mon_key(m),
+                              w = m.width, h = m.height, keep = is_keep(m) }
+        end
+    end
+    return out
+end
+
+-- Remote Play clients are 16:9 and the ultrawide is 21:9, so keeping the
+-- ultrawide while streaming wastes most of the panel inside a 16:9 frame.
+-- Ties go to KEEP_DESC so desk behaviour never turns on a coin flip.
+local function best_16x9()
+    local best, best_area = nil, -1
+    for _, c in ipairs(candidate_list()) do
+        local a = area_16x9(c)
+        if a > best_area or (a == best_area and c.keep) then
+            best, best_area = c, a
+        end
+    end
+    return best
 end
 
 local function later(ms, fn)
@@ -105,9 +165,17 @@ local function bp_present()
     return false
 end
 
+-- Desk use keeps the ultrawide. Streaming keeps whichever panel gives the most
+-- 16:9 pixels; on this desk that is the S2721QS, which sits portrait here and
+-- is rotated to landscape by the `stream-16x9` hyprstate profile once it
+-- becomes the only enabled monitor.
 local function keep_monitor()
-    for _, m in ipairs(hl.get_monitors()) do
-        if m.enabled and is_keep(m) then return m end
+    if streaming() then
+        local c = best_16x9()
+        if c then return c end
+    end
+    for _, c in ipairs(candidate_list()) do
+        if c.keep then return c end
     end
     return nil
 end
@@ -122,6 +190,20 @@ end
 -- Idempotent: only touches monitors that are enabled right now, so calling it
 -- again picks up a monitor plugged in (or woken) during Big Picture.
 local function disable_others()
+    -- Snapshot BEFORE choosing, while every monitor is still enabled and
+    -- therefore still visible to hl.get_monitors(). Only refreshed when no
+    -- override is active, so a mid-override re-pick still sees the full set.
+    if not active then
+        candidates = {}
+        for _, m in ipairs(hl.get_monitors()) do
+            if m.enabled then
+                candidates[#candidates + 1] = { name = m.name, key = mon_key(m),
+                                                w = m.width, h = m.height,
+                                                keep = is_keep(m) }
+            end
+        end
+    end
+
     local keep = keep_monitor()
     if not keep then return end -- never blank the desktop without the ultrawide
 
@@ -147,6 +229,15 @@ local function disable_others()
         disabled[#disabled + 1] = { rule = rule, key = mon_key(m) }
         log("disabled " .. mon_key(m) .. " via " .. rule)
     end
+    active_key = keep.key
+    -- XWayland primary: hypr-de's listener resolves its knob (a model substring)
+    -- against `hyprctl monitors -j`, which lists only ENABLED monitors, so with
+    -- the ultrawide disabled it matches nothing and leaves primary pointing at a
+    -- dead output. Steam reads primary to size the desktop it captures, so aim
+    -- it at the monitor we kept.
+    hl.exec_cmd("xrandr --output " .. sh_quote(keep.name) .. " --primary")
+    log("kept " .. active_key .. " (streaming=" .. tostring(streaming())
+        .. "); xwayland primary -> " .. keep.name)
     active = true
 end
 
@@ -168,21 +259,53 @@ local function release()
         log("re-enabled " .. d.key .. " via " .. d.rule)
     end
     local pending = homes
-    disabled, homes, active = {}, {}, false
+    disabled, homes, active, active_key, candidates = {}, {}, false, nil, {}
     later(REHOME_MS, function() rehome(pending) end)
+    -- Hand XWayland primary back to hypr-de's own knob rather than guessing it.
+    -- Deferred because the re-enable above has not landed yet, and the script
+    -- can only see monitors that are already enabled.
+    later(REHOME_MS, function() hl.exec_cmd("/usr/lib/hypr-de/set-xwayland-primary.sh") end)
 end
 
 local function evaluate()
-    if active and not keep_monitor() then
-        -- The ultrawide went away mid-override: never leave the desktop blank.
-        log("ultrawide gone; releasing override")
+    -- The kept monitor went away mid-override: never leave the desktop blank.
+    -- Checked against LIVE monitors, not the snapshot, which still lists a
+    -- monitor that has since been unplugged.
+    if active and active_key and not monitor_by_key(active_key) then
+        log("kept monitor " .. active_key .. " is gone; releasing override")
         release()
         return
+    end
+
+    -- The right monitor to keep differs between desk use and streaming, so a
+    -- stream starting or ending mid-override changes the target. disable_others()
+    -- only ever disables, so switching means releasing first and letting the
+    -- resulting monitor.layout_changed bring us back through here with every
+    -- monitor visible again. Re-applying inline instead would race the
+    -- re-enable and re-pick the monitor we were trying to leave.
+    if active and active_key and bp_present() then
+        local want = keep_monitor()
+        if want and want.key ~= active_key then
+            log("keep should be " .. want.key .. " not " .. active_key
+                .. " (streaming=" .. tostring(streaming()) .. "); releasing to re-pick")
+            release()
+            return
+        end
     end
 
     if bp_present() then
         revert_gen = revert_gen + 1 -- cancels any pending revert
         disable_others()
+        -- Re-check on a timer for as long as Big Picture is up, NOT only while
+        -- streaming. A stream's first log marker can land a fraction of a
+        -- second after this evaluate runs (measured: override at 13:08:16.0,
+        -- marker at 13:08:16.04), so gating the poll on streaming() meant a
+        -- lost race was never revisited.
+        stream_gen = stream_gen + 1
+        local mine = stream_gen
+        later(STREAM_POLL_MS, function()
+            if mine == stream_gen then evaluate() end
+        end)
     elseif active then
         revert_gen = revert_gen + 1
         local mine = revert_gen
@@ -232,6 +355,10 @@ hl.on("monitor.removed", function() schedule_evaluate() end)
 -- layout too, but the next pass finds the other monitors already disabled, so
 -- targets is empty and it returns without touching anything.
 hl.on("monitor.layout_changed", function() schedule_evaluate() end)
+
+-- bp-focus pokes this when a stream starts: no window or monitor event fires at
+-- that moment, yet the monitor we should keep has just changed.
+BP_MONITORS = { schedule_evaluate = schedule_evaluate }
 
 local ok, err = pcall(evaluate)
 if not ok then log("error at load: " .. tostring(err)) end
