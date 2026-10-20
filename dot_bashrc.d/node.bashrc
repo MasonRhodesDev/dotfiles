@@ -28,3 +28,10 @@ unset _fnm _fnm_dir
 # pnpm
 export PNPM_HOME="$HOME/.local/share/pnpm"
 path_prepend "$PNPM_HOME"
+
+# GitHub Packages (scoped npm registries at work): ~/.npmrc reads the token from NODE_AUTH_TOKEN, and
+# the gh CLI login already carries read:packages, so mint it from gh instead of keeping a PAT on
+# disk. Skipped when the variable is already set (CI sets it) or gh is absent.
+if [ -z "${NODE_AUTH_TOKEN:-}" ] && command -v gh >/dev/null 2>&1; then
+    NODE_AUTH_TOKEN=$(gh auth token 2>/dev/null) && export NODE_AUTH_TOKEN
+fi
