@@ -107,6 +107,14 @@ hl.bind("F20", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.local/bin/swiftpoint-prof
 
 -- Autostart
 hl.on("hyprland.start", function()
+    -- desktop-boot's login splash, first so it covers the desktop while it
+    -- assembles. Only where desktop-boot is installed, so other machines get no
+    -- "command not found" toast.
+    local splash = io.open("/usr/local/bin/desktop-boot-login-splash", "r")
+    if splash then
+        splash:close()
+        hl.exec_cmd("/usr/local/bin/desktop-boot-login-splash")
+    end
 {{ if .is_work }}
     -- Slack starts from ~/.config/autostart/slack.desktop instead: that path is
     -- systemd-ordered after sni-watcher, exec-once is not (tray icon race, 2026-09-29).
