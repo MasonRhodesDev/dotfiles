@@ -77,6 +77,8 @@ hl.config({
         background_color = "rgb(0b0d10)",
     },
 })
+-- The desktop-boot splash is on screen from its first frame, not animated in.
+hl.layer_rule({ name = "desktop-boot-splash", match = { namespace = "desktop-boot-splash" }, no_anim = true })
 
 -- Swap main.lua's workspace-to-monitor directions: minus = next, equal = previous
 -- (hl.bind appends rather than replaces, so drop the package binds first)
@@ -110,10 +112,10 @@ hl.on("hyprland.start", function()
     -- desktop-boot's login splash, first so it covers the desktop while it
     -- assembles. Only where desktop-boot is installed, so other machines get no
     -- "command not found" toast.
-    local splash = io.open("/usr/local/bin/desktop-boot-login-splash", "r")
+    local splash = io.open("/usr/bin/desktop-boot-login-splash", "r")
     if splash then
         splash:close()
-        hl.exec_cmd("/usr/local/bin/desktop-boot-login-splash")
+        hl.exec_cmd("/usr/bin/desktop-boot-login-splash")
     end
 {{ if .is_work }}
     -- Slack starts from ~/.config/autostart/slack.desktop instead: that path is
@@ -122,7 +124,15 @@ hl.on("hyprland.start", function()
 {{/* Neither Steam nor Discord has an aarch64 build; on mason-air these
      only produced "Command not found" toasts at every login. */}}
 {{ if and (not .is_work) (not $air) }}
-    hl.exec_cmd(os.getenv("HOME") .. "/.local/bin/steam-launch")
+    -- desktop-boot-gate holds Steam until the login splash has faded (it
+    -- returns at once where desktop-boot is not installed).
+    local gate = io.open("/usr/bin/desktop-boot-gate", "r")
+    if gate then
+        gate:close()
+        hl.exec_cmd("/usr/bin/desktop-boot-gate " .. os.getenv("HOME") .. "/.local/bin/steam-launch")
+    else
+        hl.exec_cmd(os.getenv("HOME") .. "/.local/bin/steam-launch")
+    end
     hl.exec_cmd("uwsm app -- discord")
 {{ end }}
 end)
