@@ -12,6 +12,10 @@
 - Enforcement: the `PreToolUse` hook at `~/.claude/hooks/no-dashes.sh` denies file writes containing the glyphs, and the `Stop` hook at `~/.claude/hooks/no-dashes-chat.py` rejects chat replies containing them. Auto-memory files under `~/.claude/projects/` are exempt because the harness mandates the dash in `MEMORY.md` index lines.
 - A dash in text attributed to Mason is a contamination marker of LLM output, not his voice (0.7% of 679 typed prompts). Critique it; never emulate it. See `~/repos/style-fingerprint/FINGERPRINT.md`.
 
+## Decisions and questions
+- Always ask decisions through the AskUserQuestion picker, one question per call, the recommended option first and marked. Never put a decision in a numbered list in the reply body, even when a session prompt asks for a "What I need from you" list; that list is for `[do]` actions only, and decisions go to the picker.
+- Why: the picker is clickable, works on the phone, and does not scroll away. Reaffirmed 2026-10-23 ("Please update globabl instructions to prefer the picker, always").
+
 ## Portability (every project is developed as if it will be open sourced)
 - Structure every repo so a stranger could clone it and run it from the README alone, with no knowledge of my machines. Visibility stays private per the Git rules above; this is about structure, not publishing.
 - Before writing any value, classify it: project detail (belongs in the repo) or environment detail (belongs outside it). Environment details include: home paths and usernames, hostnames (lab nodes, dev box, tower, printers), LAN addresses and subnets, my domain and its subdomains, device nodes and serials, specific hardware (GPU, monitors, controllers), account names, API endpoints and tokens, notification topics, the distro or package manager I happen to use, and absolute paths into my other repos.
