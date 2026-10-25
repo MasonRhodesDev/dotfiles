@@ -1,0 +1,18 @@
+[Unit]
+Description=lab-notify desktop receiver — the home lab's Notify hub as swaync popups
+Documentation=file:%h/.local/bin/lab-notify
+# Its device token (LAB_NOTIFY_DEVICE_TOKEN) comes from the GNOME Keyring
+# session-env bucket via api-keys.service; swaync shows the popups.
+After=graphical-session.target api-keys.service swaync.service
+PartOf=graphical-session.target
+Requisite=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/lab-notify desktop
+Restart=on-failure
+RestartSec=10
+Slice=background.slice
+
+[Install]
+WantedBy=graphical-session.target
