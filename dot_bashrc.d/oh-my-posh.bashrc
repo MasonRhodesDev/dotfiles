@@ -7,6 +7,8 @@
 # unconditional `bleopt` transient-prompt calls once generated inside a ble.sh
 # shell, so evaluating it in a shell without ble — non-TTY interactive shells
 # like IDE tasks or `bash -ic` — errors "bleopt: command not found" twice.
+# Interactive shells only.
+[[ $- == *i* ]] || return 0
 if [[ ${TERM_PROGRAM-} != vscode && -z ${TTY_CONSOLE-} && $TERM != linux ]] \
     && { [[ ${BLE_VERSION-} ]] || [[ ! -f ~/.local/share/blesh/ble.sh ]]; } \
     && command -v oh-my-posh >/dev/null; then

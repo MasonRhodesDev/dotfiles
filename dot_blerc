@@ -1,4 +1,7 @@
-# ble.sh configuration — https://github.com/akinomyoga/ble.sh
+# ble.sh configuration, https://github.com/akinomyoga/ble.sh
+# Readline variables set in ~/.inputrc (completion-ignore-case, visible-stats,
+# mark-directories, menu-complete-display-prefix) are honoured by ble.sh too,
+# so they live there and apply to both line editors.
 
 # Vi keybindings (replaces fish_vi_key_bindings)
 bleopt default_keymap=vi
@@ -11,19 +14,37 @@ bleopt default_keymap=vi
 bleopt char_width_mode=west
 bleopt char_width_version=16.0
 
+# No bell at all (kitty would ring it on every failed completion).
+bleopt edit_bell=
+
+# Completion menu: show descriptions next to candidates when the completer
+# provides them (option flags, subcommands) instead of a bare aligned grid.
+bleopt complete_menu_style=desc
+bleopt complete_menu_maxlines=15
+
+# Output that did not end in a newline gets a dim return glyph instead of the
+# default bright "[ble: EOF]" banner; a failed command keeps a short red mark.
+bleopt prompt_eol_mark=$'\e[2m⏎\e[m'
+bleopt exec_errexit_mark=$'\e[91m[exit %d]\e[m'
+
 # Muted gray autosuggestion, fish-like
 ble-face auto_complete='fg=242'
 
 # Vi-keymap options must wait for the keymap module (lazy-loaded at attach).
 function blerc/vim-load-hook {
-    # No mode indicator line — the oh-my-posh theme has no mode segment either
+    # No mode indicator line: the oh-my-posh theme has no mode segment either
     # (fish's FISH__BIND_MODE repaint machinery was vestigial and was dropped).
     bleopt keymap_vi_mode_show=
 
     # The fzf integration rebinds normal-mode C-r to 'i\C-r' (history search);
-    # C-r in normal mode is vim's redo — restore it. Insert-mode C-r stays
+    # C-r in normal mode is vim's redo, so restore it. Insert-mode C-r stays
     # atuin's fuzzy history.
     ble-bind -m vi_nmap -f 'C-r' vi_nmap/redo
+
+    # Up/Down in insert mode search history for what is already typed
+    # (fish behaviour); with an empty line they walk history as before.
+    ble-bind -m vi_imap -f up   history-search-backward
+    ble-bind -m vi_imap -f down history-search-forward
 }
 blehook/eval-after-load keymap_vi blerc/vim-load-hook
 

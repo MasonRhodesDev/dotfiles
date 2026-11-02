@@ -5,6 +5,8 @@
 # prints one line while drift exists. Clear it by reconciling: `chezmoi diff`,
 # then `chezmoi add <file>` (live is right) or `chezmoi apply <target>`
 # (source is right).
+# Interactive shells only.
+[[ $- == *i* ]] || return 0
 if [[ -z ${CLAUDECODE-} ]] && command -v chezmoi >/dev/null; then
     _cz_drift=${XDG_STATE_HOME:-$HOME/.local/state}/chezmoi-drift
     if [[ -s $_cz_drift/status ]]; then

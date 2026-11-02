@@ -1,0 +1,51 @@
+#!/bin/bash
+# Regenerate bash completions for CLIs that ship a generator but no Fedora
+# package file. Output goes to ~/.local/share/bash-completion/completions/<cmd>
+# where bash-completion's dynamic loader picks each file up on the first Tab
+# after that command, so none of this costs anything at shell start.
+#
+# Re-run after upgrading any of these tools (`refresh-completions`); tools
+# that are not installed are skipped. Fedora already ships gh, docker, k9s,
+# aws, just and git completions, so they are not listed here.
+set -uo pipefail
+
+dir=${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions
+mkdir -p "$dir"
+
+gen() { # gen <cmd> <generator command...>
+    local cmd=$1; shift
+    command -v "$cmd" >/dev/null 2>&1 || { printf '%-12s skipped (not installed)\n' "$cmd"; return 0; }
+    local tmp
+    tmp=$(mktemp "$dir/.$cmd.XXXXXX")
+    if "$@" >"$tmp" 2>/dev/null && [ -s "$tmp" ]; then
+        mv -f "$tmp" "$dir/$cmd"
+        printf '%-12s %s lines\n' "$cmd" "$(wc -l <"$dir/$cmd")"
+    else
+        rm -f "$tmp"
+        printf '%-12s FAILED (generator returned nothing)\n' "$cmd" >&2
+    fi
+}
+
+stub() { # stub <cmd> <completion line>   for tools that complete via -C
+    local cmd=$1 line=$2
+    command -v "$cmd" >/dev/null 2>&1 || { printf '%-12s skipped (not installed)\n' "$cmd"; return 0; }
+    printf '%s\n' "$line" >"$dir/$cmd"
+    printf '%-12s stub\n' "$cmd"
+}
+
+gen chezmoi   chezmoi completion bash
+gen atuin     atuin gen-completions --shell bash
+gen fnm       fnm completions --shell bash
+gen pnpm      pnpm completion bash
+gen rustup    rustup completions bash
+gen cargo     rustup completions bash cargo
+gen pulumi    pulumi gen-completion bash
+gen tailscale tailscale completion bash
+gen kubectl   kubectl completion bash
+gen helm      helm completion bash
+gen uv        uv generate-shell-completion bash
+gen uvx       uvx --generate-shell-completion bash
+gen herdr     herdr completion bash
+gen codex     codex completion bash
+gen bun       bun completions
+stub terraform 'complete -C terraform terraform'

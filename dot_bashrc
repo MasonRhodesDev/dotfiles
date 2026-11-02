@@ -36,23 +36,20 @@ if [ -d ~/.bashrc.d ]; then
     done
 fi
 unset rc
-# Test change
 
 # Load user env script if present
 if [ -f "$HOME/.local/bin/env" ]; then
     . "$HOME/.local/bin/env"
 fi
 
-# TARS - ClickUp Configuration (from Secret Service)
-# Skipped where there is no keyring client at all (headless machines).
-if command -v secret-tool >/dev/null 2>&1; then
-    export CLICKUP_API_TOKEN=$(secret-tool lookup application tars service clickup type token 2>/dev/null || echo "")
-    export CLICKUP_TEAM_ID=$(secret-tool lookup application tars service clickup type teamid 2>/dev/null || echo "")
-fi
+# direnv lives in ~/.bashrc.d/direnv.bashrc (interactive shells only).
+# The TARS ClickUp token exports that used to sit here were removed on
+# 2026-11-02: nothing on this machine reads CLICKUP_API_TOKEN any more and the
+# two keyring lookups cost about 20 ms per shell.
 
-# direnv hook for automatic nix-shell loading
-command -v direnv >/dev/null 2>&1 && eval "$(direnv hook bash)"
-export LD_LIBRARY_PATH="$HOME/.local/lib:$LD_LIBRARY_PATH"
+# Keep an unset LD_LIBRARY_PATH from gaining a trailing colon, which the
+# loader reads as "also search the current directory".
+export LD_LIBRARY_PATH="$HOME/.local/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 
 # Pulumi CLI (installer drops it in ~/.pulumi/bin)
 [ -d "$HOME/.pulumi/bin" ] && export PATH="$PATH:$HOME/.pulumi/bin"
