@@ -10,22 +10,26 @@ shopt -s no_empty_cmd_completion  # Tab on an empty line does not list every com
 shopt -u sourcepath  # "source x" reads ./x, not something on PATH
 
 # Listing aliases. eza is optional: when it is installed the ls family picks it
-# up, otherwise plain coreutils with colour.
-if command -v eza >/dev/null 2>&1; then
-    alias ls='eza --group-directories-first'
-    alias ll='eza -l --group-directories-first --git'
-    alias la='eza -la --group-directories-first --git'
-    alias lt='eza --tree --level=2 --group-directories-first'
-else
-    alias ls='ls --color=auto --group-directories-first'
-    alias ll='ls -l --color=auto --group-directories-first'
-    alias la='ls -la --color=auto --group-directories-first'
+# up, otherwise plain coreutils with colour. Skipped inside Claude Code shells
+# (the harness snapshots aliases into every agent shell, and agents should see
+# stock ls ordering), like the claude function in dev-slice.bashrc.
+if [[ -z ${CLAUDECODE-} ]]; then
+    if command -v eza >/dev/null 2>&1; then
+        alias ls='eza --group-directories-first'
+        alias ll='eza -l --group-directories-first --git'
+        alias la='eza -la --group-directories-first --git'
+        alias lt='eza --tree --level=2 --group-directories-first'
+    else
+        alias ls='ls --color=auto --group-directories-first'
+        alias ll='ls -l --color=auto --group-directories-first'
+        alias la='ls -la --color=auto --group-directories-first'
+    fi
+    alias l='ll'
+    alias ..='cd ..'
+    alias ...='cd ../..'
+    alias tree='tree -C'
+    alias ip='ip -color=auto'
 fi
-alias l='ll'
-alias ..='cd ..'
-alias ...='cd ../..'
-alias tree='tree -C'
-alias ip='ip -color=auto'
 
 # A terminal bell on every failed completion is noise in kitty. ble.sh reads
 # its own option (edit_abell in ~/.blerc); this covers plain readline.
