@@ -1,36 +1,46 @@
 # Node.js environment configuration
 
-# fnm (Fast Node Manager). The default alias is a stable symlink
-# (~/.local/share/fnm/aliases/default -> node-versions/<ver>/installation), so
-# putting its bin on PATH gives every shell node/npm/corepack without running
-# `fnm env` (about 50 ms, and it minted a fresh /run/user/*/fnm_multishells
-# dir per shell that path_dedupe then had to collapse).
+# fnm (Fast Node Manager).
 #
-# `fnm use`/`fnm install` still need the multishell environment, so the first
-# call to fnm in a shell evals `fnm env` and then runs the real command; after
-# that the multishell bin sits ahead of the default alias on PATH as before.
+# Two layers:
+#   1. The default alias is a stable symlink (~/.local/share/fnm/aliases/default
+#      -> node-versions/<ver>/installation), so its bin goes on PATH for every
+#      shell, interactive or not, without running `fnm env`.
+#   2. Interactive shells outside Claude Code also eval `fnm env --use-on-cd`,
+#      which wraps cd (an alias to __fnmcd) and switches Node from a
+#      .nvmrc / .node-version / engines.node found in the directory or any
+#      parent. Claude Code shells skip it: the harness snapshots aliases and
+#      cds before every tool command, and a version file naming an uninstalled
+#      Node would make that cd fail (same reason go.bashrc gates gvm). Those
+#      shells get the lazy wrapper below instead, so `fnm use` still works.
+#
 # The binary is resolved explicitly: a cargo install (this machine) lands in
 # ~/.cargo/bin, which only login shells have on PATH via ~/.profile.
 export FNM_DIR="$HOME/.local/share/fnm"
 path_prepend "$FNM_DIR/aliases/default/bin"
-fnm() {
-    local bin
-    bin=$(type -P fnm)
-    if [ -z "$bin" ]; then
-        local d
-        for d in "$HOME/.local/share/fnm" "$HOME/.cargo/bin"; do
-            [ -x "$d/fnm" ] && { bin="$d/fnm"; path_prepend "$d"; break; }
-        done
-    fi
-    if [ -z "$bin" ]; then
-        echo "fnm: binary not found" >&2
-        return 127
-    fi
-    if [ -z "${FNM_MULTISHELL_PATH-}" ]; then
-        eval "$("$bin" env)"
-    fi
-    "$bin" "$@"
-}
+_fnm=$(type -P fnm)
+if [ -z "$_fnm" ]; then
+    for _fnm_dir in "$HOME/.local/share/fnm" "$HOME/.cargo/bin"; do
+        if [ -x "$_fnm_dir/fnm" ]; then
+            path_prepend "$_fnm_dir"
+            _fnm="$_fnm_dir/fnm"
+            break
+        fi
+    done
+fi
+if [ -n "$_fnm" ] && [[ $- == *i* && -z ${CLAUDECODE-} ]]; then
+    eval "$("$_fnm" env --use-on-cd --version-file-strategy=recursive --shell bash)"
+elif [ -n "$_fnm" ]; then
+    fnm() {
+        local bin
+        bin=$(type -P fnm) || { echo "fnm: binary not found" >&2; return 127; }
+        if [ -z "${FNM_MULTISHELL_PATH-}" ]; then
+            eval "$("$bin" env)"
+        fi
+        "$bin" "$@"
+    }
+fi
+unset _fnm _fnm_dir
 
 # pnpm
 export PNPM_HOME="$HOME/.local/share/pnpm"
