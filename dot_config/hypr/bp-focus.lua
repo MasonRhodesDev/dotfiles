@@ -469,11 +469,9 @@ BP_FOCUS = M
 
 if not BP_FOCUS_HOOKED then
     BP_FOCUS_HOOKED = true
-    -- If `hyprctl reload` does NOT wipe Lua globals, this flag would survive
-    -- and the reloaded module would register no hooks at all, silently inert,
-    -- the exact failure mode that hid the broken daemon for months. Clearing it
-    -- on unload makes re-hooking correct either way.
-    hl.on("config.unload", function() BP_FOCUS_HOOKED = nil end)
+    -- `hyprctl reload` rebuilds the Lua VM, so this flag never survives a
+    -- reload and the hooks are always re-registered. It only guards against
+    -- a second dofile (hot-load via eval) stacking a second set of handlers.
     local function hook(event, name)
         hl.on(event, function(arg)
             local ok, err = pcall(function() return BP_FOCUS[name](arg) end)

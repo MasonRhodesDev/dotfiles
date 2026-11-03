@@ -60,10 +60,8 @@ end
 -- crash recovery). Flags live in the script, not in every caller.
 M.STEAM_LAUNCH = os.getenv("HOME") .. "/.local/bin/steam-launch"
 
--- Mirrors bp-focus.lua's BP_FOCUS_HOOKED guard: if a reload does not wipe
--- Lua globals, the load guard above would keep serving this table forever
--- and an edit to this file would never take effect.
-hl.on("config.unload", function() BP_COMMON = nil end)
-
+-- `hyprctl reload` tears down and rebuilds the Lua VM, so this global dies
+-- with it and an edit to this file takes effect on the next reload. The load
+-- guard above only protects against a second dofile within one config load.
 BP_COMMON = M
 return M
