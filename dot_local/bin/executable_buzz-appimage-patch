@@ -38,74 +38,12 @@ notify() {
   notify-send -a Buzz -i buzz-desktop "$1" "${2:-}" >/dev/null 2>&1 || true
 }
 
-# --- the environment-cleaning shim, single source of truth ------------------
-# Written both into the AppImage (as xdg-open/xdg-mime) and to $SHIM, where it
-# doubles as a global $BROWSER so links keep working even if a future upstream
-# layout change makes the repack fail.
-write_shim() {
-  cat >"$1" <<'SHIM_EOF'
-#!/usr/bin/env bash
-# Launch the host's xdg-open / xdg-mime with a de-AppImage'd environment.
-#
-# AppImages prepend their bundled libraries to LD_LIBRARY_PATH and every child
-# inherits them, so a spawned browser loads Ubuntu libs against Fedora binaries
-# and dies (chromium: libtiff.so.6 "version LIBTIFF_4.6.1 not found"). Strip
-# every $APPDIR-derived entry, drop the bundle's GTK/GIO/GStreamer overrides,
-# then hand off. Dispatches on $0, so it works as xdg-open, xdg-mime, or
-# $BROWSER. Managed by buzz-appimage-patch -- edit that, not this.
-set -u
-
-appdir="${APPDIR:-$(readlink -f "$(dirname "$(readlink -f "$0")")/../..")}"
-
-strip_appdir() { # drop $appdir entries from a colon-separated list
-  local list="$1" out="" entry
-  local IFS=:
-  for entry in $list; do
-    [ -n "$entry" ] || continue
-    case "$entry" in "$appdir" | "$appdir"/*) continue ;; esac
-    out="${out:+$out:}$entry"
-  done
-  printf '%s' "$out"
-}
-
-export PATH="$(strip_appdir "${PATH:-}")"
-export PATH="${PATH:-/usr/local/bin:/usr/bin:/bin}"
-export XDG_DATA_DIRS="$(strip_appdir "${XDG_DATA_DIRS:-}")"
-export XDG_DATA_DIRS="${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
-
-if libpath="$(strip_appdir "${LD_LIBRARY_PATH:-}")" && [ -n "$libpath" ]; then
-  export LD_LIBRARY_PATH="$libpath"
-else
-  unset LD_LIBRARY_PATH
-fi
-
-# BROWSER must go: xdg-open honors it, and it may point back at this shim.
-unset BROWSER APPDIR APPIMAGE ARGV0 LD_PRELOAD \
-  GTK_THEME GTK_PATH GTK_EXE_PREFIX GTK_DATA_PREFIX GTK_IM_MODULE_FILE \
-  GDK_BACKEND GDK_PIXBUF_MODULE_FILE GSETTINGS_SCHEMA_DIR GIO_EXTRA_MODULES \
-  GST_PLUGIN_SYSTEM_PATH GST_PLUGIN_SYSTEM_PATH_1_0 GST_PLUGIN_PATH \
-  GST_PLUGIN_PATH_1_0 GST_PLUGIN_SCANNER GST_PLUGIN_SCANNER_1_0 \
-  WEBKIT_DISABLE_DMABUF_RENDERER WEBKIT_DISABLE_COMPOSITING_MODE
-
-# Process trees started before the graphical session (herdr at boot via linger)
-# carry no display, so xdg-open skips the default browser and falls back to
-# text browsers. Borrow the session's display from the systemd user manager.
-if [ -z "${WAYLAND_DISPLAY:-}${DISPLAY:-}" ]; then
-  while IFS= read -r line; do
-    case "$line" in WAYLAND_DISPLAY=* | DISPLAY=*) export "$line" ;; esac
-  done < <(systemctl --user show-environment 2>/dev/null)
-fi
-
-case "$(basename "$0")" in
-  xdg-mime) exec /usr/bin/xdg-mime "$@" ;;
-  *) exec /usr/bin/xdg-open "$@" ;;
-esac
-SHIM_EOF
-  chmod 755 "$1"
-}
-
-# Keep the standalone copy current on every run.
-write_shim "$SHIM.tmp" && mv -f "$SHIM.tmp" "$SHIM"
+# --- the environment-cleaning shim -----------------------------------------
+# $SHIM is the single source of truth (managed by chezmoi). It is copied into
+# the AppImage as xdg-open/xdg-mime and doubles as a global $BROWSER, so links
+# keep working even if a future upstream layout change makes the repack fail.
+[[ -x "$SHIM" ]] || die "shim missing: $SHIM"
+write_shim() { install -m 755 "$SHIM" "$1"; }
 
 # --- pick the target -------------------------------------------------------
 target=""
