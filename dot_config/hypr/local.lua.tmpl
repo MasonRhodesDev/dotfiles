@@ -24,7 +24,7 @@ hl.window_rule({ name = "ytmusic-special",  match = { title = "^(YouTube Music)$
 hl.window_rule({ name = "voice-dictation",  match = { class = "^(dev.mason.dictation)$" }, float = true, pin = true, size = "200 50", move = "50%-100 95%", border_size = 0, no_blur = true, no_shadow = true, no_initial_focus = true, no_focus = true })
 hl.window_rule({ name = "zoom-annotate",    match = { class = "^(zoom)$", title = "^(annotate_toolbar)$" }, float = true, size = "1 1", move = "-9999 -9999", opacity = "0.0 override 0.0 override", border_size = 0, no_blur = true, no_shadow = true, no_initial_focus = true, no_focus = true })
 
--- FW16 F13-24 keys + caps-as-shift (moved out of the hypr-de package)
+-- FW16 F13-24 keys, Caps key disabled (caps:shift latched Caps Lock) (moved out of the hypr-de package)
 {{ if $air -}}
 -- Apple internal keyboard: no F13-24 row, and Asahi already maps Cmd to
 -- Super. Keep caps-as-shift, drop the Framework fkeys map.
@@ -48,7 +48,7 @@ hl.bind("XF86Sleep",        hl.dsp.exec_cmd("swaync-client -d -sw"), { locked = 
 hl.bind("SUPER + XF86MonBrightnessDown", hl.dsp.exec_cmd("brightnessctl -q -d kbd_backlight set 10%- && notify-send -t 1500 -a osd-brightness -h string:x-canonical-private-synchronous:kbd -h int:value:$(brightnessctl -d kbd_backlight -m | cut -d, -f4 | tr -d %) 'Keyboard' ''"), { locked = true, repeating = true, desc = "Media: Keyboard backlight down (Cmd+F1)" })
 hl.bind("SUPER + XF86MonBrightnessUp",   hl.dsp.exec_cmd("brightnessctl -q -d kbd_backlight set +10% && notify-send -t 1500 -a osd-brightness -h string:x-canonical-private-synchronous:kbd -h int:value:$(brightnessctl -d kbd_backlight -m | cut -d, -f4 | tr -d %) 'Keyboard' ''"), { locked = true, repeating = true, desc = "Media: Keyboard backlight up (Cmd+F2)" })
 {{- else -}}
-hl.config({ input = { kb_options = "fkeys:basic_13-24,caps:shift" } })
+hl.config({ input = { kb_options = "fkeys:basic_13-24,caps:none" } })
 {{- end }}
 
 -- Personal keybinds
