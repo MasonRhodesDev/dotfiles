@@ -87,6 +87,15 @@ unset BROWSER APPDIR APPIMAGE ARGV0 LD_PRELOAD \
   GST_PLUGIN_PATH_1_0 GST_PLUGIN_SCANNER GST_PLUGIN_SCANNER_1_0 \
   WEBKIT_DISABLE_DMABUF_RENDERER WEBKIT_DISABLE_COMPOSITING_MODE
 
+# Process trees started before the graphical session (herdr at boot via linger)
+# carry no display, so xdg-open skips the default browser and falls back to
+# text browsers. Borrow the session's display from the systemd user manager.
+if [ -z "${WAYLAND_DISPLAY:-}${DISPLAY:-}" ]; then
+  while IFS= read -r line; do
+    case "$line" in WAYLAND_DISPLAY=* | DISPLAY=*) export "$line" ;; esac
+  done < <(systemctl --user show-environment 2>/dev/null)
+fi
+
 case "$(basename "$0")" in
   xdg-mime) exec /usr/bin/xdg-mime "$@" ;;
   *) exec /usr/bin/xdg-open "$@" ;;
