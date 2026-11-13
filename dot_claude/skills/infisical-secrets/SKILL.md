@@ -40,16 +40,30 @@ If `BASH_ENV` is unset in your environment (the session was started outside a lo
 
 ## When a secret is missing
 
-Ask the human to add it, and be exact:
+Request it through the **secret inbox**, which gives the human a one-field form on their phone that
+writes straight into Infisical:
 
-> Please add `STRIPE_SECRET_KEY` in Infisical: project `<project>`, environment `dev`, path `/`.
+1. Open the request. Use the conventional name for the tool (what its docs or the code read), in
+   UPPER_SNAKE_CASE, and say what the value is and where to get it:
+
+       infisical-ask STRIPE_SECRET_KEY "Stripe test-mode secret key: Stripe → Developers → API keys"
+
+   It prints a link (tailnet only, expires in 30 minutes). For rotating an existing value, add
+   `--replace`.
+2. Put the link in your reply so they can tap it, and also send it with the `PushNotification` tool
+   (e.g. "Need STRIPE_SECRET_KEY for the payments test: <link>"); that reaches their phone when Remote
+   Control is connected. Load the tool with ToolSearch if it is deferred.
+3. Wait for it with `infisical-ask --wait STRIPE_SECRET_KEY` as a **background** command
+   (run_in_background), so you are notified when it lands. Meanwhile continue with work that doesn't
+   need the secret, or end your turn. Once it reports the key is set, carry on.
+
+If `infisical-ask` says the inbox isn't running or reachable, fall back to asking them to add it in the
+Infisical web app, and be exact:
+
+> Please add `STRIPE_SECRET_KEY` in Infisical: environment `dev`, path `/`.
 > It syncs here within about 10 seconds; tell me when it's in.
 
-- Use the conventional name for the tool (what its docs or the code read), in UPPER_SNAKE_CASE.
-- Say what the value is and where they can get it (e.g. "the test-mode secret key from Stripe →
-  Developers → API keys").
-- After they confirm, wait ~10 seconds and re-check with the commands above. If it is still missing,
-  see Troubleshooting.
+Then re-check with the commands above. If it is still missing, see Troubleshooting.
 
 Do not work around a missing secret by generating a placeholder, using a hardcoded test key, or
 creating a local file "for now".
@@ -70,11 +84,13 @@ they change in Infisical:
 
 ## Troubleshooting
 
-    systemctl --user status infisical-env-sync
-    journalctl --user -u infisical-env-sync -n 20 --no-pager
+    systemctl --user status infisical-env-sync secret-inbox
+    journalctl --user -u infisical-env-sync -u secret-inbox -n 20 --no-pager
 
 - "not a member of this project": the machine identity needs to be added to the project
   (project → Access Control → Machine Identities → Assign Existing, role Viewer). Ask the human.
+- The inbox form says the write was refused: the inbox identity (`~/.config/infisical/inbox.env`) needs
+  write access to the project's environment. Ask the human; never read or print that file.
 - "Invalid credentials": the identity's client secret in `~/.config/infisical/machine.env` is wrong or
   revoked. Ask the human to update that file themselves; never read or print it.
 - Project, environment and path come from `INFISICAL_PROJECT_ID`, `INFISICAL_ENV` and `INFISICAL_PATH`

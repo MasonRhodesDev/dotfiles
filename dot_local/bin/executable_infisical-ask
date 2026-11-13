@@ -1,0 +1,93 @@
+#!/usr/bin/env python3
+"""Ask the human for a secret through the secret inbox.
+
+  infisical-ask KEY "what it is and where to get it"   open a request, print the phone link
+  infisical-ask --replace KEY "..."                     same, even if KEY is already set (rotation)
+  infisical-ask --wait KEY [--timeout SECONDS]          block until KEY has synced into env.sh
+
+Never prints secret values.
+"""
+import json
+import os
+import re
+import sys
+import time
+import urllib.error
+import urllib.request
+
+CONF_DIR = os.path.expanduser("~/.config/infisical")
+ENV_SH = os.path.join(CONF_DIR, "env.sh")
+PORT = os.environ.get("INBOX_PORT", "8470")
+
+
+def synced(key):
+    try:
+        with open(ENV_SH) as f:
+            return any(re.match(rf"export {re.escape(key)}=", line) for line in f)
+    except FileNotFoundError:
+        return False
+
+
+def die(msg, code=1):
+    print(msg, file=sys.stderr)
+    sys.exit(code)
+
+
+def wait(key, timeout):
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        if synced(key):
+            print(f"{key} is set (synced from Infisical).")
+            return
+        time.sleep(3)
+    die(f"timed out after {timeout}s waiting for {key}. Check `journalctl --user -u infisical-env-sync -n 20`.", 2)
+
+
+def ask(key, note, replace=False):
+    if not replace and synced(key):
+        print(f"{key} is already set. Pass --replace to request a new value.")
+        return
+    try:
+        with open(os.path.join(CONF_DIR, "inbox.token")) as f:
+            token = f.read().strip()
+    except FileNotFoundError:
+        die("secret inbox isn't running here (no ~/.config/infisical/inbox.token). "
+            "Ask the human to add the secret in the Infisical web app instead.")
+    req = urllib.request.Request(f"http://127.0.0.1:{PORT}/api/requests", method="POST",
+                                 data=json.dumps({"key": key, "note": note}).encode(),
+                                 headers={"Content-Type": "application/json", "Authorization": "Bearer " + token})
+    try:
+        with urllib.request.urlopen(req, timeout=10) as r:
+            out = json.loads(r.read())
+    except urllib.error.HTTPError as e:
+        die(f"secret inbox refused the request: {e.read().decode(errors='replace')}")
+    except urllib.error.URLError as e:
+        die(f"secret inbox isn't reachable ({e.reason}). Check `systemctl --user status secret-inbox`; "
+            "until it's fixed, ask the human to add the secret in the Infisical web app.")
+    print(f"Requested {key}. Link for the human (tailnet only, expires in 30 min):")
+    print(out["url"])
+
+
+def main(argv):
+    args = argv[1:]
+    if not args or args[0] in ("-h", "--help"):
+        print(__doc__.strip())
+        return
+    if args[0] == "--wait":
+        timeout = 900
+        if "--timeout" in args:
+            i = args.index("--timeout")
+            timeout = int(args[i + 1])
+            del args[i:i + 2]
+        if len(args) != 2:
+            die("usage: infisical-ask --wait KEY [--timeout SECONDS]")
+        return wait(args[1], timeout)
+    replace = "--replace" in args
+    args = [a for a in args if a != "--replace"]
+    if not args:
+        die("usage: infisical-ask KEY \"description\"")
+    ask(args[0], " ".join(args[1:]), replace)
+
+
+if __name__ == "__main__":
+    main(sys.argv)

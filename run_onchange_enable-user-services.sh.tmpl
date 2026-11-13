@@ -13,6 +13,8 @@
 # keyring-resync.bin:    {{ include "dot_local/bin/executable_keyring-resync" | sha256sum }}
 # infisical-env-sync:    {{ include "dot_config/systemd/user/infisical-env-sync.service" | sha256sum }}
 # infisical-env-sync.bin: {{ include "dot_local/bin/executable_infisical-env-sync" | sha256sum }}
+# secret-inbox:          {{ include "dot_config/systemd/user/secret-inbox.service" | sha256sum }}
+# secret-inbox.bin:      {{ include "dot_local/bin/executable_secret-inbox" | sha256sum }}
 
 set -euo pipefail
 
@@ -39,6 +41,11 @@ systemctl --user enable keyring-resync.service 2>/dev/null || true
 echo "→ infisical-env-sync"
 systemctl --user enable infisical-env-sync.service 2>/dev/null || true
 systemctl --user try-restart infisical-env-sync.service || true
+
+# Phone form that writes requested secrets to Infisical (needs ~/.config/infisical/inbox.env).
+echo "→ secret-inbox"
+systemctl --user enable secret-inbox.service 2>/dev/null || true
+systemctl --user try-restart secret-inbox.service || true
 
 # Hosts with a hypr-DE idle knob file (mason-air): restart hypridle so the
 # launcher re-splices it. Safe for the locker: lock-cmd.sh runs it in its
