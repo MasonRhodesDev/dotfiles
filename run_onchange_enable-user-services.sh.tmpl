@@ -11,6 +11,8 @@
 # hypridle knobs:        {{ include "dot_config/hypr-de/hypridle.conf.tmpl" | sha256sum }}
 # keyring-resync:        {{ include "dot_config/systemd/user/keyring-resync.service" | sha256sum }}
 # keyring-resync.bin:    {{ include "dot_local/bin/executable_keyring-resync" | sha256sum }}
+# infisical-env-sync:    {{ include "dot_config/systemd/user/infisical-env-sync.service" | sha256sum }}
+# infisical-env-sync.bin: {{ include "dot_local/bin/executable_infisical-env-sync" | sha256sum }}
 
 set -euo pipefail
 
@@ -31,6 +33,12 @@ systemctl --user restart browser-default-guard.path || true
 # (login password changed). Runs at graphical login, exits silently otherwise.
 echo "→ keyring-resync"
 systemctl --user enable keyring-resync.service 2>/dev/null || true
+
+# Syncs Infisical secrets to ~/.config/infisical/env.sh. The unit is skipped
+# (ConditionPathExists) on hosts without ~/.config/infisical/machine.env.
+echo "→ infisical-env-sync"
+systemctl --user enable infisical-env-sync.service 2>/dev/null || true
+systemctl --user try-restart infisical-env-sync.service || true
 
 # Hosts with a hypr-DE idle knob file (mason-air): restart hypridle so the
 # launcher re-splices it. Safe for the locker: lock-cmd.sh runs it in its

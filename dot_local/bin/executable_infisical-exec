@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Run a command with this machine's Infisical secrets, restarting it when they change.
+# Usage in a systemd user unit:  ExecStart=%h/.local/bin/infisical-exec <command> [args...]
+set -euo pipefail
+set -a; . "$HOME/.config/infisical/machine.env"; set +a
+INFISICAL_TOKEN=$(infisical login --method=universal-auth \
+    --client-id="$INFISICAL_CLIENT_ID" --client-secret="$INFISICAL_CLIENT_SECRET" --silent --plain)
+export INFISICAL_TOKEN
+unset INFISICAL_CLIENT_ID INFISICAL_CLIENT_SECRET
+exec infisical run --watch --silent --projectId="$INFISICAL_PROJECT_ID" \
+    --env="${INFISICAL_ENV:-dev}" --path="${INFISICAL_PATH:-/}" -- "$@"

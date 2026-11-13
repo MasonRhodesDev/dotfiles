@@ -33,6 +33,9 @@
 - Stays local: chezmoi source edits and applies for this machine, inspection of this laptop's hardware, power, Hyprland session and systemd units, and short reactive answers. Do not install daemons, timers, language toolchains or build dependencies here.
 - Prefer `ssh dev` for one-off remote commands and herdr agents for anything with more than a few steps. Keep local Claude turns short so the machine can suspend.
 {{ end -}}
+## Secrets
+- Secrets and credentials come from Infisical. Load the `infisical-secrets` skill before handling any API key, token, password or other credential, and never write secrets to disk, hardcode them, print them, or ask me to paste them into chat. If one is missing, ask me to add it in Infisical.
+
 ## References
 - Mermaid/PDF generation: see `~/.claude/references/mermaid-pdf.md`
 - Hyprland / hyprwm ecosystem (C++ style guide, conventions, best practices): see `~/.claude/references/hyprland/`, starting with `README.md`. Read before any C++ work touching hyprtoolkit, hyprlang, hyprutils, or Hyprland plugins.

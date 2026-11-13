@@ -1,0 +1,15 @@
+[Unit]
+Description=Sync Infisical secrets to ~/.config/infisical/env.sh
+Wants=network-online.target
+After=network-online.target
+# Only on machines that have been given an Infisical machine identity.
+ConditionPathExists=%h/.config/infisical/machine.env
+
+[Service]
+ExecStart=/usr/bin/python3 %h/.local/bin/infisical-env-sync
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=default.target
