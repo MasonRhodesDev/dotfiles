@@ -1,0 +1,32 @@
+#!/bin/bash
+# T3 Code server (github.com/pingdotgg/t3code) as a systemd user service, so
+# this machine is one of the environments the T3 client load-balances new
+# agent threads across. The lab's Nomad nodes run the same release from
+# home-lab's agents stack; keep T3_VERSION equal to that image's.
+#
+# Personal agent hosts only: not the work machine, and not mason-air (an SSH
+# client, not an agent host). Access is LAN + tailnet with pairing codes;
+# T3 Connect stays off. Pair from the T3 client with `t3 pair`.
+set -euo pipefail
+
+{{ if or .is_work (eq .system.hostname "mason-air") -}}
+echo "t3code: not an agent host; skipping."
+exit 0
+{{ end -}}
+
+T3_VERSION=0.1.9
+T3="$HOME/.local/bin/t3"
+
+if ! command -v systemctl >/dev/null || ! systemctl --user show-environment >/dev/null 2>&1; then
+  echo "t3code: no systemd user manager here; skipping." >&2
+  exit 0
+fi
+
+if [ ! -x "$T3" ]; then
+  # The official installer: pinned version, verified against the release's SHA256SUMS.
+  curl -fsSL https://t3.codes/install.sh | T3CODE_VERSION="$T3_VERSION" sh
+elif [ "$("$T3" --version)" != "t3 v$T3_VERSION" ]; then
+  "$T3" update "$T3_VERSION" --allow-downgrade --yes
+fi
+
+"$T3" up --lan --no-connect
