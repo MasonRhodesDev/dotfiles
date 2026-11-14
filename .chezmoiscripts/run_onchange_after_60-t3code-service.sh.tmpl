@@ -2,15 +2,16 @@
 # T3 Code server (github.com/pingdotgg/t3code) as a systemd user service, so
 # this machine is one of the environments the T3 client load-balances new
 # agent threads across. The lab's Nomad nodes run the same release from
-# home-lab's agents stack; keep T3_VERSION equal to that image's.
+# home-lab's t3code stack; keep T3_VERSION equal to that image's.
 #
-# Personal agent hosts only: not the work machine, and not mason-air (an SSH
-# client, not an agent host). Access is LAN + tailnet with pairing codes;
-# T3 Connect stays off. Pair from the T3 client with `t3 pair`.
+# Headless personal machines only. A machine with a desktop runs the T3 Code
+# app, which hosts its own server in the same T3 home; a service beside it
+# locks the app out ("This T3 home is unavailable"). Not the work machine.
+# Access settings (T3 Connect, LAN) are the owner's and are kept as they are.
 set -euo pipefail
 
-{{ if or .is_work (eq .system.hostname "mason-air") -}}
-echo "t3code: not an agent host; skipping."
+{{ if or .is_work (not (dig "headless" false .)) -}}
+echo "t3code: not a headless agent host; skipping."
 exit 0
 {{ end -}}
 
@@ -29,4 +30,13 @@ elif [ "$("$T3" --version)" != "t3 v$T3_VERSION" ]; then
   "$T3" update "$T3_VERSION" --allow-downgrade --yes
 fi
 
-"$T3" up --lan --no-connect
+# Agent CLIs (claude, gh, cargo) live in ~/.local/bin and ~/.cargo/bin, which
+# the user manager's PATH lacks; without them T3 reports the provider missing.
+mkdir -p "$HOME/.config/systemd/user/t3code.service.d"
+cat > "$HOME/.config/systemd/user/t3code.service.d/path.conf" <<'UNIT'
+[Service]
+Environment=PATH=%h/.local/bin:%h/.cargo/bin:/usr/local/bin:/usr/bin
+UNIT
+
+# --yes keeps the existing access settings and asks nothing.
+"$T3" up --lan --yes
