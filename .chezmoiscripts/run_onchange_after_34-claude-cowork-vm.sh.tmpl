@@ -1,21 +1,7 @@
 #!/bin/bash
-# Claude Desktop "Cowork" VM backend path shims: ENSURE ABSENT.
-#
-# Cowork's app.asar hardcodes Debian firmware/virtiofsd probe paths
-# (/usr/share/OVMF/OVMF_CODE_4M.fd, VARS via s/OVMF_CODE/OVMF_VARS/,
-# /usr/libexec/virtiofsd | /usr/bin/virtiofsd). Arch ships these at
-# /usr/share/edk2/x64/OVMF_{CODE,VARS}.4m.fd and /usr/lib/virtiofsd, so
-# without shims Cowork reports "Virtualization isn't fully set up".
-#
-# Cowork is not used on any machine. The work machine (REDACTED) has no BAA
-# for it, and the personal machine opted out, so every machine removes the
-# shims and startVM fails. The qemu-system-x86, edk2-ovmf and virtiofsd
-# packages stay installed because other VMs use them.
 set -euo pipefail
 
 CONF=/etc/tmpfiles.d/claude-cowork-compat.conf
-{{/* Cowork's VM backend is x86-only: the OVMF firmware images have no
-     aarch64 counterpart, so there is never anything to remove on ARM. */}}
 {{ if ne .chezmoi.arch "amd64" -}}
 echo "Cowork VM backend is x86-only; nothing to do on {{ .chezmoi.arch }}."
 exit 0

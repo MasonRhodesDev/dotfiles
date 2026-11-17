@@ -1,8 +1,3 @@
-# Event-driven header refresh: agent hooks set user vars via OSC 1337
-# SetUserVar; re-evaluate header visibility and redraw immediately instead
-# of waiting for the 2s timer in tab_bar.py (mirrors wezterm's
-# user-var-changed → invalidate flow; the check is cheap).
-
 import importlib.util
 import os
 from typing import Any

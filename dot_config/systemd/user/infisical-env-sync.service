@@ -2,7 +2,6 @@
 Description=Sync Infisical secrets to ~/.config/infisical/env.sh
 Wants=network-online.target
 After=network-online.target
-# Only on machines that have been given an Infisical machine identity.
 ConditionPathExists=%h/.config/infisical/machine.env
 
 [Service]

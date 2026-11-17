@@ -1,7 +1,3 @@
-# Infisical-synced env vars, written by infisical-env-sync.service.
-# Interactive shells re-source the file at each prompt when it changes, and
-# unset keys that were removed. BASH_ENV makes every non-interactive bash
-# (scripts, Claude's Bash tool) read the current values per command.
 __infisical_env_file=$HOME/.config/infisical/env.sh
 export BASH_ENV=$__infisical_env_file
 

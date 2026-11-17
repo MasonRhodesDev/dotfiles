@@ -1,12 +1,4 @@
 #!/bin/bash
-# Third-party DNF repositories backing tracked packages, so a fresh Fedora
-# machine can actually install them. Idempotent; Fedora-only.
-#
-# Included (backs a kept tool): hashicorp (terraform/packer), vivaldi (browser),
-# acli (Atlassian CLI), hardware:razer (OpenRazer), google-chrome, slack, pritunl.
-# Deliberately SKIPPED: warpdotdev.repo, vscode.repo — alternate tools not in
-# packages.toml. Add them here if you decide to keep them.
-# NOTE: hardware:razer pins Fedora_42 in its URL — bump on a Fedora upgrade.
 set -euo pipefail
 
 . /etc/os-release 2>/dev/null || true
@@ -15,7 +7,7 @@ case " ${ID:-} ${ID_LIKE:-} " in
     *) echo "Not Fedora — skipping third-party repos"; exit 0 ;;
 esac
 
-put() { # $1=filename ; rest=content
+put() {
     local f="/etc/yum.repos.d/$1"; shift; local c="$*"
     if [ -f "$f" ] && [ "$(cat "$f")" = "$c" ]; then return 0; fi
     printf '%s\n' "$c" | sudo tee "$f" >/dev/null

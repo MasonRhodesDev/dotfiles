@@ -59,9 +59,8 @@ chezmoi apply
 │   └── ...
 ├── dot_local/bin/          # Local executables
 ├── scripts/                # Utility scripts (deployed to ~/scripts)
-├── software_installers/    # packages.toml registry (repo-only, see docs)
-├── .chezmoiscripts/        # run_once / run_onchange lifecycle scripts
-└── docs/                   # Detailed documentation (repo-only)
+├── software_installers/    # packages.toml registry (repo-only)
+└── .chezmoiscripts/        # run_once / run_onchange lifecycle scripts
 ```
 
 ## 🎨 Theme System
@@ -120,14 +119,6 @@ chezmoi status
 # See what would be applied
 chezmoi diff
 ```
-
-## 📚 Documentation
-
-- [Software Package Registry](docs/SOFTWARE-INSTALLERS.md)
-- [Theme System](docs/THEME-SYSTEM.md)
-- [Hyprland Configuration](docs/HYPRLAND-CONFIG.md)
-- [Neovim Setup](docs/NEOVIM-SETUP.md)
-- [Chezmoi Workflow](docs/CHEZMOI-WORKFLOW.md)
 
 ## greetd Login Manager
 

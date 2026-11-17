@@ -68,7 +68,6 @@ function runtimeRoot(name: string): string {
   try {
     chmodSync(root, 0o700);
   } catch {
-    // Best effort; the directory may be on a filesystem that ignores chmod.
   }
   return root;
 }
@@ -218,20 +217,12 @@ function listWeztermPanes(): PaneInfo[] {
     });
     return JSON.parse(output) as PaneInfo[];
   } catch {
-    // wezterm not running (kitty is the daily driver); kitty panes still work.
     return [];
   }
 }
 
-// Kitty pane ids are "kitty-<kitty pid>-<window id>" — the same key the
-// agent runner/bridge and tab_bar.py use (the pid disambiguates instances:
-// Hyprland runs one kitty per OS window, so window ids alone collide).
-// Rebuilt every listPanes() cycle; maps pane id -> remote-control target.
 const kittySockets = new Map<string, { socket: string; windowId: number }>();
 
-// Panes that look like they host an agent harness right now. Summaries are
-// for harness panes only — a plain interactive shell gets none (the human
-// typing there already knows what it's about).
 const agentPaneHints = new Set<string>();
 
 const AGENT_PROCESS_NAMES = new Set(['claude', 'codex', 'pi']);
@@ -239,9 +230,6 @@ const AGENT_PROCESS_NAMES = new Set(['claude', 'codex', 'pi']);
 function kittyWindowLooksLikeAgent(w: any): boolean {
   const uv = w?.user_vars ?? {};
   if (uv.AGENT_ACTIVE === '1' || uv.CLAUDE_ACTIVE === '1') return true;
-  // Remote agent behind ssh: its title crosses the wire ("✳ …" idle, braille
-  // spinner while working) even when its OSC cannot (Tailscale SSH leaves the
-  // remote pty root-owned, so remote hooks can't emit).
   if (/^[✳⠀-⣿] /u.test(w?.title ?? '')) return true;
   for (const proc of w?.foreground_processes ?? []) {
     for (const arg of proc?.cmdline ?? []) {
@@ -316,7 +304,6 @@ function listKittyPanes(): PaneInfo[] {
           try {
             tty = readlinkSync(`/proc/${w.pid}/fd/0`);
           } catch {
-            // Shell already gone or unreadable; pane still summarizable.
           }
           kittySockets.set(paneId, { socket, windowId: w.id });
           if (kittyWindowLooksLikeAgent(w)) agentPaneHints.add(paneId);
@@ -360,12 +347,6 @@ function getPaneText(paneId: string): string | undefined {
   }
 }
 
-// --- Transcript mode -------------------------------------------------------
-// Claude Code panes get their summary from the session transcript instead of
-// scrollback: richer signal and zero model cost. The SessionStart hook writes
-// /tmp/claude-wezterm/<session>.pane with TTY_DEVICE and SESSION_FILE; match
-// panes by tty. Codex/other panes stay on the scrollback pipeline.
-
 const CLAUDE_CORRELATION_DIR = '/tmp/claude-wezterm';
 const TRANSCRIPT_TAIL_BYTES = 256 * 1024;
 const TRANSCRIPT_RESTAMP_MS = 60_000;
@@ -386,7 +367,6 @@ function ttyToTranscript(): Map<string, string> {
       const transcript = content.match(/^SESSION_FILE=(.+)$/m)?.[1]?.trim();
       if (tty && transcript && existsSyncSafe(transcript)) map.set(tty, transcript);
     } catch {
-      // Correlation file mid-write or removed; skip.
     }
   }
   return map;
@@ -421,8 +401,6 @@ function transcriptTailLines(path: string, size: number): string[] {
   }
 }
 
-// Newest compaction/title summary in the transcript — claude's own
-// conversation title, the best signal there is.
 function compactionTitle(lines: string[]): string | undefined {
   for (let i = lines.length - 1; i >= 0; i--) {
     const line = lines[i].trim();
@@ -433,7 +411,6 @@ function compactionTitle(lines: string[]): string | undefined {
         return parsed.summary.trim();
       }
     } catch {
-      // Partial line at the slice boundary; keep scanning.
     }
   }
   return undefined;
@@ -450,8 +427,6 @@ function messageText(message: any): string | undefined {
   return undefined;
 }
 
-// Excerpts describing the conversation OVERALL: the earliest and latest user
-// messages in the window we can see. Model input only — never rendered.
 function conversationDigest(lines: string[]): string | undefined {
   const userTexts: string[] = [];
   for (const rawLine of lines) {
@@ -476,15 +451,10 @@ function conversationDigest(lines: string[]): string | undefined {
 
 const TITLE_INSTRUCTION = 'You title conversations between a developer and a coding assistant. Reply with ONLY a 3-6 word title describing the overall topic of the whole conversation. No quotes, no punctuation, no explanation.';
 
-// Titler provider: 'ollama' (default, local) or 'codex' (headless ChatGPT via
-// the codex CLI — already authenticated, cheapest tier, ~4s per title at the
-// regen cadence). codex falls back to ollama on any failure.
 const TITLER = (process.env.PANE_SUMMARY_TITLER ?? 'ollama').toLowerCase();
 const CODEX_BIN = process.env.PANE_SUMMARY_CODEX_BIN ?? 'codex';
 const CODEX_TITLE_MODEL = process.env.PANE_SUMMARY_CODEX_MODEL ?? 'gpt-5.6-luna';
 
-// Ask the local model to TITLE the conversation. Output is display-gated
-// downstream like any other model text.
 async function ollamaTitle(digest: string): Promise<string | undefined> {
   if (DISABLE_MODEL) return undefined;
   try {
@@ -570,7 +540,6 @@ interface TranscriptMemory {
   mtimeMs: number;
   size: number;
   lastWriteMs: number;
-  /** Transcript size at the last (attempted) titling — regen is growth-driven. */
   titledSize: number;
   lastTitleAttemptMs: number;
   lastSummary?: TranscriptSummary;
@@ -581,10 +550,6 @@ const transcriptSeen = new Map<string, TranscriptMemory>();
 const TITLE_REGEN_BYTES = 16 * 1024;
 const TITLE_RETRY_MS = 60_000;
 
-// The tagline is the conversation's OVERALL topic, not its latest exchange:
-// claude's own compaction title when one exists, otherwise a local-model
-// title of a digest of the conversation's user messages, re-generated only
-// as the transcript grows. Raw prompt text is never rendered.
 async function observeTranscriptPane(pane: PaneInfo, transcript: string): Promise<boolean> {
   const paneId = String(pane.pane_id);
   let stat;
@@ -660,7 +625,6 @@ async function observeTranscriptPane(pane: PaneInfo, transcript: string): Promis
     return false;
   }
 
-  // Keep the existing title fresh while the conversation moves on.
   if (prior?.lastSummary) {
     persist(prior.lastSummary);
     transcriptSeen.set(paneId, { ...prior, mtimeMs: stat.mtimeMs, size: stat.size, lastWriteMs: now });
@@ -701,7 +665,6 @@ async function observePane(pane: PaneInfo, force = false): Promise<void> {
       return;
     }
 
-    // No renderable model summary exists, so generate the first candidate eagerly.
     seen.set(paneId, { hash: rawHash, stableSinceMs: now - QUIET_MS, lastSummaryAtMs: prior?.lastSummaryAtMs ?? 0, summarizedHash: undefined });
   }
 
@@ -784,11 +747,6 @@ async function once(force = false): Promise<void> {
       const transcript = pane.tty_name ? transcripts.get(pane.tty_name) : undefined;
       if (transcript && await observeTranscriptPane(pane, transcript)) continue;
 
-      // Summaries are for harness panes only. A pane qualifies via a fresh
-      // agent state file, a kitty-side hint (user vars / foreground agent
-      // process), or a claude transcript correlation. Anything else is a
-      // manual terminal: skip it, and clear any summary left from an agent
-      // that has since exited.
       if (!agentKeys.has(paneId) && !agentPaneHints.has(paneId)) {
         const existing = readState(paneStatePath(paneId));
         if (existing?.active) clearState(paneId, pane);
@@ -796,7 +754,6 @@ async function once(force = false): Promise<void> {
       }
       await observePane(pane, force);
     } catch {
-      // Keep other panes updating even if one pane has corrupt state or closes mid-read.
     }
   }
 }
@@ -815,8 +772,6 @@ async function daemon(): Promise<void> {
     try {
       await once(false);
     } catch {
-      // Keep the daemon best-effort; transient wezterm cli failures are normal
-      // during reloads or while panes close.
     }
     await new Promise((resolve) => setTimeout(resolve, OBSERVE_INTERVAL_MS));
   }

@@ -1,7 +1,4 @@
 #!/bin/bash
-# Wire repo-tracked git hooks (.githooks/) and install gitleaks.
-# The pre-commit hook blocks secrets from being committed — critical since
-# this repo is public and chezmoi autoPushes every commit.
 set -euo pipefail
 
 SOURCE_DIR="{{ .chezmoi.sourceDir }}"

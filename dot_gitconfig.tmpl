@@ -2,7 +2,6 @@
     name = {{ .identity.name }}
     email = {{ .identity.email }}
 
-{{/* No keyring on a headless machine; GitHub goes over SSH (insteadOf below). */ -}}
 {{ if not (dig "headless" false .) -}}
 [credential]
     credentialStore = secretservice
@@ -23,15 +22,10 @@
 [url "git@github.com:"]
 	insteadof = https://github.com/
 
-{{/* Elective identity overrides (see git_identity_overrides in .chezmoi.toml.tmpl):
-     each includes ~/.gitconfig-<identity> when its git includeIf condition matches,
-     leaving the default [user] above in place everywhere else. */ -}}
 {{ range (dig "git_identity_overrides" (list) .) -}}
 [includeIf "{{ .condition }}"]
 	path = ~/.gitconfig-{{ .identity }}
 {{ end -}}
 
-{{/* Machine-local, UNMANAGED settings (work identifiers, tool state) live in
-     ~/.gitconfig-local so they never enter this public repo. */ -}}
 [include]
 	path = ~/.gitconfig-local

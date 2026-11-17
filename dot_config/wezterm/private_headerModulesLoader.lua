@@ -1,11 +1,3 @@
--- Dumb renderer for the terminal-header daemon (~/scripts/terminal-header/).
--- All header policy — sections, ordering, agent detection, summaries — lives
--- in the daemon, which writes $XDG_RUNTIME_DIR/terminal-header/pane-<id>.json
--- as { header = string|null, updatedAtMs }. This module only reads that file.
--- The old in-process headerModules/*.lua are inert and no longer loaded.
---
--- The M.* API is kept so wezterm.lua does not change.
-
 local wezterm = require 'wezterm'
 local M = {}
 
@@ -37,12 +29,10 @@ local function read_header(pane)
 end
 
 function M.load_modules()
-  -- Header sections live in the daemon now; nothing to load in-process.
   return {}
 end
 
 function M.invalidate(pane)
-  -- No cache: the daemon's file IS the cache.
 end
 
 function M.collect_components(modules, window, pane)

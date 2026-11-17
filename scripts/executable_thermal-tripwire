@@ -1,26 +1,4 @@
 #!/usr/bin/env python3
-r"""Thermal tripwire: detect sustained heat, decide whether it's a runaway, alert.
-
-Sibling of aws-sso-tripwire — same idea: watch for a condition, capture evidence
-BEFORE anything changes state, so the incident is falsifiable after the fact.
-
-Motivating incident (2026-07-28): fans pinned ~4100 RPM / Tctl 81.9C for hours.
-Cause was agent-petd (17%) + Hyprland (82%) wedged in a hot loop. It got "fixed"
-while two people were poking it simultaneously, so the trigger and the reset are
-both still unknown. This exists so that never happens again.
-
-Design: an FSM. Transitions are pure (state + sample -> action); all side effects
-(deep sample, snapshot, notify) happen in the effect dispatcher in main(), never
-inside a transition.
-
-  OK --gate sustained--> HOT_PENDING --classify--> RUNAWAY   --quiet--> OK
-                                     \-----------> ACCOUNTED --quiet--> OK
-
-Two independent gates open HOT_PENDING: sustained heat (Tctl/fan), or a
-should-be-idle daemon over its CPU ceiling. The load gate matters because the
-wedge was later observed at 46.9C with fans at 1261 RPM — cold. Only RUNAWAY
-notifies; ACCOUNTED (a build, anything nice>=10) just logs a snapshot.
-"""
 
 from __future__ import annotations
 
@@ -38,34 +16,22 @@ from pathlib import Path
 HZ = os.sysconf("SC_CLK_TCK")
 NCPU = os.cpu_count() or 1
 
-# ---------------------------------------------------------------- configuration
+POLL_SECONDS = 15
+DEEP_SAMPLE_SECONDS = 20
 
-POLL_SECONDS = 15          # cheap sample cadence
-DEEP_SAMPLE_SECONDS = 20   # CPU attribution window; /proc/stat needs >=20s to be trustworthy
+TCTL_WARM_C = 80.0
+FAN_WARM_RPM = 3500
+SUSTAIN_SECONDS = 90
 
-TCTL_WARM_C = 80.0         # observed: ~62-66C idle, 81.9C during the incident
-FAN_WARM_RPM = 3500        # observed: ~1200-2000 RPM calm, 4113/3932 during the incident
-SUSTAIN_SECONDS = 90       # must stay hot this long — ignores build spikes and transients
+RE_ALERT_COOLDOWN_S = 30 * 60
+COOLED_TCTL_C = 72.0
 
-RE_ALERT_COOLDOWN_S = 30 * 60   # don't renotify about the same offender within 30min
-COOLED_TCTL_C = 72.0            # hysteresis: must drop below this to leave the hot states
-
-# Episodes FLAP. An observed agent-petd/Hyprland wedge ran ~3min (08:22-08:26) with
-# CPU crossing back under the ceiling between polls. Requiring a breach on every
-# consecutive poll would reset the timer on each dip and never trip, so judge by
-# fraction of the window instead of an unbroken run.
 TRIP_FRACTION = 0.6
 
-# Session startup is legitimately compositor-heavy — Hyprland will sit over its
-# ceiling while outputs, layers and wallpapers come up. Judging during that window
-# would fire a false alert at every login.
 START_GRACE_S = 180
 
 STATE_DIR = Path.home() / ".local/state/thermal-trips"
 
-# Daemons that are SUPPOSED to idle. Ceiling = % of one core sustained over the
-# deep sample. Exceeding it while the machine is hot is the runaway signal —
-# "is it hot" is far less informative than "is something hot that shouldn't be".
 SHOULD_BE_IDLE: dict[str, float] = {
     "Hyprland": 25.0,
     "agent-petd": 5.0,
@@ -74,7 +40,7 @@ SHOULD_BE_IDLE: dict[str, float] = {
     "pane-summarizer": 15.0,
     "terminal-header": 10.0,
     "terminal-headerd": 10.0,
-    "voice-dictation": 20.0,   # does real audio work
+    "voice-dictation": 20.0,
     "sni-watcher": 5.0,
     "mcp-hub": 20.0,
     "happy-daemon": 10.0,
@@ -83,12 +49,11 @@ SHOULD_BE_IDLE: dict[str, float] = {
     "hyprstate": 10.0,
     "gastown": 20.0,
     "dolt": 30.0,
-    "kitty": 30.0,             # can legitimately be busy rendering
-    "thermal-tripwire": 5.0,   # this script must not become the problem
-    "updatedb": 30.0,          # prior incident: recursed btrfs snapshots x docker layers
+    "kitty": 30.0,
+    "thermal-tripwire": 5.0,
+    "updatedb": 30.0,
 }
 
-# Work that is EXPECTED to be hot. Never a runaway, however much CPU it burns.
 HEAVY_EXPECTED = {
     "cargo", "rustc", "cc1", "cc1plus", "gcc", "g++", "clang", "clang++", "ld", "lld",
     "ninja", "make", "cmake", "meson", "samu",
@@ -99,11 +64,8 @@ HEAVY_EXPECTED = {
     "tar", "zstd", "xz", "gzip", "btrfs", "btrfs-transacti", "restic", "borg",
 }
 
-NICE_EXEMPT_AT = 10   # `nice -n 19 <build>` is deliberate background work — never a runaway
+NICE_EXEMPT_AT = 10
 
-# Units that must NEVER be offered for restart: restarting them ends the session.
-# Hyprland's own unit is wayland-wm@hyprland.desktop.service, and session-scope
-# processes report user@1000.service — a "Restart" button on either logs you out.
 UNSAFE_UNIT_PREFIXES = (
     "wayland-wm@", "user@", "graphical-session", "session-", "init.scope",
     "dbus", "pipewire", "wireplumber", "systemd-", "hyprstate",
@@ -115,11 +77,8 @@ def unit_is_safe_to_restart(unit: str | None) -> bool:
         return False
     return not unit.startswith(UNSAFE_UNIT_PREFIXES)
 
-# ------------------------------------------------------------------- sysfs I/O
-
 
 def _hwmon_index() -> dict[str, list[Path]]:
-    """Map hwmon name -> device dirs. Indices shuffle across boots; resolve by name."""
     out: dict[str, list[Path]] = {}
     for d in sorted(Path("/sys/class/hwmon").glob("hwmon*")):
         try:
@@ -131,7 +90,6 @@ def _hwmon_index() -> dict[str, list[Path]]:
 
 
 def read_tctl() -> float | None:
-    """CPU package temperature (k10temp Tctl)."""
     for d in _hwmon_index().get("k10temp", []):
         for lbl in d.glob("temp*_label"):
             try:
@@ -144,7 +102,6 @@ def read_tctl() -> float | None:
 
 
 def read_fans() -> list[int]:
-    """Chassis fan RPMs (cros_ec on the Framework 16)."""
     rpms: list[int] = []
     for d in _hwmon_index().get("cros_ec", []):
         for f in sorted(d.glob("fan*_input")):
@@ -169,17 +126,13 @@ def read_all_temps() -> list[tuple[str, str, float]]:
     return sorted(rows, key=lambda r: -r[2])
 
 
-# --------------------------------------------------------------- CPU accounting
-
 
 def _proc_stat_busy() -> tuple[int, int]:
-    """(total jiffies, idle jiffies) machine-wide."""
     vals = [int(x) for x in Path("/proc/stat").read_text().split("\n")[0].split()[1:]]
     return sum(vals), vals[3] + vals[4]
 
 
 def _snap_procs() -> dict[int, tuple[str, int, int]]:
-    """pid -> (comm, cpu_jiffies, nice). Fields per proc(5), offset by the (comm) split."""
     out: dict[int, tuple[str, int, int]] = {}
     for entry in os.scandir("/proc"):
         if not entry.name.isdigit():
@@ -189,7 +142,6 @@ def _snap_procs() -> dict[int, tuple[str, int, int]]:
             head, tail = raw.rsplit(")", 1)
             comm = head.split("(", 1)[1]
             f = tail.split()
-            # index = field_number - 3 (state is field 3 at index 0)
             utime, stime, nice = int(f[11]), int(f[12]), int(f[16])
             out[int(entry.name)] = (comm, utime + stime, nice)
         except (OSError, IndexError, ValueError):
@@ -215,7 +167,6 @@ def _cmdline(pid: int) -> str:
 
 
 def _systemd_unit(pid: int) -> str | None:
-    """Resolve the pid's systemd user unit, so remediation can target it."""
     try:
         for line in Path(f"/proc/{pid}/cgroup").read_text().splitlines():
             for part in reversed(line.split("/")):
@@ -234,17 +185,6 @@ def _fork_count() -> int:
 
 
 def deep_sample(duration: float) -> tuple[float, list[Proc], float]:
-    """Machine-wide busy cores + per-process CPU + forks/sec over `duration`.
-
-    Deliberately NOT `ps %CPU`: that is a lifetime average and reported Hyprland
-    at 6.4% while it was actually burning 83%.
-
-    Returns forks/sec because per-process attribution SYSTEMATICALLY undercounts
-    under process churn: a process that starts and exits inside the window has its
-    CPU counted in /proc/stat but is absent from one of the two snapshots. Observed
-    391 forks/sec here, with 7.4 busy cores but only 1.3 attributable — the gap was
-    all short-lived processes, not a bug.
-    """
     a, (ta, ia), fa = _snap_procs(), _proc_stat_busy(), _fork_count()
     t0 = time.monotonic()
     time.sleep(duration)
@@ -265,20 +205,12 @@ def deep_sample(duration: float) -> tuple[float, list[Proc], float]:
 
 
 def aggregate_by_name(procs: list[Proc]) -> list[tuple[str, int, float]]:
-    """(comm, instance count, total CPU%) descending.
-
-    Diffuse load is invisible per-process: 10 busy cores spread over 17 `claude`
-    instances at ~14% each names no single offender, which is how a real Gas Town
-    burst got reported as "nothing obvious". Always summarise by name too.
-    """
     tally: dict[str, tuple[int, float]] = {}
     for p in procs:
         n, tot = tally.get(p.comm, (0, 0.0))
         tally[p.comm] = (n + 1, tot + p.cpu_pct)
     return sorted(((c, n, t) for c, (n, t) in tally.items()), key=lambda r: -r[2])
 
-
-# ------------------------------------------------------------------ classifier
 
 
 @dataclass
@@ -307,8 +239,6 @@ def classify(procs: list[Proc]) -> Verdict:
             v.unaccounted.append(p)
     return v
 
-
-# -------------------------------------------------------------------- evidence
 
 
 def _cmd(argv: list[str], timeout: float = 8.0) -> str:
@@ -377,7 +307,6 @@ def write_snapshot(tctl, fans, busy_cores, procs: list[Proc], v: Verdict,
         L.append(f"  {name:<10} {label:<20} {val:6.1f}C")
     L.append("")
 
-    # The checklist from the 2026-07-28 incident: capture these BEFORE touching anything.
     for title, argv in (
         ("agent-pet status (note the `unread` count)", ["agent-pet", "status"]),
         ("hyprstate gpu status (cross-GPU COPY PATH amplifies any damage loop)",
@@ -392,22 +321,13 @@ def write_snapshot(tctl, fans, busy_cores, procs: list[Proc], v: Verdict,
     return path
 
 
-# --------------------------------------------------------------------- alerting
-
 
 def notify_async(v: Verdict, snapshot: Path, tctl: float, fans: list[int]) -> None:
-    """Fire the notification without stalling the FSM.
-
-    notify-send --action implies --wait, so it blocks until the notification is
-    acted on or dismissed — potentially hours. Never call it on the poll loop, or
-    monitoring stops exactly when it matters most.
-    """
     threading.Thread(target=_notify_blocking, args=(v, snapshot, tctl, fans),
                      daemon=True).start()
 
 
 def _notify_blocking(v: Verdict, snapshot: Path, tctl: float, fans: list[int]) -> None:
-    """Critical notification carrying one-click remediation. Blocks on user choice."""
     top = v.runaways[0]
     fan_s = "/".join(str(f) for f in fans)
     body = (f"{top.comm} at {top.cpu_pct:.0f}% of a core "
@@ -417,8 +337,6 @@ def _notify_blocking(v: Verdict, snapshot: Path, tctl: float, fans: list[int]) -
 
     argv = ["notify-send", "-u", "critical", "-a", "thermal-tripwire",
             "-A", "snap=Show evidence"]
-    # Only offer restart for units where that is survivable — never the compositor
-    # or session scope. Pick the first safe offender, which may not be the top one.
     fixable = next((p for p in v.runaways if unit_is_safe_to_restart(p.unit)), None)
     if fixable:
         argv += ["-A", f"restart=Restart {fixable.unit}"]
@@ -448,8 +366,6 @@ def log(msg: str) -> None:
     print(f"{time.strftime('%H:%M:%S')} {msg}", flush=True)
 
 
-# -------------------------------------------------------------------------- FSM
-
 OK, HOT_PENDING, RUNAWAY, ACCOUNTED = "OK", "HOT_PENDING", "RUNAWAY", "ACCOUNTED"
 
 
@@ -458,7 +374,6 @@ class Machine:
     state: str = OK
     trip_reason: str = ""
     started_at: float | None = None
-    # (timestamp, hot, breaching) for the trailing SUSTAIN_SECONDS window
     samples: deque[tuple[float, bool, bool]] = field(default_factory=deque)
     last_alert: dict[str, float] = field(default_factory=dict)
 
@@ -474,15 +389,6 @@ class Machine:
 
     def transition(self, tctl: float | None, fans: list[int],
                    breaching: bool, now: float) -> str:
-        """Pure: returns the action to perform. No side effects here.
-
-        TWO independent gates. Temperature is NOT sufficient on its own: the
-        agent-petd/Hyprland wedge was observed at 46.9C with fans at 1261 RPM, so a
-        thermal-only trigger misses it entirely. The load gate catches a cold
-        runaway; the thermal gate catches heat whose cause isn't in the
-        should-be-idle list at all. Both judge by FRACTION of the window, because
-        episodes flap across the ceiling rather than holding above it.
-        """
         hot = self.is_hot(tctl, fans)
         self.samples.append((now, hot, breaching))
         while self.samples and now - self.samples[0][0] > SUSTAIN_SECONDS:
@@ -496,8 +402,6 @@ class Machine:
 
             breach_frac, n = self._fraction(2)
             hot_frac, _ = self._fraction(1)
-            # The window must actually SPAN the sustain period — not merely hold a
-            # few samples — so "sustained 90s" means what it says at any cadence.
             span = self.samples[-1][0] - self.samples[0][0] if n >= 2 else 0.0
             if n < 3 or span < SUSTAIN_SECONDS * 0.8:
                 return "none"
@@ -515,7 +419,6 @@ class Machine:
             return "investigate"
 
         if self.state in (RUNAWAY, ACCOUNTED):
-            # Leave the hot states only when it's genuinely quiet across the window.
             breach_frac, n = self._fraction(2)
             cool = (tctl is not None and tctl < COOLED_TCTL_C)
             if cool and breach_frac == 0.0 and n >= 3:
@@ -527,19 +430,12 @@ class Machine:
         return "none"
 
     def may_alert(self, comm: str, now: float) -> bool:
-        # Absent key means "never alerted" — must NOT be treated as t=0, or a runaway
-        # in the first 30min of uptime gets silently suppressed (monotonic starts near 0).
         prev = self.last_alert.get(comm)
         return prev is None or now - prev >= RE_ALERT_COOLDOWN_S
 
 
 def poll_idle_breach(prev: dict[int, tuple[str, int, int]] | None,
                      dt: float) -> tuple[dict[int, tuple[str, int, int]], list[str]]:
-    """Cheap should-be-idle check using consecutive polls as the delta window.
-
-    Costs nothing extra: the loop already sleeps POLL_SECONDS, so the gap between
-    two snapshots IS the measurement interval. Returns (snapshot, breaching comms).
-    """
     cur = {pid: v for pid, v in _snap_procs().items() if v[0] in SHOULD_BE_IDLE}
     breaching: list[str] = []
     if prev and dt > 1.0:

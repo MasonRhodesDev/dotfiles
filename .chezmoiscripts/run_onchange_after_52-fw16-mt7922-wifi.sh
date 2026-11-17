@@ -1,18 +1,4 @@
 #!/bin/bash
-# Framework 16 MT7922 (mt7921e driver) Wi-Fi workarounds for the kernel 6.18.x
-# regression: link/driver wedges on resume + occasional bind failure at boot.
-# Bundles modprobe options + resume-reload service + boot health-check.
-#
-# DOUBLE-GATED (per Mason's request):
-#   hardware -> only on a Framework Laptop 16 with an MT792x adapter
-#   software -> only on the affected 6.18.x kernel series. On 6.19+ the
-#               regression is gone, so this is INERT (installs nothing).
-#               Today's machine runs 6.19.x, so a reinstall here is a no-op
-#               unless/until a 6.18.x kernel is in use.
-#
-# Fixes the original's bug: it grepped lspci for "MT7921" but this chip reports
-# as "MT7922", so it always concluded the driver was unbound and tried to pin a
-# nonexistent fallback kernel. Generalized to MT792[12] + dynamic fallback.
 set -euo pipefail
 
 vendor=$(cat /sys/class/dmi/id/sys_vendor 2>/dev/null || true)
@@ -32,7 +18,7 @@ if ! lspci -nn 2>/dev/null | grep -qiE 'MEDIATEK.*MT792[12]'; then
     echo "No MT792x adapter found — skipping"; exit 0
 fi
 
-install_file() { # $1=dest $2=content $3=mode
+install_file() {
     local d="$1" m="${3:-0644}"
     if [ -f "$d" ] && [ "$(cat "$d")" = "$2" ]; then return 0; fi
     sudo install -d "$(dirname "$d")"
@@ -42,8 +28,7 @@ install_file() { # $1=dest $2=content $3=mode
 }
 
 install_file /etc/modprobe.d/mt7921e-workaround.conf \
-'# Workarounds for MT7921/MT7922 (mt7921e) driver issues in kernel 6.18.x
-options mt7921e disable_aspm=1
+'options mt7921e disable_aspm=1
 options mt7921e wed_enable=0'
 
 install_file /etc/systemd/system/wifi-resume.service \
@@ -62,8 +47,6 @@ WantedBy=suspend.target hibernate.target hybrid-sleep.target suspend-then-hibern
 
 install_file /usr/local/bin/check-wifi-health.sh \
 '#!/bin/bash
-# MT7921/MT7922 (mt7921e) boot health check. If the driver is not bound, pick
-# the newest *other* installed kernel as a one-shot GRUB fallback.
 LOG_FILE="/var/log/wifi-health.log"
 WIFI_INTERFACE="wlp4s0"
 log(){ echo "[$(date "+%F %T")] $1" | tee -a "$LOG_FILE"; }

@@ -1,5 +1,4 @@
 #!/bin/bash
-# Remove ~/.wezterm.lua if it exists (conflicts with ~/.config/wezterm/)
 
 WEZTERM_ROOT="$HOME/.wezterm.lua"
 

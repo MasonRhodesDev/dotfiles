@@ -1,14 +1,4 @@
 #!/bin/sh
-# Emit `NAME=VALUE\n` lines for every GNOME Keyring entry tagged
-# `service=session-env`. NAME is the entry's `label`; VALUE is the secret.
-#
-# Single source of truth for the session-env keyring bucket. Consumers:
-#   - ~/.local/bin/import-api-keys      → systemd --user environment
-#   - ~/.config/fish/conf.d/api-keys.fish → interactive fish shells
-#
-# Add a new var once with:
-#   printf '%s' "value" | secret-tool store \
-#       --label=MY_VAR service session-env account MY_VAR
 
 set -eu
 

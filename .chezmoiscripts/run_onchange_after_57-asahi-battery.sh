@@ -1,14 +1,4 @@
 #!/bin/bash
-# Apple silicon (Asahi) battery charge cap: stop charging at 80% to slow
-# cell wear on a laptop that mostly lives on a desk and is rarely drained
-# in one sitting. The macsmc-battery driver exposes
-# charge_control_end_threshold; Asahi's packaged
-# macsmc-battery-charge-control-end-threshold.path unit persists whatever is
-# written there to /etc/udev/macsmc-battery.conf, and its udev rule restores
-# it on every boot, so a single write is the whole mechanism.
-#
-# Hardware-gated: only on an Apple silicon devicetree with the attribute.
-# run_onchange_: re-runs when this file changes; sudo only when the value differs.
 set -euo pipefail
 
 CAP=80

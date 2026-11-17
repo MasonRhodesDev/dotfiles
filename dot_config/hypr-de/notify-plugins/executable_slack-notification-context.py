@@ -29,7 +29,6 @@ from datetime import datetime
 from pathlib import Path
 
 LOG_DIR = Path.home() / ".config/Slack/logs/default"
-# browser.log rotates to browser1.log at ~5MB; check both, newest first.
 LOG_FILES = ["browser.log", "browser1.log"]
 
 STAMP = r"^\[(\d{2}/\d{2}/\d{2}), (\d{2}:\d{2}:\d{2}):(\d{3})\] info: Store: "
@@ -61,7 +60,7 @@ def cmd_deeplink(target, tolerance):
             delta = abs(epoch - target)
             if delta <= tolerance and (best is None or delta < best[0]):
                 best = (delta, payload)
-        if best:  # newest log had a match; skip the rotated one
+        if best:
             break
     if not best:
         return
@@ -71,9 +70,6 @@ def cmd_deeplink(target, tolerance):
     if not (team.startswith("T") and channel and channel[0] in "CDG"):
         return
     uri = f"slack://channel?team={team}&id={channel}"
-    # Message-precise navigation: the webapp scrolls to and highlights the
-    # message; thread_ts additionally opens the thread pane (same params
-    # Slack's own CLICK_NOTIFICATION handler forwards).
     msg = payload.get("msg") or ""
     if re.fullmatch(r"\d+\.\d+", msg):
         uri += f"&message={msg}"

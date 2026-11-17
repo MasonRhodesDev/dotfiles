@@ -1,15 +1,3 @@
-# Dumb renderer for the terminal-header daemon (~/scripts/terminal-header/).
-# All header policy — sections, ordering, agent detection, summaries — lives
-# in the daemon, which writes $XDG_RUNTIME_DIR/terminal-header/pane-<key>.json
-# as {"header": string|null, "updatedAtMs": ms}. This module reads that file,
-# draws the string, and flips the bar's visibility. Pane key is
-# kitty-<kitty pid>-<window id> (the pid disambiguates instances: Hyprland
-# runs one kitty per OS window, so window ids alone collide).
-#
-# The only policy kept in-process is the visibility flip itself, which must
-# run inside kitty: tab_bar_min_tabs drives the C layout, and a 2s timer (plus
-# the on_set_user_var watcher) flips it between 1 and 9999.
-
 import json
 import os
 import time
@@ -67,9 +55,6 @@ def _dbg(msg: str) -> None:
 
 
 def check_visibility() -> None:
-    # Hide the bar when the header is empty. tab_bar_min_tabs drives the C
-    # layout, so mutate the live Options and push it with the same call the
-    # config-reload path uses (apply_new_options in boss.py).
     boss = get_boss()
     opts = get_options()
     want = 1 if _content_present(boss) else 9999
@@ -80,14 +65,8 @@ def check_visibility() -> None:
         for tm in boss.os_window_map.values():
             legacy_relayout = getattr(tm, 'tabbar_visibility_changed', None)
             if legacy_relayout is not None:
-                # kitty < 0.47
                 legacy_relayout()
             else:
-                # kitty >= 0.47: full resize — layout_tab_bar() plus a
-                # relayout of every tab. resize(only_tabs=True) sometimes
-                # left window content occupying the bar's row (content
-                # drawing over the header) because the central geometry
-                # wasn't recomputed for all windows.
                 tm.resize()
         _dbg('visibility flipped')
     for tm in boss.os_window_map.values():
@@ -108,10 +87,6 @@ def _ensure_timer() -> None:
         _dbg(f'timer installed id={_timer_id}')
 
 
-# The bar starts hidden (tab_bar_min_tabs 9999 in kitty.conf), so draw_tab —
-# the usual timer bootstrap — may never run. This module is imported during
-# TabBar creation at startup, so install the timer here; guarded in case a
-# future kitty constructs TabBar before its event loop exists.
 try:
     _ensure_timer()
 except Exception:

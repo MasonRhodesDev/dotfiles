@@ -61,7 +61,6 @@ vim.api.nvim_create_autocmd({ "FileType" }, {
   end,
 })
 
--- Custom filetype detection for Hyprland config files
 vim.api.nvim_create_autocmd({"BufRead", "BufNewFile"}, {
   pattern = {
     "*/chezmoi/dot_config/hypr/*.conf",
@@ -76,7 +75,6 @@ vim.api.nvim_create_autocmd({"BufRead", "BufNewFile"}, {
   end,
 })
 
--- Set working directory early before plugins load, then let existing logic handle git repos
 vim.api.nvim_create_augroup("EarlyWorkingDir", { clear = true })
 vim.api.nvim_create_autocmd("VimEnter", {
   group = "EarlyWorkingDir",
@@ -87,26 +85,22 @@ vim.api.nvim_create_autocmd("VimEnter", {
       local path = vim.fn.fnamemodify(arg, ":p")
       local target_path = path
       
-      -- If it's a file, use its directory
       if vim.fn.isdirectory(path) == 0 then
         target_path = vim.fn.fnamemodify(path, ":h")
       end
       
-      -- Check if it's in a git repo and find the root
       local git_root = vim.fn.system("cd " .. vim.fn.shellescape(target_path) .. " && git rev-parse --show-toplevel 2>/dev/null")
       git_root = vim.trim(git_root)
       
       if vim.v.shell_error == 0 and git_root ~= "" then
         vim.cmd("cd " .. vim.fn.fnameescape(git_root))
       elseif vim.fn.isdirectory(path) == 1 then
-        -- Only change to directory if we explicitly opened a directory
         vim.cmd("cd " .. vim.fn.fnameescape(path))
       end
     end
   end,
 })
 
--- Highlight active/inactive windows
 vim.api.nvim_create_autocmd({"WinEnter", "BufEnter"}, {
   callback = function()
     vim.opt_local.cursorline = true
@@ -121,7 +115,6 @@ vim.api.nvim_create_autocmd({"WinLeave", "BufLeave"}, {
   end
 })
 
--- Custom filetype detection for .tmpl files (chezmoi templates)
 vim.api.nvim_create_autocmd({"BufRead", "BufNewFile"}, {
   pattern = "*.tmpl",
   callback = function()
@@ -129,13 +122,11 @@ vim.api.nvim_create_autocmd({"BufRead", "BufNewFile"}, {
     local filepath = vim.fn.expand("%:p")
     local real_ext = filename:match('%.([^%.]+)%.tmpl$')
     if real_ext then
-      -- Special case for Hyprland config files in chezmoi
       if real_ext == 'conf' and filepath:match('/chezmoi/dot_config/hypr/') then
         vim.bo.filetype = 'hypr'
         return
       end
 
-      -- Map common extensions to filetypes
       local ext_to_filetype = {
         lua = 'lua',
         js = 'javascript',

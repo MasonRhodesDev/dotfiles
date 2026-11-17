@@ -23,8 +23,8 @@ function M.config()
         "diagnostics",
         {
           'filename',
-          path = 1, -- Show relative path
-          shorting_target = 0, -- Don't shorten the path
+          path = 1,
+          shorting_target = 0,
         }
       },
       lualine_x = { "copilot", "filetype" },

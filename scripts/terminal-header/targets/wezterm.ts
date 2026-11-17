@@ -2,10 +2,6 @@ import { execFileSync } from 'node:child_process';
 import type { ForegroundProcess, PaneSnapshot, TerminalTarget } from '../types.ts';
 import { binaryOnPath } from './util.ts';
 
-// wezterm's CLI exposes neither user vars nor foreground processes: panes
-// come from `wezterm cli list` and the process list is recovered per tty
-// from one ps sweep. Pane keys are wezterm's numeric pane ids.
-
 let known: boolean | undefined;
 
 function processesByTty(): Map<string, ForegroundProcess[]> {
@@ -23,7 +19,6 @@ function processesByTty(): Map<string, ForegroundProcess[]> {
       byTty.set(tty, list);
     }
   } catch {
-    // ps failure: wezterm panes just get fewer sections this tick.
   }
   return byTty;
 }
@@ -43,7 +38,6 @@ export const weztermTarget: TerminalTarget = {
         encoding: 'utf8', timeout: 2_000, stdio: ['ignore', 'pipe', 'ignore'],
       }));
     } catch {
-      // Installed but not running.
       return [];
     }
     const byTty = processesByTty();

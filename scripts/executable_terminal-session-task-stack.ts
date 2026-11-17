@@ -294,7 +294,6 @@ function parseModelDecision(value: string): ModelTaskDecision | undefined {
           return { summary, taskShift };
         }
       } catch {
-        // Fall through to plain phrase parsing.
       }
     }
     const summary = cleanModelSummary(value);

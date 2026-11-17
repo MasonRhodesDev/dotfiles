@@ -1,15 +1,4 @@
 #!/usr/bin/env bash
-# claude-desktop-update — keep the (manually installed) Claude Desktop .deb
-# current on Fedora by pulling from Anthropic's apt repo index.
-#
-# Reads the repo's Packages index, picks the highest version, and if it's
-# newer than what's installed: downloads the .deb, verifies its SHA256,
-# extracts it, and reinstalls into /opt/claude-desktop with the chrome-sandbox
-# setuid bit + the libsecret password-store launcher. Verify-then-swap: a bad
-# download never touches the installed app.
-#
-# Idempotent and safe to run daily. Default: does NOT interrupt a running app
-# (the new version applies on next launch); pass --restart to relaunch it.
 set -euo pipefail
 
 REPO="https://downloads.claude.ai/claude-desktop/apt/stable"
@@ -24,16 +13,11 @@ RESTART=0
 mkdir -p "$(dirname "$LOG")"
 log() { printf '%s  %s\n' "$(date -Is)" "$*" | tee -a "$LOG" >&2; }
 
-# Highest version: prefer dpkg's comparator, fall back to `sort -V`.
-ver_gt() { # ver_gt A B  -> true if A > B
+ver_gt() {
   if command -v dpkg >/dev/null 2>&1; then dpkg --compare-versions "$1" gt "$2"
   else [ "$1" != "$2" ] && [ "$(printf '%s\n%s\n' "$2" "$1" | sort -V | tail -1)" = "$1" ]; fi
 }
 
-# Watch for a native RPM/dnf repo. If Anthropic ever publishes one, this is
-# the signal to drop this script and switch to a dnf-managed install. Probes
-# the likely mirror paths of the apt layout; repodata/repomd.xml is the
-# definitive "this is a yum/dnf repo" marker. Notifies once per new finding.
 check_rpm() {
   local found="" url code
   for url in \
@@ -64,7 +48,6 @@ check_rpm
 log "checking $PKGS_URL"
 PKGS="$(curl -fsSL --max-time 60 "$PKGS_URL")" || { log "ERROR: cannot fetch Packages index"; exit 1; }
 
-# Parse stanzas → pick the highest Version, with its Filename + SHA256.
 latest_ver=""; latest_file=""; latest_sha=""
 cur_ver=""; cur_file=""; cur_sha=""
 flush() {
@@ -108,7 +91,6 @@ if [ -n "$latest_sha" ]; then
   log "sha256 verified"
 fi
 
-# Extract (dpkg-deb if present, else ar + tar).
 log "extracting"
 if command -v dpkg-deb >/dev/null 2>&1; then
   dpkg-deb -x "$deb" "$tmp/data"
@@ -120,7 +102,6 @@ fi
 SRC="$tmp/data"
 [ -x "$SRC/usr/lib/claude-desktop/claude-desktop" ] || { log "ERROR: extracted tree missing binary"; exit 1; }
 
-# Install (atomic-ish swap of /opt/claude-desktop).
 log "installing to $APPDIR"
 sudo rm -rf "$APPDIR.new"
 sudo mkdir -p "$APPDIR.new"
@@ -133,15 +114,12 @@ sudo rm -rf "$APPDIR.old"
 sudo mv "$APPDIR.new" "$APPDIR"
 sudo rm -rf "$APPDIR.old"
 
-# Launcher (re-assert the libsecret backend; Hyprland's desktop string isn't
-# recognized by Chromium, so without this it falls back to a plaintext store).
 sudo tee "$LAUNCHER" >/dev/null <<'EOF'
 #!/usr/bin/env bash
 exec /opt/claude-desktop/claude-desktop --password-store=gnome-libsecret "$@"
 EOF
 sudo chmod 0755 "$LAUNCHER"
 
-# Desktop entry + icons (Exec rewritten to the absolute launcher).
 sudo install -Dm0644 "$SRC/usr/share/applications/claude-desktop.desktop" \
   /usr/share/applications/claude-desktop.desktop
 sudo sed -i -E "s|^(Exec=)claude-desktop|\\1$LAUNCHER|; s|(Exec=)claude-desktop |\\1$LAUNCHER |" \
@@ -152,7 +130,6 @@ sudo gtk-update-icon-cache -f /usr/share/icons/hicolor 2>/dev/null || true
 
 log "installed $latest_ver"
 
-# Apply to a running instance only if asked; otherwise it takes effect on next launch.
 if pgrep -f '^/opt/claude-desktop/claude-desktop' >/dev/null 2>&1; then
   if [ "$RESTART" = 1 ]; then
     log "restarting running app"

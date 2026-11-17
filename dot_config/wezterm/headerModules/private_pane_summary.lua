@@ -147,7 +147,6 @@ local function read_state(pane)
 end
 
 return {
-  -- Pane summary is intentionally last/right-most.
   priority = 10000,
 
   detect = function(pane)

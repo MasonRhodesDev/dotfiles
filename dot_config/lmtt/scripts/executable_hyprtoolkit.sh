@@ -1,7 +1,4 @@
 #!/bin/bash
-# Generate hyprtoolkit config from lmtt environment variables
-# Called by lmtt with pass_as_env=true, so colors are in LMTT_<COLOR> env vars
-# Writes directly to hyprtoolkit.conf so inotify hot-reload picks up changes
 
 strip() { echo "${1#\#}"; }
 

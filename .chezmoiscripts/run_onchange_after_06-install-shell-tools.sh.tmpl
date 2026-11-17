@@ -1,14 +1,4 @@
 #!/bin/bash
-# Install everything interactive bash hooks into (see dot_bashrc.d/ and
-# dot_blerc): ble.sh, oh-my-posh, atuin, zoxide, fzf, direnv, bash-completion.
-#
-# Every hook in ~/.bashrc.d is guarded, so a machine missing these tools gets
-# plain bash with no error at all. This is the one exception to "chezmoi does
-# not install software" (docs/SOFTWARE-INSTALLERS.md): without it a fresh
-# machine silently comes up without the shell this repo configures.
-#
-# run_onchange_: re-runs when this file changes. Idempotent: installs only
-# what is missing, so a re-run on a complete machine does nothing.
 set -euo pipefail
 
 missing_pkgs=()
@@ -33,16 +23,12 @@ if [ "${#missing_pkgs[@]}" -gt 0 ]; then
 {{- end }}
 fi
 
-# oh-my-posh: not packaged everywhere (Arch ARM has none). The official
-# installer picks the build for this machine's architecture. Needs unzip.
 if ! command -v oh-my-posh >/dev/null 2>&1 && [ ! -x "$HOME/.local/bin/oh-my-posh" ]; then
     echo "shell tools: installing oh-my-posh to ~/.local/bin"
     mkdir -p "$HOME/.local/bin"
     curl -fsSL https://ohmyposh.dev/install.sh | bash -s -- -d "$HOME/.local/bin"
 fi
 
-# ble.sh: shell script, so the nightly release tarball works on any
-# architecture. ~/.bashrc sources it from ~/.local/share/blesh/ble.sh.
 if [ ! -f "$HOME/.local/share/blesh/ble.sh" ]; then
     echo "shell tools: installing ble.sh to ~/.local/share/blesh"
     tmp=$(mktemp -d)

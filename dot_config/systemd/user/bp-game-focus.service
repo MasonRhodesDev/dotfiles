@@ -2,8 +2,6 @@
 Description=Big Picture / game focus state machine (Hyprland)
 PartOf=graphical-session.target
 After=graphical-session.target
-# uwsm finalizes HYPRLAND_INSTANCE_SIGNATURE into the user manager before
-# graphical-session.target activates; skip cleanly if it's absent.
 ConditionEnvironment=HYPRLAND_INSTANCE_SIGNATURE
 
 [Service]

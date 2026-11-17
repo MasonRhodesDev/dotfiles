@@ -1,7 +1,5 @@
 import type { PaneSnapshot, Section, SectionContext } from '../types.ts';
 
-// ssh options that consume the next argument (from ssh(1)) — needed to find
-// the first non-option word, the destination.
 const OPTS_WITH_ARG = new Set('BbcDEeFIiJLlmOoPpRSWw'.split(''));
 
 export function sshDestination(cmdline: string[]): string | undefined {

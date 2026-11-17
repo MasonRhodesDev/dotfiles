@@ -1,19 +1,15 @@
 #!/bin/bash
-# Interactive rbw (Bitwarden CLI) setup for chezmoi dotfiles
-# Runs once before first apply, guides through login and setup
 
 echo "========================================="
 echo "rbw (Bitwarden CLI) Setup for Chezmoi"
 echo "========================================="
 echo ""
 
-# Check if already configured
 if command -v rbw &> /dev/null && rbw unlocked &> /dev/null; then
     echo "✅ rbw already configured and unlocked"
     exit 0
 fi
 
-# Install rbw if not present
 if ! command -v rbw &> /dev/null; then
     echo "📦 Installing rbw..."
 {{- if or (eq .chezmoi.osRelease.id "arch") (eq .chezmoi.osRelease.id "archarm") }}
@@ -47,17 +43,14 @@ if [ -z "$email" ]; then
     exit 0
 fi
 
-# Configure rbw with email
 rbw config set email "$email"
 
-# Register device (required for official Bitwarden server)
 echo ""
 echo "Registering device with Bitwarden..."
 if ! rbw register 2>/dev/null; then
     echo "⚠️  Registration failed. Continuing anyway..."
 fi
 
-# Login
 echo ""
 echo "Logging in to Bitwarden..."
 if rbw login 2>/dev/null; then
@@ -76,9 +69,7 @@ echo ""
 echo "Unlocking rbw vault..."
 if rbw unlock 2>/dev/null; then
     echo "✅ Vault unlocked!"
-    # Secure rbw configuration directory
     chmod 0700 "$HOME/.config/rbw" 2>/dev/null || true
-    # TTY-capable pinentry so unlock works over console/SSH at init time.
     rbw config set pinentry pinentry-curses 2>/dev/null || true
 else
     echo "⚠️  Unlock failed. Continuing with placeholder values..."
@@ -110,7 +101,6 @@ echo "Note: rbw will automatically sync and access the item."
 echo ""
 read -p "Press Enter after creating the item (or Ctrl+C to skip)..." dummy
 
-# Sync to fetch the new item
 echo ""
 echo "Syncing rbw..."
 if rbw sync 2>/dev/null; then
@@ -135,5 +125,4 @@ echo ""
 echo "Continuing with chezmoi apply..."
 echo ""
 
-# Always exit successfully (non-blocking)
 exit 0
