@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# Run a command with this machine's Infisical secrets, restarting it when they change.
-# Usage in a systemd user unit:  ExecStart=%h/.local/bin/infisical-exec <command> [args...]
 set -euo pipefail
 set -a; . "$HOME/.config/infisical/machine.env"; set +a
 INFISICAL_TOKEN=$(infisical login --method=universal-auth \

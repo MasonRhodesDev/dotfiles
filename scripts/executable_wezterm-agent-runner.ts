@@ -30,7 +30,6 @@ function stateRoot(): string {
   try {
     chmodSync(root, 0o700);
   } catch {
-    // Best effort; the directory may be on a filesystem that ignores chmod.
   }
   return root;
 }
@@ -59,9 +58,6 @@ function writeInactivePaneState(): void {
 function setUserVar(name: string, value: string): void {
   const encoded = Buffer.from(value, 'utf8').toString('base64');
   let seq = `\x1b]1337;SetUserVar=${name}=${encoded}\x07`;
-  // Inside tmux the pane pty is tmux's, not the terminal's: wrap in the tmux
-  // DCS passthrough envelope (ESCs doubled) so tmux forwards the OSC to the
-  // attached client. Needs `allow-passthrough on` (set in ~/.tmux.conf).
   if (process.env.TMUX) {
     seq = `\x1bPtmux;${seq.replace(/\x1b/g, '\x1b\x1b')}\x1b\\`;
   }
@@ -100,9 +96,6 @@ function emitState(state: StoredState): void {
     return;
   }
 
-  // This WezTerm build accepts numeric-looking SetUserVar values reliably but
-  // ignores arbitrary strings. AGENT_ACTIVE/AGENT_SEQ are pane-local refresh
-  // signals; string details are read by Lua from the explicit state file.
   emitVars({
     AGENT_ACTIVE: '1',
     AGENT_KIND: agentKind(state.agent),
@@ -146,29 +139,17 @@ if (!existsSync(realScript)) {
   process.exit(127);
 }
 
-// Pane identity: wezterm pane id, or kitty pid + window id. The kitty pid is
-// in the key because Hyprland runs one kitty instance per OS window, so every
-// window's id is 1 and the id alone collides across instances. kitty
-// interprets the same OSC 1337 SetUserVar sequences emitted below.
-// TERM decides the terminal: env vars like WEZTERM_PANE survive nested
-// terminal launches (kitty opened from a wezterm shell still carries it),
-// but TERM is always overridden by the terminal that owns the pty.
 const inKitty = (process.env.TERM ?? '').includes('kitty') && Boolean(process.env.KITTY_WINDOW_ID);
 const kittyPane = process.env.KITTY_WINDOW_ID
   ? `kitty-${process.env.KITTY_PID ?? '0'}-${process.env.KITTY_WINDOW_ID}`
   : undefined;
 
-// TERM=*kitty* without pane vars = the far end of an ssh session from kitty.
-// The state file stays on this (remote) host, so key it by our pty — the
-// bridge derives the same key from its controlling terminal. The OSC user
-// vars still cross the ssh channel and light the local header.
 function remoteTtyPane(): string | undefined {
   if (!(process.env.TERM ?? '').includes('kitty')) return undefined;
   try {
     const tty = readlinkSync('/proc/self/fd/1');
     if (tty.startsWith('/dev/pts/')) return `remote-pts-${tty.slice('/dev/pts/'.length)}`;
   } catch {
-    // Not a pty; no pane identity.
   }
   return undefined;
 }

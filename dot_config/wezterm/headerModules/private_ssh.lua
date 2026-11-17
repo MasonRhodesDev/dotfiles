@@ -1,5 +1,3 @@
--- ssh options that consume the next argument (from ssh(1)) — needed to find
--- the first non-option word, the destination.
 local OPTS_WITH_ARG = "BbcDEeFIiJLlmOoPpRSWw"
 
 local function ssh_destination(argv)

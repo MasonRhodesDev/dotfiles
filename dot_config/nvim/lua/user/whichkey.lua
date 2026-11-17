@@ -11,7 +11,6 @@ local M = {
 function M.config()
   local which_key = require "which-key"
 
-  -- Create sticky buffer navigation
   local function sticky_buffer_nav(initial_direction)
     local sticky_active = false
 
@@ -22,25 +21,20 @@ function M.config()
         vim.cmd("bprevious")
       end
 
-      -- Show buffer name
       local bufname = vim.fn.bufname("%")
       local filename = vim.fn.fnamemodify(bufname, ":t")
       if filename == "" then
         filename = "[No Name]"
       end
 
-      -- Display buffer info with navigation hint
       vim.notify("Buffer: " .. filename .. " (n=next, p=prev, ESC=exit)", vim.log.levels.INFO, { timeout = 1000 })
 
-      -- Only set up keymaps if not already active
       if not sticky_active then
         sticky_active = true
 
-        -- Set up global temporary keymaps
         vim.keymap.set("n", "n", function() navigate("next") end, { silent = true })
         vim.keymap.set("n", "p", function() navigate("prev") end, { silent = true })
         vim.keymap.set("n", "<Esc>", function()
-          -- Clear temporary keymaps
           pcall(vim.keymap.del, "n", "n")
           pcall(vim.keymap.del, "n", "p")
           pcall(vim.keymap.del, "n", "<Esc>")
@@ -60,7 +54,7 @@ function M.config()
 
   which_key.setup {
     preset = "modern",
-    delay = 500,  -- Show after 500ms
+    delay = 500,
     plugins = {
       marks = true,
       registers = true,
@@ -87,7 +81,6 @@ function M.config()
     },
   }
 
-  -- Add keymaps after setup
   which_key.add {
     { "<leader>q", "<cmd>confirm q<CR>", desc = "Quit" },
     { "<leader>h", "<cmd>nohlsearch<CR>", desc = "NOHL" },
@@ -99,7 +92,6 @@ function M.config()
     { "<leader>T", group = "Treesitter" },
   }
 
-  -- Buffer management keymaps
   which_key.add {
     { "<leader>bc", "<cmd>bd<CR>", desc = "Close Buffer" },
     { "<leader>bC", "<cmd>bd!<CR>", desc = "Force Close Buffer" },

@@ -17,7 +17,6 @@ return {
     Key = " ",
     Keyword = " ",
     Method = " ",
-    -- Module = " ",
     Module = " ",
     Namespace = " ",
     Null = "󰟢 ",

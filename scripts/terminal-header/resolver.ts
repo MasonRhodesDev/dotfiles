@@ -1,7 +1,3 @@
-// Pure header resolution: PaneSnapshot in, header string (or null) out.
-// Sections are a tiered registry, oh-my-posh style: to add a header section,
-// write a file in sections/ and register it here — nothing else changes.
-
 import type { PaneSnapshot, Section, SectionContext } from './types.ts';
 import { sshSection } from './sections/ssh.ts';
 import { agentSection } from './sections/agent.ts';
@@ -25,7 +21,6 @@ export function resolveHeader(snapshot: PaneSnapshot, ctx: SectionContext): stri
     try {
       text = section.detect(snapshot, ctx);
     } catch {
-      // A broken section must never take the whole header down.
     }
     if (text) {
       parts.push(text);

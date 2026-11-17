@@ -7,6 +7,5 @@ Wants=network-online.target
 [Service]
 Type=oneshot
 ExecStart=%h/.local/bin/claude-desktop-update
-# Keep the daily download/extract off the interactive cores.
 Nice=19
 IOSchedulingClass=idle

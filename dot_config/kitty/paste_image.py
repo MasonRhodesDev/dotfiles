@@ -1,7 +1,3 @@
-# Smart paste kitten — parity with the wezterm Ctrl+V action_callback:
-# runs wezterm-paste-image, which returns a temp-file path for image
-# clipboard contents or the plain text otherwise, and pastes the result.
-
 import subprocess
 
 from kittens.tui.handler import result_handler

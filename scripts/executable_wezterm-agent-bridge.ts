@@ -63,7 +63,6 @@ function stateRoot(): string {
   try {
     chmodSync(root, 0o700);
   } catch {
-    // Best effort; the directory may be on a filesystem that ignores chmod.
   }
   return root;
 }
@@ -142,10 +141,6 @@ function nextStatus(payload: HookPayload, previous?: StoredState): Pick<StoredSt
   }
 }
 
-// TERM=*kitty* without pane vars = the far end of an ssh session from kitty.
-// Key the state file by the controlling pty so it matches the runner's key
-// (the runner reads its stdout pty; hooks run with piped stdio, so fall back
-// to the controlling terminal from /proc/self/stat).
 function remoteTtyPane(): string | undefined {
   if (!(process.env.TERM ?? '').includes('kitty')) return undefined;
   for (const fd of [0, 1, 2]) {
@@ -166,7 +161,6 @@ function remoteTtyPane(): string | undefined {
       if (major >= 136 && major <= 143) return `remote-pts-${(major - 136) * 256 + minor}`;
     }
   } catch {
-    // No controlling terminal; no pane identity.
   }
   return undefined;
 }
@@ -183,11 +177,6 @@ const payload = parsePayload(input);
 try {
   if (!knownAgents.has(agent)) process.exit(0);
 
-  // Pane identity: wezterm pane id, or kitty pid + window id (the pid is in
-  // the key because Hyprland runs one kitty instance per OS window, so every
-  // window's id is 1 and the id alone collides across instances).
-  // TERM decides the terminal: stale WEZTERM_PANE survives nested terminal
-  // launches, but TERM is always set by the terminal that owns the pty.
   const inKitty = (process.env.TERM ?? '').includes('kitty') && Boolean(process.env.KITTY_WINDOW_ID);
   const kittyPane = process.env.KITTY_WINDOW_ID
     ? `kitty-${process.env.KITTY_PID ?? '0'}-${process.env.KITTY_WINDOW_ID}`

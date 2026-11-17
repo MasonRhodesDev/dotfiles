@@ -1,13 +1,11 @@
 #!/bin/bash
 # packages.toml hash: {{ include "software_installers/packages.toml" | sha256sum }}
-# Elective post-apply package audit via Claude haiku.
 
 [ ! -t 0 ] && exit 0
 
 COOLDOWN_FILE="$HOME/.local/state/chezmoi-installs/last-check-prompt"
 COOLDOWN_SECS=3600
 
-# Check cooldown — don't ask more than once per hour
 if [ -f "$COOLDOWN_FILE" ]; then
     last=$(cat "$COOLDOWN_FILE")
     now=$(date +%s)

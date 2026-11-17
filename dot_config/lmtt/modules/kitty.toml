@@ -1,8 +1,3 @@
-# Kitty terminal — palette mapping mirrors lmtt-modules/src/wezterm.rs:
-# Material tokens for semantic slots, fixed per-mode hues for the ANSI
-# slots Material You has no token for (green/yellow/cyan), so ls/diffs/TUIs
-# keep conventional hues.
-
 name = "kitty"
 description = "Kitty terminal emulator (parity with WezTerm module)"
 binary = "kitty"
@@ -27,7 +22,6 @@ selection_foreground {{on_primary_container}}
 
 url_color {{primary}}
 
-# Slot order: black, red, green, yellow, blue, magenta, cyan, white
 color0  {{#if (eq mode "dark")}}{{surface_container_high}}{{else}}{{on_surface}}{{/if}}
 color1  {{error}}
 color2  {{#if (eq mode "dark")}}#98c379{{else}}#50a14f{{/if}}
@@ -46,7 +40,6 @@ color13 {{secondary}}
 color14 {{#if (eq mode "dark")}}#7bdfec{{else}}#016d9c{{/if}}
 color15 {{on_surface}}
 
-# Header (tab bar) — consumed by tab_bar.py via DrawData
 tab_bar_background      {{surface_container}}
 active_tab_background   {{primary}}
 active_tab_foreground   {{on_primary}}
@@ -55,8 +48,6 @@ inactive_tab_foreground {{on_surface_variant}}
 """
 
 [reload]
-# In-process config reload; recolors all windows live. No per-window config
-# re-evaluation exists in kitty, so no reload fan-out.
 command = "pkill -USR1 -x kitty || true"
 timeout = 5000
 

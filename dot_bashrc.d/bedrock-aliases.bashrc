@@ -1,53 +1,15 @@
-# Bedrock-scoped harness entry points: codex-bedrock, pi-bedrock and claude-bedrock.
-#
-# Both run the work Bedrock developer catalog (SSO profile bedrock-developer,
-# us-west-2) WITHOUT touching the default auth of either harness. Everything
-# is scoped to the child process:
-#   - codex: a separate profile file (~/.codex/bedrock.config.toml) using
-#     codex's native amazon-bedrock-runtime provider with SigV4 from the SSO profile.
-#   - pi: GPT-5.6 Terra through pi's built-in amazon-bedrock provider
-#     (Converse API, so it pins the AIP ARN like every other endpoint). The
-#     model entry lives in ~/.pi/agent/models.json; AWS_PROFILE/AWS_REGION are
-#     set for that process only and the bedrock-profile extension honours them.
-#   - claude: Bedrock env vars set only for that invocation, with the
-#     personal ANTHROPIC_API_KEY unset so it cannot leak into the work call.
-# Plain `codex`, `pi` and `claude` keep using the OpenAI subscription, pi's
-# default provider and the claude.ai login respectively.
-#
-# The application inference profile ARNs live in ~/.config/bedrock-aliases.env
-# (not in this public repo). Copy them from the developer managed-settings.json
-# in terraform-infrastructure on a new machine.
-
-_bedrock_sso_ensure() { # $1 = AWS profile (default bedrock-developer)
+_bedrock_sso_ensure() {
     local p=${1:-bedrock-developer}
     AWS_PROFILE=$p aws sts get-caller-identity --query Account --output text >/dev/null 2>&1 && return 0
     echo "bedrock: SSO session expired, running aws sso login --profile $p" >&2
     aws sso login --profile "$p"
 }
 
-# Bedrock account (developer role). Works since 2026-09-16: LCO-506 granted the
-# role the CRIS profile us.openai.gpt-5.6-terra, which is what codex must name
-# because the Responses API rejects application inference profiles (400). The
-# profile file mirrors the Developer MDM payload in terraform-infrastructure
-# (tf/envs/bedrock/endpoint-management/codex/developer, LCO-448). Account
-# enforced guardrail applies; a blocked reply poisons the session, start a new one.
 codex-bedrock() {
     _bedrock_sso_ensure bedrock-developer || return 1
     codex --profile bedrock "$@"
 }
 
-# pi on the same Developer catalog. Default GPT-5.6 Terra, and the model picker
-# is scoped (--models) to exactly what the developer SSO role may invoke: the six
-# AIPs tagged roles="developer" in tf/envs/bedrock/bedrock-inference-profile.tf
-# (Sonnet 5, Opus 5, Haiku 4.5, GPT-5.6 Terra/Sol/Luna). They are listed in
-# ~/.pi/agent/models.json under readable ids (aip.claude-sonnet-5, ...) because
-# the picker prints ids; PI_BEDROCK_MODEL_MAP hands the real ARNs to the
-# bedrock-aip-map extension, which swaps them in per request. The CRIS
-# us.openai.* grant is left out on purpose: it exists for codex's Responses path
-# and would bill off the AIP tag from pi. The account enforced guardrail
-# evaluates GPT on bare Converse (verified 2026-09-16: fake SSN prompt ->
-# guardrail_intervened, no guardrailConfig attached). A blocked reply poisons
-# the session; start a new one.
 pi-bedrock() {
     local envfile="$HOME/.config/bedrock-aliases.env"
     if [[ ! -r $envfile ]]; then
@@ -68,7 +30,6 @@ pi-bedrock() {
         pi --provider amazon-bedrock --model aip.gpt-5.6-terra --models "amazon-bedrock/aip.*" "$@"
 }
 
-# Sandbox account via sbx-admin. Works today (no enforced guardrail there).
 codex-sandbox() {
     _bedrock_sso_ensure sbx-admin || return 1
     codex --profile sandbox "$@"
@@ -84,8 +45,6 @@ claude-bedrock() {
     local BEDROCK_AIP_PREFIX BEDROCK_AIP_SONNET BEDROCK_AIP_OPUS BEDROCK_AIP_HAIKU
     # shellcheck source=/dev/null
     source "$envfile"
-    # Same env block as the developer-tier managed-settings.json, minus the MCP
-    # allowlist. Sonnet 5 default; Opus 5 and Haiku 4.5 via --model.
     env -u ANTHROPIC_API_KEY -u ANTHROPIC_AUTH_TOKEN \
         CLAUDE_CODE_USE_BEDROCK=1 AWS_REGION=us-west-2 AWS_PROFILE=bedrock-developer \
         ANTHROPIC_MODEL="$BEDROCK_AIP_SONNET" \

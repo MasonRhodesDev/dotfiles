@@ -1,14 +1,8 @@
 #!/bin/bash
-# Virtual-console (pure TTY) UX: readable Terminus font sized to the
-# framebuffer, early-boot font via initramfs, and gpm mouse copy/paste.
-# Shell-side niceties (palette, tmux attach, no blanking) live in
-# ~/.config/fish/conf.d/tty.fish. Cross-distro: Arch + Fedora.
-# Idempotent: installs/edits only when something differs.
 set -euo pipefail
 
 . /etc/os-release 2>/dev/null || true
 
-# --- packages -----------------------------------------------------------
 need_pkgs=""
 case " ${ID:-} ${ID_LIKE:-} " in
     *" arch "*)
@@ -26,17 +20,14 @@ case " ${ID:-} ${ID_LIKE:-} " in
         ;;
 esac
 
-# --- console font sized to framebuffer height ---------------------------
-# Terminus PSF caps out at 16x32; pick by vertical pixels so the same
-# script lands sensibly on the 3440x1440 desktop, the FW16, or a 768p box.
 fb_h=0
 if [ -r /sys/class/graphics/fb0/virtual_size ]; then
     fb_h=$(cut -d, -f2 /sys/class/graphics/fb0/virtual_size)
 fi
-if   [ "$fb_h" -ge 1300 ]; then font=ter-132b   # 16x32
-elif [ "$fb_h" -ge 900  ]; then font=ter-124b   # 12x24
-elif [ "$fb_h" -ge 1    ]; then font=ter-118b   # 10x18
-else                            font=ter-124b   # no fb info — middle ground
+if   [ "$fb_h" -ge 1300 ]; then font=ter-132b
+elif [ "$fb_h" -ge 900  ]; then font=ter-124b
+elif [ "$fb_h" -ge 1    ]; then font=ter-118b
+else                            font=ter-124b
 fi
 
 vconsole_changed=0
@@ -50,7 +41,6 @@ if ! grep -qx "FONT=$font" /etc/vconsole.conf 2>/dev/null; then
     vconsole_changed=1
 fi
 
-# --- early-boot font: rebuild initramfs only when the font changed -------
 if [ "$vconsole_changed" = 1 ]; then
     if command -v mkinitcpio >/dev/null 2>&1; then
         if grep -Eq '^HOOKS=.*(consolefont|sd-vconsole)' /etc/mkinitcpio.conf; then
@@ -61,11 +51,9 @@ if [ "$vconsole_changed" = 1 ]; then
     elif command -v dracut >/dev/null 2>&1; then
         sudo dracut -f
     fi
-    # apply to live VTs now (no-op inside a graphical session's VT)
     sudo systemctl restart systemd-vconsole-setup 2>/dev/null || true
 fi
 
-# --- gpm: mouse select/paste on the console ------------------------------
 if ! systemctl is-enabled -q gpm.service 2>/dev/null; then
     sudo systemctl enable --now gpm.service
     echo "  gpm enabled"

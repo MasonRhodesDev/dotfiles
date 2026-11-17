@@ -37,9 +37,6 @@ function command(name: string, args: string[], options: Parameters<typeof spawnS
 
 function testEnv(extra: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = { ...process.env, XDG_RUNTIME_DIR: testRuntimeDir, WEZTERM_PANE_SUMMARY_DISABLE_MODEL: '1' };
-  // The suite must behave the same run from kitty, wezterm, tmux, or
-  // headless: strip the invoking terminal's identity (TERM discrimination in
-  // the runner/bridge would otherwise override what a test sets).
   delete env.TERM;
   delete env.KITTY_WINDOW_ID;
   delete env.KITTY_PID;
@@ -58,9 +55,6 @@ function stateRoot(env: NodeJS.ProcessEnv = testEnv()): string {
     : join(env.HOME ?? '.', '.cache', 'wezterm-agent-status');
 }
 
-// Summaries are agent-pane-only: the summarizer skips (and clears) panes with
-// no fresh agent state. Tests that exercise summary preservation must first
-// mark their fake pane as an agent pane, as the runner/bridge would in life.
 function seedAgentPaneState(agent: string, pane: string): void {
   const dir = join(stateRoot(), agent);
   mkdirSync(dir, { recursive: true });

@@ -1,6 +1,4 @@
 #!/usr/bin/env node
-// Table-driven resolver tests: PaneSnapshot + fake context in, header out.
-// Run: node ~/scripts/terminal-header/test.ts
 
 import type { AgentState, PaneSnapshot, SectionContext } from './types.ts';
 import { resolveHeader } from './resolver.ts';

@@ -1,7 +1,6 @@
 { pkgs ? import <nixpkgs> {} }:
 
 let
-  # Helper to fetch and extract Ubuntu 24.04 .deb packages
   fetchUbuntuDeb = { name, url, sha256 }: pkgs.runCommand name {
     nativeBuildInputs = [ pkgs.dpkg ];
     src = pkgs.fetchurl { inherit url sha256; };
@@ -18,7 +17,6 @@ let
     fi
   '';
 
-  # Ubuntu 24.04 (Noble) libraries for Playwright WebKit
   ubuntuLibs = {
     icu74 = fetchUbuntuDeb {
       name = "libicu74";
@@ -45,7 +43,6 @@ let
     };
   };
 
-  # Script to patch WebKit binaries
   patchWebkit = pkgs.writeShellScriptBin "patch-webkit" ''
     set -e
 
@@ -75,9 +72,7 @@ let
     echo "✓ WebKit patched successfully"
   '';
 
-  # Standard Playwright dependencies from nixpkgs
   playwrightDeps = with pkgs; [
-    # Graphics and X11
     xorg.libX11
     xorg.libXcomposite
     xorg.libXdamage
@@ -90,7 +85,6 @@ let
     libGL
     libdrm
 
-    # GTK and accessibility (WebKit critical)
     gtk3
     at-spi2-atk
     at-spi2-core
@@ -98,7 +92,6 @@ let
     libnotify
     libappindicator-gtk3
 
-    # Core libraries
     alsa-lib
     atk
     cairo
@@ -115,32 +108,26 @@ let
     libpng
     zlib
 
-    # Wayland support
     wayland
 
-    # Media
     ffmpeg
     gst_all_1.gstreamer
     gst_all_1.gst-plugins-base
     gst_all_1.gst-plugins-good
     vulkan-loader
 
-    # Fonts
     liberation_ttf
     dejavu_fonts
 
-    # Additional WebKit dependencies
     harfbuzz
     libwebp
     libxml2
     sqlite
 
-    # System libraries
     systemd
     eudev
   ];
 
-  # Combine Ubuntu libs with nixpkgs libs
   ubuntuLibPath = pkgs.lib.makeLibraryPath (builtins.attrValues ubuntuLibs);
   nixLibPath = pkgs.lib.makeLibraryPath playwrightDeps;
 
@@ -174,7 +161,6 @@ pkgs.mkShell {
     echo "  After installing: run 'patch-webkit' to fix library paths"
   '';
 
-  # Expose attributes for child projects to import
   passthru = {
     inherit playwrightDeps ubuntuLibs ubuntuLibPath nixLibPath shellHookContent patchWebkit;
   };

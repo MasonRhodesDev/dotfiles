@@ -3,12 +3,6 @@ import { readlinkSync } from 'node:fs';
 import type { ForegroundProcess, PaneSnapshot, TerminalTarget } from '../types.ts';
 import { binaryOnPath } from './util.ts';
 
-// kitty runs one instance per OS window under most tiling setups, each with
-// its own remote-control socket (kitty.conf: listen_on unix:@kitty-{kitty_pid},
-// allow_remote_control yes). Pane keys are kitty-<kitty pid>-<window id> —
-// the pid disambiguates instances, since every instance's first window is
-// id 1. `kitten @ ls` exposes user vars and foreground processes for free.
-
 let known: boolean | undefined;
 
 export const kittyTarget: TerminalTarget = {
@@ -44,7 +38,6 @@ export const kittyTarget: TerminalTarget = {
             try {
               tty = readlinkSync(`/proc/${w.pid}/fd/0`);
             } catch {
-              // Shell gone or unreadable; sections that need tty stay silent.
             }
             snapshots.push({
               paneKey: `kitty-${pid}-${w.id}`,

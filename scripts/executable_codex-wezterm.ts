@@ -4,8 +4,6 @@ import { spawn } from 'node:child_process';
 const RUNNER = '/home/mason/scripts/wezterm-agent-runner.ts';
 const REAL_CODEX = '/home/mason/.npm-global/lib/node_modules/@openai/codex/bin/codex.js';
 
-// WEZTERM_PANE (wezterm) or KITTY_WINDOW_ID (kitty) — the runner resolves
-// the pane identity itself and emits the same OSC user-var protocol to both.
 const inSupportedTerminal = Boolean(process.env.WEZTERM_PANE || process.env.KITTY_WINDOW_ID);
 const shouldUseWeztermRunner = Boolean(inSupportedTerminal && process.stdout.isTTY);
 const args = shouldUseWeztermRunner

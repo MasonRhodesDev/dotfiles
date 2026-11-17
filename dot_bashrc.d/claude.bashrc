@@ -1,6 +1,4 @@
-# Git commit with Claude-generated message
 git-claudmit() {
-    # Parse flags
     local prepare_only=false
     while [[ $# -gt 0 ]]; do
         case $1 in
@@ -16,19 +14,15 @@ git-claudmit() {
         esac
     done
 
-    # Check if we're in a git repository
     if ! git rev-parse --git-dir > /dev/null 2>&1; then
         echo "Error: Not in a git repository"
         return 1
     fi
 
-    # Check if there are staged files
     if ! git diff --cached --quiet 2>/dev/null; then
-        # Get staged diff
         local staged_diff=$(git diff --cached)
         local git_dir=$(git rev-parse --git-dir)
 
-        # Generate commit message using Claude
         echo "Generating commit message..."
         local commit_msg=$(claude -p "Analyze these git changes and create a Conventional Commits message.
 
@@ -53,7 +47,6 @@ CRITICAL: Output ONLY the commit message. No analysis, explanations, markdown fo
 Changes:
 ${staged_diff}")
 
-        # Show commit message
         echo ""
         echo "Commit message:"
         echo "---"
@@ -62,12 +55,10 @@ ${staged_diff}")
         echo ""
 
         if $prepare_only; then
-            # Open editor with pre-populated message
             echo -e "\033[32mOpening editor to finalize commit message...\033[0m"
             echo ""
             git commit -e -m "$commit_msg"
         else
-            # Normal commit flow with confirmation
             read -p "Commit with this message? (y/n): " -n 1 confirm
             echo ""
 

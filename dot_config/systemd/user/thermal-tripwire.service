@@ -11,8 +11,6 @@ ExecStart=%h/scripts/thermal-tripwire
 Restart=on-failure
 RestartSec=10
 
-# Must never become the problem it watches for. The loop is a few sysfs reads
-# every 15s; the only heavier work is a 20s /proc walk on trip.
 Nice=19
 IOSchedulingClass=idle
 CPUSchedulingPolicy=idle

@@ -1,25 +1,4 @@
 #!/bin/bash
-# Apple silicon BCM4378 (brcmfmac) Wi-Fi/Bluetooth firmware goes silent: every
-# ioctl then times out ("Timeout on response for query command"), the command
-# ring fills ("Failed to reserve space in commonring"), hci_bcm4377 dies with
-# it, and NetworkManager cannot bring anything back. Observed 2026-10-13 on
-# mason-air (MacBook Air M1, kernel 7.1.13 ARCH): after s2idle resume, and
-# also 30 s after a cold-boot firmware load with no sleep involved. Only a
-# fresh firmware load recovers; there is no upstream fix (AsahiLinux/linux
-# issue 491, t2linux/kernel issue 32 show the same signature).
-#
-# Three pieces, all reboot-free:
-#   1. /usr/local/sbin/brcmfmac-reset  unloads and reloads the drivers.
-#   2. A system-sleep hook calls it around every suspend, so the chip never
-#      has to survive sleep in place.
-#   3. brcmfmac-watch.service follows the kernel log and calls it as soon as
-#      the wedge signature appears, rate-limited, so a wedge at any other
-#      time self-heals in a few seconds instead of needing a reboot.
-# Plus NetworkManager is told to stop randomising the MAC: brcmfmac lacks
-# POWERED_ADDR_CHANGE, so every scan-time MAC change is an ioctl that fails.
-#
-# Hardware-gated: only on an Apple silicon devicetree with a BCM4378.
-# run_onchange_: re-runs when this file changes; sudo only when /etc differs.
 set -euo pipefail
 
 compat=$(tr '\0' '\n' < /sys/firmware/devicetree/base/compatible 2>/dev/null || true)
@@ -32,7 +11,7 @@ if ! lspci -nn 2>/dev/null | grep -qi 'BCM4378'; then
     echo "No BCM4378 adapter found, skipping"; exit 0
 fi
 
-install_file() { # $1=dest $2=content $3=mode
+install_file() {
     local d="$1" m="${3:-0644}"
     if [ -f "$d" ] && [ "$(cat "$d")" = "$2" ]; then return 0; fi
     sudo install -d "$(dirname "$d")"
@@ -41,22 +20,14 @@ install_file() { # $1=dest $2=content $3=mode
     echo "  installed $d"
 }
 
-# systemd 262 runs hooks from /usr/lib/systemd/system-sleep/ only: the hook
-# first shipped under /etc/systemd/system-sleep/ and never fired (observed
-# 2026-10-13, F6 suspend wedged the firmware with the driver still loaded).
 if [ -f /etc/systemd/system-sleep/brcmfmac-reload ]; then
     sudo rm -f /etc/systemd/system-sleep/brcmfmac-reload
     echo "  removed stale /etc/systemd/system-sleep/brcmfmac-reload"
 fi
 
-# 1. Shared reset: the only thing that revives the firmware.
 reset_body=$(cat <<'EOF'
 #!/bin/bash
 # Installed by chezmoi (run_onchange_after_56-asahi-bcm4378-sleep.sh).
-# Unload and reload the BCM4378 Wi-Fi and Bluetooth drivers so the chip gets
-# a fresh firmware download. Usage: brcmfmac-reset <down|up|cycle> [reason]
-# NetworkManager sees a new interface and reconnects on its own; Bluetooth
-# connections drop and re-pair automatically.
 
 modules_down="brcmfmac_wcc brcmfmac hci_bcm4377"
 modules_up="brcmfmac hci_bcm4377"
@@ -65,7 +36,6 @@ log() { logger -t brcmfmac-reset "$*"; }
 
 down() {
   lsmod | grep -q '^brcmfmac ' || return 0
-  # bounded, so a wedged chip cannot stop the machine from sleeping
   if timeout 15 modprobe -r $modules_down; then
     log "unloaded $modules_down ($reason)"
   else
@@ -92,12 +62,9 @@ EOF
 )
 install_file /usr/local/sbin/brcmfmac-reset "$reset_body" 0755
 
-# 2. Sleep hook. systemd-suspend.service runs it as root: <pre|post> <type>.
 hook_body=$(cat <<'EOF'
 #!/bin/bash
 # Installed by chezmoi (run_onchange_after_56-asahi-bcm4378-sleep.sh).
-# The BCM4378 firmware does not reliably survive s2idle, so drop the drivers
-# before sleep and load them fresh after resume via brcmfmac-reset.
 case "$1" in
   pre)  /usr/local/sbin/brcmfmac-reset down "before $2" ;;
   post) /usr/local/sbin/brcmfmac-reset cycle "after $2" ;;
@@ -107,17 +74,9 @@ EOF
 )
 install_file /usr/lib/systemd/system-sleep/brcmfmac-reload "$hook_body" 0755
 
-# 3. Watchdog: first timeout means the command ring is dead (never recovers
-# on its own), so reset on the first match. Guards: never while
-# systemd-suspend.service is running (the sleep hook's own unload logs a
-# timeout), a cooldown after our own reset (fresh firmware can wedge again
-# 30 s after load), and a cap per window so a chip that will not come back
-# does not get reset in a tight loop.
 watch_body=$(cat <<'EOF'
 #!/bin/bash
 # Installed by chezmoi (run_onchange_after_56-asahi-bcm4378-sleep.sh).
-# Follow the kernel log for the brcmfmac wedge signature and reset the
-# drivers via brcmfmac-reset. Runs as brcmfmac-watch.service.
 
 cooldown=90        # seconds after a reset before we act again
 window=1800        # rate-limit window
@@ -132,9 +91,6 @@ window_count=0
 log "watching kernel log for brcmfmac wedge"
 journalctl -k -f -n 0 -o cat | grep --line-buffered -E "$pattern" | while read -r line; do
   now=$(date +%s)
-  # systemd-suspend.service is a oneshot and reads as "activating" while
-  # the hooks run, so gate on sleep.target: reached before the pre hook,
-  # stopped after the post hook finishes.
   if systemctl is-active --quiet sleep.target; then
     continue   # sleep hook owns the driver right now
   fi
@@ -193,12 +149,8 @@ elif ! systemctl is-active --quiet brcmfmac-watch.service; then
     echo "  started brcmfmac-watch.service"
 fi
 
-# 4. brcmfmac cannot change MAC on a live interface (no POWERED_ADDR_CHANGE),
-# so NetworkManager's per-scan random MAC is a failing ioctl on every wake.
 nm_body=$(cat <<'EOF'
 # Installed by chezmoi (run_onchange_after_56-asahi-bcm4378-sleep.sh).
-# brcmfmac on Apple silicon cannot change the MAC of a live interface, so
-# keep the permanent address instead of randomising per scan/connection.
 [device]
 wifi.scan-rand-mac-address=no
 

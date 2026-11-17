@@ -36,8 +36,6 @@ jobs:
       - name: Render all source templates
         run: |
           export PATH="$HOME/.local/bin:$PATH"
-          # status computes the full target state, rendering every template,
-          # .chezmoiignore, and script template — any template error fails here.
           chezmoi status --source "$PWD" > /dev/null
           count=$(find . -name '*.tmpl' -not -path './.git/*' | wc -l)
           echo "✅ All templates rendered cleanly ($count .tmpl files, is_work=${{ matrix.profile }})" >> "$GITHUB_STEP_SUMMARY"

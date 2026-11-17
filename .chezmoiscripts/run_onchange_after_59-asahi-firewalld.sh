@@ -1,22 +1,4 @@
 #!/bin/bash
-# Firewall for the Apple silicon laptop (mason-air): firewalld with
-# NetworkManager zone integration, so trust is a property of the Wi-Fi
-# connection rather than the interface.
-#
-# Policy:
-#   * default zone "public" (untrusted): inbound dropped except dhcpv6-client.
-#     ssh is removed from the stock public zone, so the laptop is not
-#     reachable on cafe / office Wi-Fi. Every new network lands here.
-#   * home networks (TRUSTED below) go in the "trusted" zone, which accepts
-#     all inbound traffic. Zone is pinned on the NM
-#     connection profile (connection.zone); NM owns interface-to-zone
-#     mapping, so firewall-cmd --change-interface is deliberately not used.
-# Outbound is never filtered, so the SSH path to dev is unaffected.
-#
-# Scoped to Apple silicon on purpose: the dev box must keep ssh reachable
-# and is not a roaming laptop. Set up 2026-10-13.
-# run_onchange_: re-runs when this file changes; idempotent, sudo only when
-# something actually differs.
 set -euo pipefail
 
 TRUSTED=(MtDoom)
@@ -39,7 +21,6 @@ if ! command -v firewall-cmd >/dev/null 2>&1; then
     fi
 fi
 
-# firewalld must own the ruleset; the standalone units would fight it.
 for u in nftables iptables; do
     if systemctl is-enabled "$u" >/dev/null 2>&1; then
         sudo systemctl disable --now "$u"
@@ -66,7 +47,6 @@ fi
 
 [ "$reload" = 1 ] && fc --reload
 
-# Pin a zone on every Wi-Fi profile: trusted for TRUSTED, public otherwise.
 changed=0
 while IFS=: read -r name type; do
     [ "$type" = "802-11-wireless" ] || continue
@@ -77,7 +57,6 @@ while IFS=: read -r name type; do
         sudo nmcli connection modify "$name" connection.zone "$want"
         echo "  $name -> zone $want"
         changed=1
-        # re-apply if this profile is the live one so the zone takes effect now
         if nmcli -t -f NAME connection show --active | grep -qx "$name"; then
             sudo nmcli connection up "$name" >/dev/null || true
         fi

@@ -1,7 +1,4 @@
 #!/usr/bin/env bash
-# Kill ssh-agent processes left behind in logind sessions whose login has
-# ended. Each one pins its session in "closing", and session-polling tools
-# (JumpCloud remote-assist) then churn through the stale list.
 set -u
 uid=$(id -u)
 reaped=0

@@ -1,6 +1,5 @@
 [Unit]
 Description=Cleanly shut down Steam before session teardown
-# Active while the graphical session is up; its ExecStop runs during teardown.
 PartOf=graphical-session.target
 After=graphical-session.target
 

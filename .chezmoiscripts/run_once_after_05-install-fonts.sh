@@ -6,11 +6,9 @@ echo "Installing required fonts..."
 FONTS_DIR="$HOME/.local/share/fonts"
 REPOS_DIR="$HOME/repos"
 
-# Create fonts directory if it doesn't exist
 mkdir -p "$FONTS_DIR"
 mkdir -p "$REPOS_DIR"
 
-# Install SF Pro fonts (Apple fonts)
 echo "Installing SF Pro fonts..."
 SF_PRO_DIR="$REPOS_DIR/SF-Pro"
 if [ ! -d "$SF_PRO_DIR" ]; then
@@ -18,7 +16,6 @@ if [ ! -d "$SF_PRO_DIR" ]; then
 fi
 cp "$SF_PRO_DIR"/*.otf "$FONTS_DIR/" 2>/dev/null || true
 
-# Install Lilex font
 echo "Installing Lilex font..."
 LILEX_URL="https://github.com/mishamyrt/Lilex/releases/download/2.621/Lilex.zip"
 LILEX_ZIP="$REPOS_DIR/Lilex.zip"
@@ -26,7 +23,6 @@ curl -fLo "$LILEX_ZIP" "$LILEX_URL"
 unzip -o "$LILEX_ZIP" -d "$FONTS_DIR/Lilex" "*.ttf" "*.otf" 2>/dev/null || true
 rm "$LILEX_ZIP"
 
-# Install Nerd Fonts (FiraCode and JetBrains Mono)
 echo "Installing FiraCode Nerd Font..."
 FIRA_URL="https://github.com/ryanoasis/nerd-fonts/releases/latest/download/FiraCode.zip"
 FIRA_ZIP="$REPOS_DIR/FiraCode.zip"
@@ -41,7 +37,6 @@ curl -fLo "$JETBRAINS_ZIP" "$JETBRAINS_URL"
 unzip -o "$JETBRAINS_ZIP" -d "$FONTS_DIR/JetBrainsMono" "*.ttf" "*.otf" 2>/dev/null || true
 rm "$JETBRAINS_ZIP"
 
-# Install Powerline fonts
 echo "Installing Powerline fonts..."
 POWERLINE_DIR="$REPOS_DIR/powerline-fonts"
 if [ ! -d "$POWERLINE_DIR" ]; then
@@ -51,24 +46,14 @@ cd "$POWERLINE_DIR"
 ./install.sh
 cd -
 
-# ---------------------------------------------------------------------------
-# System font packages: base Unicode coverage (Noto Sans + color emoji) plus
-# the fonts referenced by my configs and my personal required set. Guarded with
-# `|| true` so one unavailable package never aborts `chezmoi apply`.
-# ---------------------------------------------------------------------------
 echo "Installing system font packages..."
 if command -v pacman >/dev/null 2>&1; then
-    # Official repo: base coverage + config-referenced + personal repo fonts.
-    # Nerd fonts come as individual prebuilt ttf-*-nerd packages — NEVER
-    # nerd-fonts-git, whose PKGBUILD mirror-clones the entire ~10 GB font repo
-    # to build collections we don't use.
     sudo pacman -S --needed --noconfirm \
         noto-fonts noto-fonts-emoji \
         ttf-roboto adobe-source-code-pro-fonts \
         terminus-font ttf-fira-code ttf-firacode-nerd ttf-jetbrains-mono-nerd \
         ttf-nerd-fonts-symbols-mono \
         || true
-    # AUR: my personal fonts that aren't in the official repos.
     aur_helper=""
     command -v paru >/dev/null 2>&1 && aur_helper=paru
     [ -z "$aur_helper" ] && command -v yay >/dev/null 2>&1 && aur_helper=yay
@@ -88,7 +73,6 @@ elif command -v dnf >/dev/null 2>&1; then
         google-roboto-fonts terminus-fonts adobe-source-code-pro-fonts || true
 fi
 
-# Refresh font cache
 echo "Refreshing font cache..."
 fc-cache -fv
 

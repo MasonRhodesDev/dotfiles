@@ -17,7 +17,6 @@ local M = {
       commit = "b9fd5226c2f76c951fc8ed5923d85e4de065e509",
     },
   },
-  -- lazy = true,
   cmd = "Telescope",
 }
 
@@ -61,10 +60,8 @@ function M.config()
         "--line-number",
         "--column",
         "--smart-case",
-        "--hidden",              -- Search hidden files
-        -- Respects .gitignore by default
-        -- ~/.ignore file contains negation patterns to whitelist specific gitignored files
-        "--glob=!.git/",         -- Always exclude .git directory
+        "--hidden",
+        "--glob=!.git/",
       },
 
       mappings = {
@@ -96,8 +93,6 @@ function M.config()
         theme = "dropdown",
         previewer = false,
         hidden = true,
-        -- Respect .gitignore (no no_ignore flag)
-        -- Use vimgrep_arguments --glob patterns above for exceptions
       },
 
       buffers = {
@@ -150,10 +145,10 @@ function M.config()
     },
     extensions = {
       fzf = {
-        fuzzy = true, -- false will only do exact matching
-        override_generic_sorter = true, -- override the generic sorter
-        override_file_sorter = true, -- override the file sorter
-        case_mode = "smart_case", -- or "ignore_case" or "respect_case"
+        fuzzy = true,
+        override_generic_sorter = true,
+        override_file_sorter = true,
+        case_mode = "smart_case",
       },
       ["ui-select"] = {
         require("telescope.themes").get_dropdown({
@@ -163,10 +158,8 @@ function M.config()
     },
   }
 
-  -- Load extensions
   require("telescope").load_extension("ui-select")
 
-  -- Use theme default borders for telescope
 end
 
 return M

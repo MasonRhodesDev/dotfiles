@@ -13,7 +13,6 @@ local M = {
 function M.config()
   local harpoon = require("harpoon")
 
-  -- Harpoon 2 setup
   harpoon:setup({
     settings = {
       save_on_toggle = false,
@@ -30,7 +29,6 @@ function M.config()
   keymap("n", "<s-m>", function() harpoon:list():add() end, opts)
   keymap("n", "<TAB>", function() harpoon.ui:toggle_quick_menu(harpoon:list()) end, opts)
 
-  -- Optional: Add numbered shortcuts
   keymap("n", "<C-t>", function() harpoon:list():select(2) end, opts)
   keymap("n", "<C-n>", function() harpoon:list():select(3) end, opts)
   keymap("n", "<C-s>", function() harpoon:list():select(4) end, opts)

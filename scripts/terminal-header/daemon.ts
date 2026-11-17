@@ -1,10 +1,4 @@
 #!/usr/bin/env node
-// Terminal header daemon: snapshots every kitty window and wezterm pane,
-// runs each through the section resolver, and writes
-//   $XDG_RUNTIME_DIR/terminal-header/pane-<key>.json  { header, updatedAtMs }
-// Terminals are dumb renderers of that file. Inputs (user vars, agent state
-// files, claude correlation, pane summaries) are produced elsewhere — by the
-// claude hooks, agent runner/bridge, and pane-summarizer.service.
 
 import {
   chmodSync, mkdirSync, readdirSync, readFileSync,
@@ -31,7 +25,6 @@ function runtimeRoot(name: string): string {
   try {
     chmodSync(root, 0o700);
   } catch {
-    // Filesystem may ignore chmod; best effort.
   }
   return root;
 }
@@ -57,8 +50,6 @@ function writeJson(path: string, value: unknown): void {
   writeFileSync(temp, `${JSON.stringify(value)}\n`, { mode: 0o600 });
   renameSync(temp, path);
 }
-
-// --- Section context --------------------------------------------------------
 
 function loadAgentStates(nowMs: number): Map<string, AgentState> {
   const map = new Map<string, AgentState>();
@@ -112,7 +103,6 @@ function loadTranscripts(): Map<string, string> {
           statSync(transcript);
           map.set(tty, transcript);
         } catch {
-          // Transcript removed; ignore stale correlation.
         }
       }
     } catch {
@@ -122,12 +112,6 @@ function loadTranscripts(): Map<string, string> {
   return map;
 }
 
-// Display gate: a summary renders only if it reads like a tagline. Model
-// output gets the strict treatment (ports the old wezterm safe_summary
-// heuristics — small local models emit lists, paths, and quoted fragments);
-// transcript-sourced compaction titles are already title-shaped and only get
-// the length treatment. Anything rejected simply doesn't render — a missing
-// tagline beats a dirty one.
 function saneTagline(raw: string, summarizer: string): string | undefined {
   let s = raw.replace(/["'`]/g, '').replace(/\s+/g, ' ').trim();
   if (!s || s.includes('[REDACTED')) return undefined;
@@ -156,8 +140,6 @@ function loadSummary(paneKey: string, nowMs: number): string | undefined {
   return saneTagline(state.summary, String(state.summarizer ?? ''));
 }
 
-// --- Main loop ---------------------------------------------------------------
-
 const lastWritten = new Map<string, { header: string | null; atMs: number }>();
 
 function tick(): void {
@@ -177,7 +159,6 @@ function tick(): void {
     try {
       return t.listPanes();
     } catch {
-      // One broken target must not take down the others.
       return [];
     }
   });
@@ -195,13 +176,11 @@ function tick(): void {
     lastWritten.set(snapshot.paneKey, { header, atMs: nowMs });
   }
 
-  // Drop output files for panes that no longer exist.
   for (const key of lastWritten.keys()) {
     if (!seen.has(key)) {
       try {
         rmSync(headerPath(key), { force: true });
       } catch {
-        // Best effort.
       }
       lastWritten.delete(key);
     }
@@ -218,7 +197,6 @@ if (command === 'once') {
     try {
       tick();
     } catch {
-      // Transient terminal-CLI failures during reloads are normal.
     }
     await new Promise((resolve) => setTimeout(resolve, TICK_MS));
   }

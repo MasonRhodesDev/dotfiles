@@ -7,7 +7,6 @@ local function tree_keymaps(bufnr)
   local opts = { noremap = true, silent = true }
   local keymap = vim.api.nvim_buf_set_keymap
   
-  -- Telescope commands
   keymap(bufnr, "n", "<leader>ff", "<cmd>Telescope find_files<cr>", opts)
   keymap(bufnr, "n", "<leader>ft", "<cmd>Telescope live_grep<cr>", opts)
   keymap(bufnr, "n", "<leader>fb", "<cmd>Telescope git_branches<cr>", opts)
@@ -17,30 +16,24 @@ local function tree_keymaps(bufnr)
   keymap(bufnr, "n", "<leader>fr", "<cmd>Telescope oldfiles<cr>", opts)
   keymap(bufnr, "n", "<leader>bb", "<cmd>Telescope buffers previewer=false<cr>", opts)
   
-  -- Other common commands
   keymap(bufnr, "n", "<leader>gg", "<cmd>Neogit<cr>", opts)
   keymap(bufnr, "n", "<leader>q", "<cmd>confirm q<cr>", opts)
   keymap(bufnr, "n", "<leader>h", "<cmd>nohlsearch<cr>", opts)
   keymap(bufnr, "n", "<leader>v", "<cmd>vsplit<cr>", opts)
   
-  -- Harpoon
   keymap(bufnr, "n", "<TAB>", "<cmd>lua require('harpoon').ui:toggle_quick_menu(require('harpoon'):list())<cr>", opts)
 end
 
 local function on_attach(bufnr)
   local api = require('nvim-tree.api')
   
-  -- Default mappings
   api.config.mappings.default_on_attach(bufnr)
   
-  -- Add our leader key mappings
   tree_keymaps(bufnr)
 
-  -- Fold navigation (directory collapse/expand)
   vim.keymap.set('n', '<C-h>', api.node.navigate.parent_close, { buffer = bufnr, noremap = true, silent = true })
   vim.keymap.set('n', '<C-l>', api.node.open.edit, { buffer = bufnr, noremap = true, silent = true })
   
-  -- Override H to toggle both dotfiles and git-ignored files together
   vim.keymap.set('n', 'H', function()
     api.tree.toggle_hidden_filter()
     api.tree.toggle_gitignore_filter()
@@ -72,9 +65,9 @@ function M.config()
     view = {
       relativenumber = true,
       width = {
-        min = 30,        -- Minimum width
-        max = 50,        -- Maximum width (-1 for unbounded)
-        padding = 1,     -- Extra padding on right
+        min = 30,
+        max = 50,
+        padding = 1,
       },
     },
     renderer = {
@@ -161,9 +154,9 @@ function M.config()
       },
     },
     filters = {
-      dotfiles = false,       -- Show dotfiles by default
-      git_ignored = false,    -- Show git-ignored files by default
-      custom = {},            -- Custom patterns to hide (lua patterns)
+      dotfiles = false,
+      git_ignored = false,
+      custom = {},
       exclude = {},
     },
   }

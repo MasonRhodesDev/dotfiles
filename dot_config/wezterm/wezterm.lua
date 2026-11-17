@@ -1,41 +1,23 @@
 local wezterm = require 'wezterm'
 local config = {}
 
--- No automatic config reloads: with 11+ windows, every reload trigger costs
--- a full Lua config eval PER WINDOW, and wezterm also reloads on every XDG
--- portal SettingChanged signal — a theme switch (several gsettings writes)
--- fanned out to ~400 evals and seconds of blocked GUI thread. lmtt recolors
--- live panes directly via OSC escape sequences; new panes read
--- lmtt-colors.lua at spawn. CTRL+SHIFT+R reloads manually after config
--- edits. (Do NOT signal wezterm-gui for reloads: it has no reload signal
--- handler, so SIGUSR1 just terminates it.)
 config.automatically_reload_config = false
 
--- bash everywhere (2026-08 fish→bash migration); interactive UX comes from
--- ble.sh + atuin + zoxide + fzf via ~/.bashrc.d. --login so GUI terminals
--- and VT logins traverse the identical .bash_profile → .bashrc path.
 config.default_prog = { '/usr/bin/bash', '--login' }
 
--- Improve Wayland stability during TTY switching
 config.enable_wayland = true
 config.front_end = "OpenGL"
 config.exit_behavior = "CloseOnCleanExit"
 config.notification_handling = "NeverShow"
 config.skip_close_confirmation_for_processes_named = {}
 
--- Minimal status bar: hidden by default, shown per-window (via override)
--- only while header components are active. Safe now that automatic config
--- reloads are off — a tab-bar flip costs one config eval for that window,
--- and only when the state actually changes.
 config.enable_tab_bar = false
 config.hide_tab_bar_if_only_one_tab = false
 config.show_tabs_in_tab_bar = false
 config.show_new_tab_button_in_tab_bar = false
 
--- Dynamic opacity based on running process
 config.window_background_opacity = 0.95
 
--- Load wezterm-config.nvim plugin (optional, guarded to avoid hard failure)
 local wezterm_config_nvim = nil
 if wezterm.plugin and wezterm.plugin.require then
   local ok, plugin_or_err = pcall(function()
@@ -50,24 +32,14 @@ else
   wezterm.log_info("wezterm.plugin API unavailable; skipping plugins")
 end
 
--- Refresh status frequently enough for pane summaries to feel live without
--- requiring user-var events for every update.
 config.status_update_interval = 1000
 
--- Load header module system
 local header_loader = require('headerModulesLoader')
 local header_modules = header_loader.load_modules()
 
--- Header (left status) colors — assigned after lmtt-colors.lua loads below;
--- declared here so the status handler closure captures them as upvalues.
 local header_fg = '#e2e2e9'
 local header_bg = '#1d2024'
 
--- The pane summarizer used to be spawned here, which meant it only ran while
--- wezterm was up. It is now a systemd user service (pane-summarizer.service)
--- that serves both kitty and wezterm panes.
-
--- Main status bar update handler
 wezterm.on("update-right-status", function(window, pane)
   local components = header_loader.collect_components(header_modules, window, pane)
 
@@ -81,15 +53,8 @@ wezterm.on("update-right-status", function(window, pane)
     window:set_left_status("")
   end
 
-  -- Keep all header sections in the left status so spacing, margins, and
-  -- justification remain consistent with the existing layout. "Right-most"
-  -- means the last pipe-delimited section, not WezTerm's right_status area.
   window:set_right_status("")
 
-  -- Show the bar only while components are active. Guarded: an override
-  -- write triggers a config eval for this window, so it must happen only
-  -- on an actual state flip — never unconditionally per tick (that pattern
-  -- once fanned a theme switch out to 300+ config evals).
   local want_tab_bar = #components > 0
   local overrides = window:get_config_overrides() or {}
   if (overrides.enable_tab_bar or false) ~= want_tab_bar then
@@ -98,17 +63,11 @@ wezterm.on("update-right-status", function(window, pane)
   end
 end)
 
--- Handle user variable changes from nvim for config overrides
 wezterm.on('user-var-changed', function(window, pane, name, value)
-  -- Legacy agent-harness vars (Claude/pi/codex hooks): harnesses match the
-  -- terminal natively now, nothing consumes these — ignore them entirely.
-  -- They're plain strings, and feeding them to wezterm-config.nvim made its
-  -- json_parse throw on every event.
   if name:match("^AGENT_") or name:match("^CLAUDE_") then
     return
   end
 
-  -- Handle nvim config overrides (pcall: any non-JSON var must not throw)
   if wezterm_config_nvim and wezterm_config_nvim.override_user_var then
     local ok, overrides = pcall(
       wezterm_config_nvim.override_user_var,
@@ -122,20 +81,14 @@ wezterm.on('user-var-changed', function(window, pane, name, value)
   end
 end)
 
--- Load dynamic colors from lmtt (Linux Matugen Theme Toggle)
 local colors_file = wezterm.config_dir .. '/lmtt-colors.lua'
 
--- Add the colors file to the watch list for automatic reloading
 wezterm.add_to_config_reload_watch_list(colors_file)
 
--- Load the colors
 local has_colors, colors_module = pcall(dofile, colors_file)
 if has_colors and colors_module then
   config.colors = colors_module
 
-  -- Make the header conform to the lmtt palette. The fancy tab bar (which
-  -- hosts the left status) is styled via window_frame, not colors.tab_bar,
-  -- so derive both from the generated tab_bar block.
   local tab_bar = colors_module.tab_bar
   if tab_bar and tab_bar.background then
     header_bg = tab_bar.background
@@ -148,7 +101,6 @@ if has_colors and colors_module then
     }
   end
 else
-  -- Fallback colors if theme switcher hasn't generated colors yet
   config.colors = {
     foreground = '#e2e2e9',
     background = '#111318',
@@ -168,47 +120,38 @@ else
   }
 end
 
--- Font configuration
 config.font = wezterm.font_with_fallback({
   'Lilex',
   'JetBrainsMono Nerd Font',
   'FiraCode Nerd Font',
 })
 
--- Use default hyperlink rules and add file path detection
 config.hyperlink_rules = wezterm.default_hyperlink_rules()
 
--- Add rules for file paths with line numbers
 table.insert(config.hyperlink_rules, {
   regex = [[([\w\.\-_/]+):(\d+):?(\d+)?]],
   format = 'file://$1:$2',
   highlight = 1,
 })
 
--- Add rules for simple file paths
 table.insert(config.hyperlink_rules, {
   regex = [[\b([\w\.\-_/]*[\w\.\-_]+\.(js|ts|jsx|tsx|py|rs|go|java|cpp|c|h|vue|svelte|html|css|scss|sass|less|json|yaml|yml|toml|md|txt))\b]],
   format = 'file://$1',
   highlight = 1,
 })
 
--- Key bindings for copy/paste with system clipboard
 config.keys = {
-  -- Shift+Enter sends Escape+CR
   {key="Enter", mods="SHIFT", action=wezterm.action{SendString="\x1b\r"}},
-  -- Copy to system clipboard
   {
     key = 'c',
     mods = 'CTRL|SHIFT',
     action = wezterm.action.CopyTo 'Clipboard',
   },
-  -- Paste from system clipboard (text)
   {
     key = 'v',
     mods = 'CTRL|SHIFT',
     action = wezterm.action.PasteFrom 'Clipboard',
   },
-  -- Smart paste: image paths for images, text for text (for Claude Code)
   {
     key = 'v',
     mods = 'CTRL',
@@ -219,7 +162,6 @@ config.keys = {
       end
     end),
   },
-  -- Disable Super+N to let Hyprland handle it (swaync notification panel)
   {
     key = 'n',
     mods = 'SUPER',
@@ -227,17 +169,13 @@ config.keys = {
   },
 }
 
--- Mouse bindings for link handling  
 config.mouse_bindings = {
-  -- Double-click to select word and open if it's a file path
   {
     event = { Up = { streak = 2, button = 'Left' } },
     mods = 'NONE',
     action = wezterm.action_callback(function(window, pane)
-      -- Get the selected text (which should be the word we double-clicked)
       local selection = window:get_selection_text_for_pane(pane)
       
-      -- Debug: write to file
       local debug_file = io.open('/tmp/wezterm-debug.log', 'a')
       if debug_file then
         debug_file:write('Double-click detected\n')
@@ -251,7 +189,6 @@ config.mouse_bindings = {
           cwd = cwd.file_path
         end
         
-        -- Parse file:line:column format
         local file, line, column = selection:match('^(.+):(%%d+):(%%d+)$')
         if not file then
           file, line = selection:match('^(.+):(%%d+)$')
@@ -260,9 +197,7 @@ config.mouse_bindings = {
           file = selection
         end
         
-        -- Make absolute path if relative
         if not file:match('^/') and cwd then
-          -- Remove trailing slash from cwd if present
           cwd = cwd:gsub('/$', '')
           file = cwd .. '/' .. file
         end
@@ -277,7 +212,6 @@ config.mouse_bindings = {
           cmd = string.format('%%s "%%s"', visual, file)
         end
         
-        -- Debug: log command
         local debug_file2 = io.open('/tmp/wezterm-debug.log', 'a')
         if debug_file2 then
           debug_file2:write('Command: ' .. cmd .. '\n')
@@ -289,7 +223,6 @@ config.mouse_bindings = {
       end
     end),
   },
-  -- Regular click for other hyperlinks
   {
     event = { Up = { streak = 1, button = 'Left' } },
     mods = 'CTRL',

@@ -1,33 +1,19 @@
 #!/usr/bin/env bash
-# SessionEnd hook to clear WezTerm user variables when Claude closes
 
 INPUT=$(cat)
 
-# Extract session_id from JSON
 if command -v jq >/dev/null 2>&1; then
     SESSION_ID=$(echo "$INPUT" | jq -r '.session_id')
 else
     SESSION_ID=$(echo "$INPUT" | grep -o '"session_id":"[^"]*"' | cut -d'"' -f4)
 fi
 
-# Get correlation file
 CORRELATION_DIR="/tmp/claude-wezterm"
 CORRELATION_FILE="$CORRELATION_DIR/$SESSION_ID.pane"
 
-# Source correlation file if it exists
 if [[ -f "$CORRELATION_FILE" ]]; then
     source "$CORRELATION_FILE"
 
-    # Send a SetUserVar OSC to the pane TTY. Inside tmux the TTY is the pane
-    # pty (tmux's, not the terminal's): wrap in the tmux DCS passthrough
-    # envelope (ESCs doubled) so tmux forwards the OSC to the attached
-    # client. Needs `allow-passthrough on` (set in ~/.tmux.conf).
-    #
-    # The write MUST be time-bounded — a pty that still exists but isn't being
-    # drained fills its ~12K kernel buffer and then blocks writers
-    # indefinitely. At SessionEnd the pane is often already going away, which
-    # is exactly when this happens. See the note in
-    # wezterm-claude-activity-hook.
     OSC_WRITE_TIMEOUT=0.25
     OSC_STALLED=0
     send_user_var() {
@@ -42,14 +28,12 @@ if [[ -f "$CORRELATION_FILE" ]]; then
             || OSC_STALLED=1
     }
 
-    # Clear user variables (set CLAUDE_ACTIVE to "0", CLAUDE_ACTIVITY and CLAUDE_MODEL to empty)
     if [[ -n "$TTY_DEVICE" ]]; then
         send_user_var CLAUDE_ACTIVE 0
         send_user_var CLAUDE_ACTIVITY ""
         send_user_var CLAUDE_MODEL ""
     fi
 
-    # Clean up correlation file
     rm -f "$CORRELATION_FILE"
 fi
 

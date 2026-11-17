@@ -64,9 +64,6 @@ local function read_pane_state(pane, agent)
   local id = pane_id(pane)
   if not id or not agent then return nil end
 
-  -- AGENT_ACTIVE/AGENT_KIND/AGENT_SEQ are numeric WezTerm user-var signals.
-  -- String details live in this explicit hook-fed pane state file because this
-  -- WezTerm build ignores non-numeric SetUserVar values.
   local path = state_root() .. "/" .. agent .. "/pane-" .. id .. ".json"
   local content = read_file(path)
   if not content then return nil end
@@ -85,7 +82,6 @@ local function cwd_component(pane)
   end)
   if not ok or url == nil then return "" end
 
-  -- Url object (newer wezterm) or "file://host/path" string (older).
   local path
   if type(url) == "userdata" or type(url) == "table" then
     path = url.file_path

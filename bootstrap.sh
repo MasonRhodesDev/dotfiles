@@ -1,12 +1,4 @@
 #!/bin/bash
-# Fresh-machine bootstrap for Mason's dotfiles.
-#
-#   sh -c "$(curl -fsLS https://raw.githubusercontent.com/MasonRhodesDev/dotfiles/main/bootstrap.sh)"
-#
-# Installs the prerequisites chezmoi can't provide itself (git may be missing
-# entirely on a fresh install), sets up rbw (Bitwarden CLI) so the identity
-# prompts during `chezmoi init` get seeded with real values, then runs
-# `chezmoi init --apply`. Everything is idempotent — safe to re-run.
 set -euo pipefail
 
 REPO="MasonRhodesDev/dotfiles"
@@ -14,16 +6,13 @@ REPO="MasonRhodesDev/dotfiles"
 say()  { printf '\n\033[1;34m== %s\033[0m\n' "$*"; }
 warn() { printf '\033[1;33m!! %s\033[0m\n' "$*"; }
 
-# --- distro detection -------------------------------------------------------
 . /etc/os-release
 case "$ID" in
-    # Asahi Alarm (Arch Linux ARM on Apple Silicon) reports ID=archarm.
     arch|archarm) PKG_INSTALL=(sudo pacman -S --needed --noconfirm) ;;
     fedora) PKG_INSTALL=(sudo dnf install -y) ;;
     *) echo "Unsupported distro: $ID (arch/archarm/fedora only)" >&2; exit 1 ;;
 esac
 
-# --- prerequisites ----------------------------------------------------------
 say "Installing prerequisites (git, jq, chezmoi, rbw, pinentry)"
 pkgs=(git jq chezmoi pinentry)
 if [ "$ID" = "arch" ]; then
@@ -34,7 +23,6 @@ else
 fi
 "${PKG_INSTALL[@]}" "${pkgs[@]}"
 
-# --- rbw (Bitwarden) setup, so identity seeds correctly at init -------------
 if command -v rbw >/dev/null; then
     if rbw unlocked >/dev/null 2>&1; then
         say "rbw already configured and unlocked"
@@ -63,15 +51,10 @@ if command -v rbw >/dev/null; then
         warn "  work_claude_md, work_overlay_repo   (work machines only)"
         warn "(chezmoi init will fall back to prompts / safe defaults otherwise.)"
     fi
-    # Use a TTY-capable pinentry so `rbw unlock` works over a console/SSH during
-    # `chezmoi init` (no GUI popup needed) — the "cli pin-lock" for headless setup.
     rbw config set pinentry pinentry-curses 2>/dev/null || true
 fi
 
-# --- chezmoi init + apply ---------------------------------------------------
 say "chezmoi init --apply $REPO"
-# First clone uses https (no SSH key exists yet on a fresh machine); switch the
-# remote to SSH later: git -C ~/.local/share/chezmoi remote set-url origin git@github.com:$REPO.git
 chezmoi init --apply "https://github.com/$REPO.git"
 
 say "Done. Log out/in (or reboot) for session services to start cleanly."

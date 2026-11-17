@@ -1,7 +1,4 @@
 #!/bin/bash
-# Block commits containing secrets. This repo is PUBLIC and chezmoi
-# auto-pushes, so anything committed is published immediately.
-# Installed via core.hooksPath=.githooks (run_once_after_40-setup-git-hooks.sh).
 
 if ! command -v gitleaks >/dev/null 2>&1; then
     echo "pre-commit: gitleaks not installed — secret scan SKIPPED." >&2
@@ -20,11 +17,6 @@ if ! gitleaks git --staged --no-banner --redact --config "$repo_root/.gitleaks.t
     exit 1
 fi
 
-# secret-guard: block work identifiers (org/brand names, work email) that must
-# never enter this PUBLIC repo. The forbidden strings are NOT stored here — they
-# live in a local, gitignored blocklist deployed from the private overlay repo
-# (~/.local/share/dotfiles-work/secret-guard.txt), one pattern per line, so the
-# public repo never contains the very strings it guards against. No file => skip.
 guard="$HOME/.local/share/dotfiles-work/secret-guard.txt"
 if [ -f "$guard" ]; then
     staged="$(git diff --cached --no-color)"

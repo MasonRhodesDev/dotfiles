@@ -1,11 +1,4 @@
 #!/usr/bin/env python3
-"""
-Chezmoi package checker.
-Uses Claude haiku to audit manifest packages AND detect untracked drift.
-
-Usage:
-    chezmoi-package-check.py
-"""
 
 import json
 import os
@@ -36,11 +29,9 @@ def read_manifest():
 
 
 def collect_drift_data():
-    """Pre-compute all data for drift detection so haiku doesn't need to explore."""
     dot_config = CHEZMOI_DIR / "dot_config"
     skip_dirs = {"environment.d", "systemd", "udev", "xdg-desktop-portal", "autostart", "git", "ags"}
 
-    # 1. Config directories
     config_dirs = []
     if dot_config.is_dir():
         for d in sorted(dot_config.iterdir()):
@@ -49,11 +40,9 @@ def collect_drift_data():
                 if name not in skip_dirs and not re.match(r"^gtk-\d", name):
                     config_dirs.append(name)
 
-    # 2. Hyprland exec apps
     hypr_dir = dot_config / "hypr"
     skip_cmds = {"sleep", "sed", "killall", "systemctl", "dbus-update-activation-environment",
                  "gsettings", "pkill", "pgrep", "sh", "bash", "env",
-                 # sub-binaries from larger packages — not standalone installs
                  "gnome-keyring-daemon", "wpctl", "wl-copy", "wl-paste"}
     hypr_exec = set()
     hypr_binds = set()
@@ -77,14 +66,12 @@ def collect_drift_data():
                 if cmd and not cmd.startswith("$") and cmd != "exec" and not re.match(r".*\.(sh|js|py)$", cmd):
                     hypr_binds.add(cmd)
 
-    # 3. Script names
     scripts_dir = CHEZMOI_DIR / "scripts"
     script_names = []
     if scripts_dir.is_dir():
         for f in sorted(scripts_dir.iterdir()):
             script_names.append(f.name.removeprefix("executable_"))
 
-    # 4. Flatpak apps
     flatpak_apps = ""
     try:
         flatpak_apps = subprocess.run(
@@ -94,7 +81,6 @@ def collect_drift_data():
     except (FileNotFoundError, subprocess.TimeoutExpired):
         pass
 
-    # 5. Cargo tools
     cargo_tools = ""
     try:
         result = subprocess.run(
@@ -108,7 +94,6 @@ def collect_drift_data():
     except (FileNotFoundError, subprocess.TimeoutExpired):
         pass
 
-    # 6. Manifest entry keys (top-level TOML table names)
     manifest_text = read_manifest()
     manifest_pkgs = sorted(set(re.findall(r'^\[(\w+)\]', manifest_text, re.MULTILINE)))
 
@@ -125,7 +110,6 @@ def collect_drift_data():
 
 
 def parse_stream_line(data):
-    """Extract progress info from a stream-json event."""
     if data.get("type") == "assistant":
         for block in data.get("message", {}).get("content", []):
             if block.get("type") == "tool_use":
@@ -137,7 +121,6 @@ def parse_stream_line(data):
 
 
 def run_claude_check(claude_bin, system_prompt, user_prompt):
-    """Run claude in print mode with stream-json, showing progress. Returns final result text."""
     cmd = [
         claude_bin, "--model", "haiku", "-p", "--verbose",
         "--output-format", "stream-json", "--include-partial-messages",
@@ -160,12 +143,10 @@ def run_claude_check(claude_bin, system_prompt, user_prompt):
             except json.JSONDecodeError:
                 continue
 
-            # Show progress
             progress = parse_stream_line(data)
             if progress:
                 print(progress, flush=True)
 
-            # Capture final result
             if data.get("type") == "result":
                 result_text = data.get("result", "")
 
@@ -177,7 +158,6 @@ def run_claude_check(claude_bin, system_prompt, user_prompt):
 
 
 def run_claude_interactive(claude_bin, system_prompt, seed_message=""):
-    """Replace this process with an interactive Claude session."""
     args = [claude_bin, "--model", "haiku", "--system-prompt", system_prompt]
     if seed_message:
         args.append(seed_message)
@@ -185,7 +165,6 @@ def run_claude_interactive(claude_bin, system_prompt, seed_message=""):
 
 
 def prompt_user(question, timeout=120):
-    """Prompt user via /dev/tty with timeout. Returns response or empty string."""
     try:
         tty = open("/dev/tty", "r")
         print(f"\n{question} [y/N] ", end="", flush=True)
@@ -200,7 +179,6 @@ def prompt_user(question, timeout=120):
 
 
 def run_audit(claude_bin, profile):
-    """Post-apply: check manifest packages are installed AND find untracked drift."""
     data = collect_drift_data()
     packages_toml = data["packages_toml"]
 

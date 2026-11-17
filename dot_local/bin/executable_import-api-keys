@@ -1,10 +1,4 @@
 #!/bin/sh
-# Import everything from the session-env keyring bucket into the
-# systemd --user environment so GUI apps launched under Hyprland/uwsm
-# inherit the vars.
-#
-# Enumeration is delegated to `list-session-env`; see that script for
-# the bucket convention.
 
 set -eu
 

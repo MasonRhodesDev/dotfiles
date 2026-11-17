@@ -1,6 +1,3 @@
-# Readline settings. ble.sh is the line editor in interactive bash and reads
-# the completion variables below through `bind -v`; plain readline (python,
-# psql, a bash without ble.sh) gets all of it.
 $include /etc/inputrc
 
 set bell-style none
@@ -21,11 +18,9 @@ set page-completions off
 set enable-bracketed-paste on
 
 $if Bash
-    # Up/Down search history for the prefix already typed.
     "\e[A": history-search-backward
     "\e[B": history-search-forward
     "\eOA": history-search-backward
     "\eOB": history-search-forward
-    # Shift-Tab cycles backwards through candidates; Tab keeps its default.
     "\e[Z": menu-complete-backward
 $endif

@@ -1,26 +1,4 @@
 #!/usr/bin/env python3
-"""Keep the GNOME login keyring's password in sync with the login password.
-
-pam_gnome_keyring unlocks the login keyring at login. When the login password
-changes outside PAM (JumpCloud, a remote reset) the keyring stays locked because
-it is still encrypted with the old password. Re-keying needs the old password,
-so this helper asks for exactly one thing: the previous keyring password. The
-new password comes from the login itself: /etc/greetd/.. pam_exec runs
-keyring-stash-authtok, which writes the just-verified login password to
-/run/keyring-resync/<uid> (tmpfs). This script consumes and deletes that stash
-on every graphical login and uses it only when the keyring is locked.
-
-  keyring-resync            default: wait up to 20 s for PAM to unlock the
-                            keyring; if still locked, prompt and re-key
-  keyring-resync --wait N   change the wait
-  keyring-resync --force    always open gnome-keyring's own two-field
-                            change-password prompt (first-time setup)
-  keyring-resync --selftest run the single-entry re-key flow against a
-                            throwaway collection ("resync-test", original
-                            password "a", stash "b"); never touches "login"
-
-No password is logged. The stash is read once and unlinked before anything else.
-"""
 import os
 import subprocess
 import sys
@@ -59,7 +37,6 @@ def notify(msg):
 
 
 def take_stash():
-    """Read and unlink the PAM stash. Returns the password or None."""
     try:
         st = os.stat(STASH)
     except FileNotFoundError:
@@ -99,7 +76,7 @@ def unlock_via_control_socket(password):
 
 
 def ask_old_password(warning=None):
-    gi.require_version("Gcr", "4")  # lazy: only needed when a prompt is actually shown
+    gi.require_version("Gcr", "4")
     from gi.repository import Gcr
     prompt = Gcr.SystemPrompt.open(-1, None)
     try:
@@ -120,13 +97,11 @@ def ask_old_password(warning=None):
 
 
 def rekey_single_entry(collection, new_password, verbose=False):
-    """Prompt for the old password (max 3 tries) and re-key to new_password."""
     warning = None
     for _ in range(3):
         try:
             old = ask_old_password(warning)
         except (ValueError, ImportError, GLib.Error) as e:
-            # no gcr-4 typelib or no prompter on this machine: use the daemon's own prompt
             if verbose:
                 print(f"gcr prompt unavailable ({e}); falling back to two-field prompt")
             return rekey_two_field_prompt(collection)
@@ -145,7 +120,6 @@ def rekey_single_entry(collection, new_password, verbose=False):
 
 
 def rekey_two_field_prompt(collection):
-    """gnome-keyring's own change-password prompt (old + new + confirm)."""
     prompt_path = call(SERVICE_PATH, GUILT, "ChangeWithPrompt",
                        GLib.Variant("(o)", (collection,)), "(o)").unpack()[0]
     loop = GLib.MainLoop()
@@ -215,7 +189,6 @@ def main():
             take_stash()
             sys.exit(0)
     except GLib.Error as e:
-        # no secret service or no login collection on this machine: nothing to sync
         take_stash()
         print(f"no login keyring available ({e.message}); nothing to do")
         sys.exit(0)
