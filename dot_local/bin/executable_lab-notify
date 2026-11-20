@@ -3,11 +3,12 @@
 
 Client for the home lab's Notify hub (Node-RED Notify tab, home-flows
 tools/notify_hub.py, https://nodered.immaduck.xyz/notify). People are HA
-person slugs ("mason"); the hub sends to every phone HA assigns to them and
-to every desktop running `lab-notify desktop` for them.
+person slugs ("mason"); the hub sends to every phone signed in to the HA app
+with that person's login and to every desktop running `lab-notify desktop` for
+them.
 
-  lab-notify send --to mason --title "Backup done" [--body ...] [--url https://...]
-  lab-notify ask  --to mason --title "Merge #58?" -o Merge -o Wait [--reply] [--url ...]
+  lab-notify send --to mason --title "Backup done" --target https://... [--body ...]
+  lab-notify ask  --to mason --title "Merge #58?" --target https://... -o Merge -o Wait [--reply]
                   [--wait SECONDS]       # prints the answer; exit 0 answered,
                                          # 2 expired/cleared, 3 still open (prints id)
   lab-notify wait ID [--wait SECONDS]    # same, for an ask sent earlier
@@ -16,7 +17,8 @@ to every desktop running `lab-notify desktop` for them.
   lab-notify desktop                     # receiver: swaync popups with buttons/reply
 
 Keep the title a headline that stands alone; put instructions in the place the
-reader already is (chat, a PR), and the link in --url.
+reader already is (chat, a PR), and send them there with --target (required:
+an https link, an HA path like /home-rooms/office, or entityId:<entity>).
 
 Token (Authorization: Bearer):
   sender:   $LAB_NOTIFY_TOKEN, else read from the Nomad variable
@@ -128,7 +130,7 @@ def wait_answer(token, mid, seconds):
 
 def cmd_send(a, ask=False):
     body = {"to": a.to, "title": a.title}
-    for k in ("body", "url", "category", "tag"):
+    for k in ("body", "target", "category", "tag"):
         if getattr(a, k):
             body[k] = getattr(a, k)
     if a.expires:
@@ -187,9 +189,9 @@ class Desktop:
 
     def show(self, m, replaces=0):
         actions = []
-        for i, o in enumerate(m.get("options") or []):
-            actions += ["NT_%d" % i, o]
-        if m.get("url"):
+        for i, act in enumerate(m.get("actions") or []):
+            actions += ["NT_%d" % i, act["label"]]
+        if m.get("link"):
             actions += ["default", "Open"]
         if m.get("reply"):
             actions += ["inline-reply", "Reply"]
@@ -233,10 +235,14 @@ class Desktop:
                     return mid, s["msg"]
         return None, None
 
-    def answer(self, mid, text):
-        code, r = call(self.token, "POST", "/notify/msg/%s/answer" % mid, {"answer": text})
+    def answer(self, mid, body):
+        code, r = call(self.token, "POST", "/notify/msg/%s/answer" % mid, body)
         if code not in (200, 409):
             print("lab-notify: answer to %s failed (%d): %s" % (mid, code, r.get("error")), file=sys.stderr)
+
+    @staticmethod
+    def open(link):
+        subprocess.Popen(["xdg-open", link], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     def signals(self):
         # ActionInvoked (id, key) for buttons; NotificationReplied (id, text) for
@@ -256,14 +262,17 @@ class Desktop:
                     continue
                 if kind == "NotificationReplied":
                     if arg.strip():
-                        self.answer(mid, arg.strip())
-                elif arg == "default" and m.get("url"):
-                    subprocess.Popen(["xdg-open", m["url"]], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                        self.answer(mid, {"answer": arg.strip()})
+                elif arg == "default" and m.get("link"):
+                    self.open(m["link"])
                 elif re.fullmatch(r"NT_\d", arg):
-                    opts = m.get("options") or []
+                    acts = m.get("actions") or []
                     i = int(arg[3:])
-                    if i < len(opts):
-                        self.answer(mid, opts[i])
+                    if i < len(acts):
+                        if acts[i].get("url"):
+                            self.open(acts[i]["url"])
+                        else:
+                            self.answer(mid, {"action": i})
             p.wait()
             time.sleep(2)
 
@@ -294,7 +303,8 @@ def main():
         p.add_argument("--to", action="append", required=True, help="person (HA person slug); repeat for several")
         p.add_argument("--title", required=True, help="a headline that stands alone (max 100)")
         p.add_argument("--body", help="1-3 lines of context (max 1000)")
-        p.add_argument("--url", help="https:// link a tap opens")
+        p.add_argument("--target", required=True,
+                       help="where a tap goes: an https link, an HA path (/home-rooms/office) or entityId:<entity>")
         p.add_argument("--category", choices=["alert", "ask", "info"])
         p.add_argument("--tag", help="same sender + tag updates the open message instead of adding one")
         p.add_argument("--expires", type=int, help="seconds until it expires (ask 24 h, info 4 h)")
