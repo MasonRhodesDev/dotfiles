@@ -45,8 +45,6 @@ LICENSE
 .config/hypr/scripts/bp-game-focus.py
 .config/hypr/scripts/steam-clean-shutdown.sh
 .config/systemd/user/bp-game-focus.service
-.config/systemd/user/steam-clean-shutdown.service
-.config/systemd/user/app-.scope.d
 .local/bin/steam-launch
 .config/environment.d/gaming.conf
 .local/bin/steam-set-launch-options
@@ -81,8 +79,6 @@ scripts/thermal-tripwire
 .config/hypr/scripts/bp-game-focus.py
 .config/hypr/scripts/steam-clean-shutdown.sh
 .config/systemd/user/bp-game-focus.service
-.config/systemd/user/steam-clean-shutdown.service
-.config/systemd/user/app-.scope.d
 .local/bin/steam-launch
 .config/environment.d/gaming.conf
 .local/bin/steam-set-launch-options
