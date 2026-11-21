@@ -1,9 +1,5 @@
 [
   {
-    item = ".config/systemd/user/mcp-hub.service";
-    reason = "MCP Hub is not used.";
-  }
-  {
     item = "scripts/terminal-header/sections/summary.ts";
     reason = "The pane summarizer it showed is not used.";
   }
