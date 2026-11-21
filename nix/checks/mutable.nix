@@ -31,6 +31,7 @@ let
   adopt = pkgs.writeText "activation-adopt" adopting.config.home.activation.dotfilesMutable.data;
   adoptPlan = adopting.config.home.file.".local/share/dotfiles/mutable-plan".source;
   plain = home.config.home.file.".local/share/dotfiles/mutable-plan".source;
+  kept = pkgs.writeText "mutable-paths" home.config.home.file.".local/share/dotfiles/mutable-paths".text;
   present = evalHome {
     modules = [{
       dotfiles.mutable."app/hooks.json" = { strategy = "merge-json"; mode = "0600"; whenPresent = "app"; json.hooks = [ "ours" ]; };
@@ -59,6 +60,7 @@ pkgs.runCommand "check-mutable" { nativeBuildInputs = [ pkgs.jq ]; } ''
   echo '{"managed":"app","nested":{"managed":"app","own":"app"},"own":"app"}' > "$HOME/merged.json"
   activate
 
+  expect "a seeded file is not one dot keeps from chezmoi, so the copy chezmoi wrote is retired and the seed takes its place" "$(cat ${kept})" "$(printf 'copied\nfresh.json\nmerged.json')"
   expect "seed writes a missing file" "$(cat "$HOME/seeded")" "from the flake"
   expect "overwrite replaces the file" "$(cat "$HOME/copied")" "from the flake"
   expect "overwrite keeps the copy that predates the flake" "$(cat "$HOME/copied.pre-nix")" "hand written"
