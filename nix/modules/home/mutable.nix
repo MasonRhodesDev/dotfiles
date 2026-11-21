@@ -174,7 +174,7 @@ in
     home.file.".local/share/dotfiles/mutable-plan" = { source = plan; executable = true; };
 
     home.file.".local/share/dotfiles/mutable-paths".text =
-      lib.concatMapStrings (path: "${path}\n") (lib.attrNames config.dotfiles.mutable);
+      lib.concatMapStrings (path: "${path}\n") (lib.attrNames (lib.filterAttrs (_: f: f.strategy != "seed") config.dotfiles.mutable));
 
     home.activation.dotfilesMutable = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
       mutable() {
