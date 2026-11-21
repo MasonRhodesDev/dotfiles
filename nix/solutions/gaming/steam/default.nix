@@ -6,26 +6,12 @@
   requires = [ "window-manager" ];
   conflicts = [ "work-identity" ];
 
-  linux.home = { lib, ... }: {
+  linux.home = { config, lib, ... }: {
     home.file.".local/bin/steam-launch" = { source = ./steam-launch; executable = true; };
     xdg.configFile."hypr/scripts/steam-clean-shutdown.sh" = { source = ./steam-clean-shutdown.sh; executable = true; };
 
-    systemd.user.services.steam-clean-shutdown = {
-      Unit = {
-        Description = "Cleanly shut down Steam before session teardown";
-        PartOf = [ "graphical-session.target" ];
-        After = [ "graphical-session.target" ];
-      };
-      Service = {
-        Type = "oneshot";
-        RemainAfterExit = true;
-        ExecStart = "/usr/bin/true";
-        ExecStop = "%h/.config/hypr/scripts/steam-clean-shutdown.sh";
-        TimeoutStopSec = "35s";
-      };
-      Install.WantedBy = [ "graphical-session.target" ];
-    };
-    xdg.configFile."systemd/user/app-.scope.d/steam-clean-shutdown.conf".source = ./app-scope-steam-clean-shutdown.conf;
+    xdg.configFile."systemd/user/graphical-session.target.wants/steam-clean-shutdown.service".source =
+      config.lib.file.mkOutOfStoreSymlink "/usr/lib/systemd/user/steam-clean-shutdown.service";
     xdg.configFile."environment.d/gaming.conf".source = ./gaming.conf;
     home.file.".local/bin/steam-set-launch-options" = { source = ./steam-set-launch-options; executable = true; };
 
@@ -53,11 +39,10 @@
 
   inventory = {
     starts = {
-      linux = [ "steam-clean-shutdown.service" "hypr-autostart: steam-launch" ];
+      linux = [ "steam-clean-shutdown.service (hypr-de-gaming)" "hypr-autostart: steam-launch" ];
     };
     files = [
-      ".config/systemd/user/steam-clean-shutdown.service"
-      ".config/systemd/user/app-.scope.d/steam-clean-shutdown.conf"
+      ".config/systemd/user/graphical-session.target.wants/steam-clean-shutdown.service"
       ".config/hypr/scripts/steam-clean-shutdown.sh"
       ".local/bin/steam-launch"
       ".local/bin/steam-set-launch-options"
