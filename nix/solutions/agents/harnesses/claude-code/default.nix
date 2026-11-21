@@ -84,6 +84,8 @@ in
           cleanupPeriodDays = 365;
           feedbackSurveyRate = 0;
           attribution = { commit = ""; pr = ""; };
+          extraKnownMarketplaces.cursor-plugins.source = { source = "github"; repo = "cursor/plugins"; };
+          enabledPlugins."pstack@cursor-plugins" = true;
           env = {
             BASH_MAX_OUTPUT_LENGTH = "30000";
             MAX_MCP_OUTPUT_TOKENS = "25000";

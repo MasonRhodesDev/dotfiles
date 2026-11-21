@@ -13,6 +13,16 @@
 - Always ask decisions through the AskUserQuestion picker, one question per call, the recommended option first and marked. Never put a decision in a numbered list in the reply body, even when a session prompt asks for a "What I need from you" list; that list is for `[do]` actions only, and decisions go to the picker.
 - Why: the picker is clickable, works on the phone, and does not scroll away. Reaffirmed 2026-10-23 ("Please update globabl instructions to prefer the picker, always").
 
+## Code comments
+- Write no code comments in any language or config format. Names, types and structure carry the meaning. If code is unclear without a comment, rename, extract or retype it until it is clear.
+- A comment that a tool reads is code and stays: shebangs, compiler and linter directives (`//go:embed`, `@ts-expect-error`, `# noqa`, `# shellcheck`, `// ignore:`), license and SPDX headers, markers a script greps for, template expressions, and doc text a framework turns into runtime output (clap `///` help, FastMCP or click docstrings, the `# Safety` section clippy requires). Keep only the directive itself, with no prose after it.
+- Reasoning and history go in the commit message and the PR description, never in the code.
+
+## Markdown files
+- A repo holds only the markdown GitHub renders for people: the root `README.md`, `LICENSE`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `SUPPORT.md`, `GOVERNANCE.md`, `PULL_REQUEST_TEMPLATE.md`, `.github/ISSUE_TEMPLATE/*`, and a nested `README.md` only in a separately published package.
+- Two kinds of markdown are exempt because something reads them as their format: files an agent harness requires (`SKILL.md` and its references, `.claude/agents/*.md`, plugin prompts) and content a program loads at runtime.
+- Never create any other markdown in a repo: no `AGENTS.md`, `CLAUDE.md`, ADRs or `docs/decisions/`, plans, specs, status, handoff, design notes, runbooks or changelogs. If a program needs data, use a data format such as TOML, YAML or JSON.
+
 ## Portability (every project is developed as if it will be open sourced)
 - Structure every repo so a stranger could clone it and run it from the README alone, with no knowledge of my machines. Visibility stays private per the Git rules above; this is about structure, not publishing.
 - Before writing any value, classify it: project detail (belongs in the repo) or environment detail (belongs outside it). Environment details include: home paths and usernames, hostnames (lab nodes, dev box, tower, printers), LAN addresses and subnets, my domain and its subdomains, device nodes and serials, specific hardware (GPU, monitors, controllers), account names, API endpoints and tokens, notification topics, the distro or package manager I happen to use, and absolute paths into my other repos.
