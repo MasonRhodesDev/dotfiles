@@ -1,4 +1,4 @@
-PATH="$HOME/.local/bin:$PATH"
+PATH="$HOME/.local/bin:$HOME/.npm-global/bin:$PATH"
 export npm_config_prefix="$HOME/.npm-global"
 [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
 

@@ -10,6 +10,7 @@ if [ -f ~/.bashrc.d/00-path-helpers.bashrc ]; then
     . ~/.bashrc.d/00-path-helpers.bashrc
 fi
 
+path_prepend "$HOME/.npm-global/bin"
 path_prepend "$HOME/bin"
 path_prepend "$HOME/.local/bin"
 

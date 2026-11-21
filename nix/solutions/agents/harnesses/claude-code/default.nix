@@ -80,7 +80,7 @@ in
           fallbackModel = [ "sonnet" ];
           effortLevel = "medium";
           fastModePerSessionOptIn = true;
-          autoUpdatesChannel = "stable";
+          autoUpdatesChannel = "latest";
           cleanupPeriodDays = 365;
           feedbackSurveyRate = 0;
           attribution = { commit = ""; pr = ""; };
@@ -97,9 +97,6 @@ in
 
       home.file = {
         ".claude/CLAUDE.md".text = claudeMd;
-        ".claude/agents/memory-on-correction.md".text =
-          builtins.replaceStrings [ "@projectDir@" ] [ (lib.replaceStrings [ "/" ] [ "-" ] config.home.homeDirectory) ]
-            (builtins.readFile ./agents/memory-on-correction.md);
         ".claude/references/mermaid-pdf.md".source = ./references/mermaid-pdf.md;
         ".bashrc.d/claude.bashrc" = lib.mkIf (lib.elem "bash" machine.enabled) { source = ./claude.bashrc; };
         "scripts/undercover-hook" = { source = ./undercover-hook; executable = true; };
@@ -191,7 +188,6 @@ in
       ".claude/CLAUDE.md"
       ".claude/keybindings.json"
       ".claude/settings.json"
-      ".claude/agents/memory-on-correction.md"
       ".claude/references/mermaid-pdf.md"
       ".bashrc.d/claude.bashrc"
       ".config/git/ignore"
