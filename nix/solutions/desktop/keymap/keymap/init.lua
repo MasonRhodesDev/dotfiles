@@ -1,3 +1,4 @@
+require("hs.ipc")
 local config = hs.json.read(hs.configdir .. "/keymap.json")
 local engine = dofile(hs.configdir .. "/remap.lua").new(config)
 
