@@ -1,0 +1,693 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+die() { echo "dot: $*" >&2; exit 1; }
+
+flake=${DOTFILES_FLAKE:-$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)}
+[ -e "$flake/flake.nix" ] || die "no flake.nix in $flake. Set DOTFILES_FLAKE to the checkout's nix directory."
+
+machine=${DOTFILES_MACHINE:-}
+private=${DOTFILES_PRIVATE:-}
+build_host=${DOTFILES_BUILD_HOST:-}
+named=
+while [ $# -gt 0 ]; do
+  case $1 in
+    --machine) machine=${2:?--machine needs a name}; named=1; shift 2 ;;
+    --private) private=${2:?--private needs a flake ref}; shift 2 ;;
+    --build-host) build_host=${2:?--build-host needs an ssh destination}; shift 2 ;;
+    -*) die "unknown option $1" ;;
+    *) break ;;
+  esac
+done
+command=${1:-switch}
+[ $# -gt 0 ] && shift
+
+secrets_args=()
+if [ "$command" = secrets ]; then
+  while [ $# -gt 0 ]; do
+    case $1 in
+      --machine) machine=${2:?--machine needs a name}; named=1; shift 2 ;;
+      --json) secrets_args+=(--json); shift ;;
+      *) die "secrets takes --machine NAME and --json, not $1" ;;
+    esac
+  done
+fi
+
+private_beside_origin() {
+  local origin host path
+  origin=$(git -C "$flake" remote get-url origin 2>/dev/null) \
+    || die "this checkout has no origin remote. Pass --private REF or set DOTFILES_PRIVATE."
+  origin=${origin%.git}
+  case $origin in
+    git@*:*) host=${origin#git@}; host=${host%%:*}; path=${origin#*:} ;;
+    ssh://git@*/*) origin=${origin#ssh://git@}; host=${origin%%/*}; path=${origin#*/} ;;
+    https://*/*) origin=${origin#https://}; host=${origin%%/*}; path=${origin#*/} ;;
+    *) die "cannot derive the private repo from origin '$origin'. Pass --private REF." ;;
+  esac
+  echo "git+ssh://git@$host/$path-private"
+}
+
+[ -n "$private" ] || private=$(private_beside_origin)
+override=()
+[ "$private" = stub ] || override=(--override-input private "$private")
+
+if [ -z "$machine" ]; then
+  if command -v scutil >/dev/null 2>&1; then machine=$(scutil --get LocalHostName); else machine=$(hostname -s); fi
+fi
+
+current_home=${XDG_STATE_HOME:-$HOME/.local/state}/home-manager/gcroots/current-home
+if [ "$build_host" = local ]; then
+  build_host=
+elif [ -z "$build_host" ] && [ -r "$current_home/dotfiles-build-host" ]; then
+  build_host=$(head -n 1 "$current_home/dotfiles-build-host")
+fi
+
+on_build_host() {
+  ssh -n -- "$build_host" "PATH=\$PATH:\$HOME/.nix-profile/bin:/nix/var/nix/profiles/default/bin; $(printf '%q ' "$@")"
+}
+
+build_store=
+remote_flake=
+send_flake() {
+  local json source dir daemon
+  json=$(nix flake prefetch --json "$flake") || die "could not read the flake in $flake to send it to $build_host."
+  source=$(sed -n 's/.*"storePath":"\([^"]*\)".*/\1/p' <<< "$json")
+  dir=$(sed -n 's/.*"original":{[^}]*"dir":"\([^"]*\)".*/\1/p' <<< "$json")
+  [ -n "$source" ] || die "nix flake prefetch named no store path for $flake."
+  daemon=$(on_build_host sh -c 'command -v nix-daemon') || die "cannot reach a nix-daemon on the build host $build_host over ssh."
+  build_store="ssh-ng://$build_host?remote-program=$daemon"
+  nix copy --to "$build_store" "$source" || die "could not send the flake to the build host $build_host."
+  remote_flake="path:$source${dir:+?dir=$dir}"
+}
+
+nix_eval() {
+  local attr=$1; shift
+  if [ -n "$build_host" ]; then
+    on_build_host nix eval ${override[@]+"${override[@]}"} "$remote_flake#$attr" "$@"
+  else
+    nix eval ${override[@]+"${override[@]}"} "$flake#$attr" "$@"
+  fi
+}
+
+realise() {
+  local attr=$1 out drv; shift
+  if [ -z "$build_host" ]; then
+    nix build --no-link --print-out-paths ${override[@]+"${override[@]}"} "$flake#$attr" "$@"
+    return
+  fi
+  case $(nix eval --raw --impure --expr builtins.currentSystem) in
+    *-darwin)
+      drv=$(on_build_host nix eval --raw ${override[@]+"${override[@]}"} "$remote_flake#$attr.drvPath" "$@") \
+        || die "the build host $build_host could not evaluate $attr."
+      nix copy --derivation --from "$build_store" "$drv" >&2 \
+        || die "could not copy the derivations of $attr from $build_host."
+      nix build --no-link --print-out-paths "$drv^*" || die "$attr did not build here from the derivations $build_host evaluated."
+      ;;
+    *)
+      out=$(on_build_host nix build --no-link --print-out-paths ${override[@]+"${override[@]}"} "$remote_flake#$attr" "$@") \
+        || die "the build host $build_host could not build $attr."
+      nix copy --from "$build_store" "$out" >&2 \
+        || die "could not copy $out from $build_host. This machine accepts only paths signed by a key in its trusted-public-keys, and $build_host signs what it builds with the key identity.buildHosts names (see the cleanup runbook)."
+      echo "$out"
+      ;;
+  esac
+}
+
+[ -z "$build_host" ] || send_flake
+
+list_traits() {
+  # shellcheck disable=SC2016
+  nix_eval lib.traits --raw --apply 'traits: let
+    values = t: builtins.concatStringsSep " or " (map builtins.toJSON t.values);
+    line = name: let t = traits.${name}; in "  ${name}: ${t.description}\n      ${
+      if t.many or false then "A list of ${values t}. Left out, it is empty."
+      else if t ? default then "${values t}. Left out, it is ${builtins.toJSON t.default}."
+      else "${values t}. Every machine states it."}";
+  in builtins.concatStringsSep "\n" (map line (builtins.attrNames traits))'
+}
+
+names=$(nix_eval lib.machines --raw --apply 'machines: builtins.concatStringsSep " " (builtins.attrNames machines)')
+case " $names " in
+  *" $machine "*) ;;
+  *)
+    cat >&2 <<EOF
+dot: no machine entry named '$machine' in $private
+     entries: $names
+
+Add machines/$machine.nix to the private repo and push it:
+
+  {
+    system = "$(nix eval --raw --impure --expr builtins.currentSystem)";
+    traits = { <the traits below> };
+    user   = { name = "$USER"; home = "$HOME"; };
+    private = { };
+  }
+
+Traits:
+$(list_traits)
+EOF
+    exit 1
+    ;;
+esac
+
+state=${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles
+moved=$state/moved
+linked=$state/linked
+made=$state/made
+stopped=$state/stopped
+unfinished() { [ -e "$moved" ] || [ -e "$linked" ] || [ -e "$made" ] || [ -e "$stopped" ]; }
+first_switch=$state/first-switch
+
+build() { realise "lib.machines.$machine.build" "$@"; }
+
+exists() { [ -e "$1" ] || [ -L "$1" ]; }
+
+user_systemctl() { env XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}" systemctl --user "$@"; }
+
+user_manager_running() {
+  local manager
+  manager=$(user_systemctl is-system-running 2>&1 || true)
+  [ "$manager" = running ] || [ "$manager" = degraded ]
+}
+
+show_warnings() {
+  [ -s "$1/dotfiles-warnings" ] || return 0
+  sed 's/^/dot: warning: /' "$1/dotfiles-warnings" >&2
+}
+
+make_directory() {
+  local directory=$1 missing=
+  while [ ! -d "$directory" ]; do
+    missing=$directory$'\n'$missing
+    directory=$(dirname "$directory")
+  done
+  mkdir -p "$1" && printf %s "$missing" >> "$made"
+}
+
+begin_switch() {
+  local files directory
+  make_directory "$state" || return 1
+  files=$(readlink -e "$1/home-files") && echo "$files" > "$linked" || return 1
+  (cd "$files" && find . -mindepth 1 -type d -printf '%P\n') | while IFS= read -r directory; do
+    exists "$HOME/$directory" || echo "$HOME/$directory"
+  done >> "$made"
+}
+
+planned_move() {
+  local kind=$1 relative=$2 destination
+  case $kind in
+    retire) destination=$state/chezmoi-retired/$relative ;;
+    aside) destination=$state/set-aside/$relative ;;
+  esac
+  if exists "$destination"; then kind=blocked; fi
+  printf '%s\t%s\t%s\n' "$kind" "$relative" "$destination"
+}
+
+planned_moves() {
+  local generation=$1 units=$HOME/.config/systemd/user paths files target relative above link
+  paths=$(mktemp)
+  if command -v chezmoi >/dev/null 2>&1 && [ ! -e "$state/chezmoi-retired.done" ]; then
+    chezmoi managed --include=files,symlinks --path-style=absolute | while IFS= read -r target; do
+      relative=${target#"$HOME"/}
+      exists "$target" || continue
+      case $(readlink "$target" 2>/dev/null || true) in /nix/store/*) continue ;; esac
+      grep -qxF "$relative" "$generation/home-files/.local/share/dotfiles/mutable-paths" 2>/dev/null && continue
+      planned_move retire "$relative"
+      case $target in "$units"/*/*) continue ;; "$units"/*) ;; *) continue ;; esac
+      for link in "$units"/*.wants/* "$units"/*.requires/*; do
+        if [ -L "$link" ] && [ "$link" -ef "$target" ]; then planned_move retire "${link#"$HOME"/}"; fi
+      done
+    done | awk -F '\t' -v paths="$paths" '!seen[$2]++ { print; print $2 > paths }'
+  fi
+  files=$(readlink -e "$generation/home-files")
+  (cd "$files" && find . \( -type f -o -type l \) | sort) | while IFS= read -r relative; do
+    relative=${relative#./}
+    above=$relative
+    while [[ $above == */* ]]; do
+      above=${above%/*}
+      if [ ! -d "$HOME/$above" ] && exists "$HOME/$above"; then relative=$above; fi
+    done
+    target=$HOME/$relative
+    exists "$target" || continue
+    case $(readlink "$target" 2>/dev/null || true) in /nix/store/*-home-manager-files/*) continue ;; esac
+    grep -qxF "$relative" "$paths" && continue
+    echo "$relative" >> "$paths"
+    planned_move aside "$relative"
+    case $target in "$units"/*/*) continue ;; "$units"/*) ;; *) continue ;; esac
+    for link in "$units"/*.wants/* "$units"/*.requires/*; do
+      [ -L "$link" ] && [ "$link" -ef "$target" ] || continue
+      grep -qxF "${link#"$HOME"/}" "$paths" && continue
+      echo "${link#"$HOME"/}" >> "$paths"
+      planned_move aside "${link#"$HOME"/}"
+    done
+  done
+  rm -f "$paths"
+}
+
+running_units() {
+  local kind relative destination
+  user_manager_running || return 0
+  while IFS=$'\t' read -r kind relative destination; do
+    case $kind in retire | aside) ;; *) continue ;; esac
+    case $relative in .config/systemd/user/*/*) continue ;; .config/systemd/user/*) ;; *) continue ;; esac
+    if user_systemctl is-active --quiet "${relative##*/}"; then echo "${relative##*/}"; fi
+  done < "$1"
+}
+
+enabled_by() {
+  local link
+  for link in "$1"/home-files/.config/systemd/user/*.wants/"$2" "$1"/home-files/.config/systemd/user/*.requires/"$2"; do
+    if [ -L "$link" ]; then return 0; fi
+  done
+  return 1
+}
+
+stop_units() {
+  local unit
+  while IFS= read -r unit; do
+    echo "$unit" >> "$stopped" || return 1
+    if user_systemctl stop "$unit"; then echo "dot: stopped $unit"; else echo "dot: could not stop $unit" >&2; fi
+  done < <(running_units "$1")
+}
+
+start_stopped() {
+  local generation=$1 unit
+  [ -e "$stopped" ] || return 0
+  user_systemctl daemon-reload || true
+  while IFS= read -r unit; do
+    if [ -z "$generation" ] || enabled_by "$generation" "$unit"; then
+      if user_systemctl start "$unit"; then echo "dot: started $unit again"; else echo "dot: could not start $unit again" >&2; fi
+    fi
+  done < "$stopped"
+  rm -f "$stopped"
+}
+
+planned() {
+  local kind relative destination
+  while IFS=$'\t' read -r kind relative destination; do
+    case $kind in
+      "$1") if [ "$kind" = blocked ]; then echo "  ~/$relative  ($destination is taken)"; else echo "  ~/$relative"; fi ;;
+    esac
+  done < "$2"
+}
+
+apply_moves() {
+  local kind relative destination
+  while IFS=$'\t' read -r kind relative destination; do
+    make_directory "$(dirname "$destination")" || return 1
+    printf '%s\t%s\n' "$HOME/$relative" "$destination" >> "$moved" || return 1
+    mv "$HOME/$relative" "$destination" || return 1
+  done
+}
+
+only_links_to() {
+  local path=$1 files=$2 entry
+  [ -n "$files" ] || return 1
+  if [ -L "$path" ]; then
+    [ "$(readlink "$path")" = "$files/${path#"$HOME"/}" ]
+    return
+  fi
+  [ -d "$path" ] || return 1
+  while IFS= read -r entry; do
+    [ -L "$entry" ] && [ "$(readlink "$entry")" = "$files/${entry#"$HOME"/}" ] || return 1
+  done < <(find "$path" ! -type d)
+}
+
+restore_moves() {
+  local from to files unresolved
+  [ -e "$moved" ] || return 0
+  files=$(cat "$linked" 2>/dev/null || true)
+  unresolved=$(mktemp)
+  while IFS=$'\t' read -r from to; do
+    exists "$to" || continue
+    if only_links_to "$from" "$files"; then rm -rf "$from"; fi
+    if ! exists "$from" && mv "$to" "$from"; then
+      echo "dot: put back $from" >&2
+    else
+      printf '%s\t%s\n' "$from" "$to" >> "$unresolved"
+    fi
+  done < <(tac "$moved")
+  if [ -s "$unresolved" ]; then tac "$unresolved" > "$moved"; else rm -f "$moved"; fi
+  rm -f "$unresolved"
+}
+
+report_unresolved() {
+  local from to
+  [ -e "$moved" ] || return 0
+  {
+    echo "dot: these were moved by a switch that did not go through, and something else is in their place now:"
+    while IFS=$'\t' read -r from to; do echo "dot:   $from  (what was there is in $to)"; done < "$moved"
+    echo "dot: To put one back, move what is in its place away and run:"
+    while IFS=$'\t' read -r from to; do printf 'dot:   mv -T %q %q\n' "$to" "$from"; done < "$moved"
+    printf 'dot: To keep what is in their place, and leave the rest where it was moved to, run: rm %q\n' "$moved"
+  } >&2
+}
+
+first_switch_pending() { [ ! -e "$current_home" ] || [ -e "$first_switch" ]; }
+
+seed_first_switch() {
+  local generation=$1
+  first_switch_pending || return 0
+  make_directory "$(dirname "$current_home")" || return 1
+  : > "$first_switch" || return 1
+  nix-store --realise "$generation" --add-root "$current_home" > /dev/null
+}
+
+set_profile() {
+  local generation=$1 profiles=${XDG_STATE_HOME:-$HOME/.local/state}/nix/profiles
+  [ -d "$profiles" ] || profiles=${NIX_STATE_DIR:-/nix/var/nix}/profiles/per-user/$USER
+  nix-env --profile "$profiles/home-manager" --set "$generation"
+}
+
+undo_home() {
+  local files relative directories directory
+  files=$(cat "$linked" 2>/dev/null || true)
+  restore_moves
+  start_stopped ""
+  if [ -e "$first_switch" ]; then
+    if [ -d "$files" ]; then
+      while IFS= read -r relative; do
+        if [ "$(readlink "$HOME/$relative" 2>/dev/null)" = "$files/$relative" ]; then rm -f "$HOME/$relative"; fi
+      done < <(cd "$files" && find . \( -type f -o -type l \) -printf '%P\n')
+    fi
+    rm -f "$current_home" "$first_switch"
+  fi
+  directories=$(LC_ALL=C sort -ru "$made" 2>/dev/null || true)
+  rm -f "$linked" "$made"
+  while IFS= read -r directory; do
+    [ -z "$directory" ] || rmdir "$directory" 2>/dev/null || true
+  done <<< "$directories"
+  report_unresolved
+}
+
+activate_home() {
+  local generation=$1 plan
+  home_status=0
+  plan=$(mktemp)
+  planned_moves "$generation" > "$plan"
+  if grep -q "^blocked" "$plan"; then
+    {
+      echo "dot: these have to move out of the way, and the place to move them to holds an earlier copy:"
+      planned blocked "$plan"
+      echo "dot: Move them or the earlier copies away, then switch again. Nothing was changed."
+    } >&2
+    rm -f "$plan"
+    home_status=1
+    return 0
+  fi
+  trap 'undo_home; exit 130' INT TERM HUP
+  if begin_switch "$generation" && stop_units "$plan" && apply_moves < "$plan" && seed_first_switch "$generation" \
+    && HOME_MANAGER_BACKUP_EXT=pre-nix "$generation/activate"; then
+    start_stopped "$generation"
+    if [ -e "$first_switch" ]; then
+      set_profile "$generation" || echo "dot: the generation is active, but its home-manager profile could not be set." >&2
+      rm -f "$first_switch"
+    fi
+    rm -f "$moved" "$linked" "$made"
+    if grep -q "^retire" "$plan"; then
+      touch "$state/chezmoi-retired.done"
+      echo "chezmoi's files are in $state/chezmoi-retired. Run 'chezmoi purge' when the machine looks right."
+    fi
+    if grep -q "^aside" "$plan"; then
+      echo "What was in the way of the generation's links is in $state/set-aside."
+    fi
+  else
+    home_status=1
+    echo "dot: the home generation did not activate. Putting the home back as it was." >&2
+    undo_home
+  fi
+  trap - INT TERM HUP
+  rm -f "$plan"
+}
+
+unresolved_libraries() {
+  local scan=$1/home-files/.local/share/dotfiles/unresolved-libraries
+  [ -x "$scan" ] || return 0
+  "$scan" 2>&1 || echo "the scan for libraries that foreign packages cannot load failed"
+}
+
+root_program_changed() {
+  local runner=$1/home-path/bin/dotfiles-root-apply
+  [ -x "$runner" ] && [ "$(readlink /var/lib/dotfiles/applied 2>/dev/null)" != "$(readlink -f "$runner")" ]
+}
+
+switch_linux() {
+  local generation=$1 runner=$1/home-path/bin/dotfiles-root-apply root_status=0 root_log root_messages=''
+  if unfinished; then
+    echo "dot: an earlier switch did not finish. Undoing it first." >&2
+    undo_home
+    [ ! -e "$moved" ] || die "not switching until that is settled."
+  fi
+  if root_program_changed "$generation"; then
+    root_log=$(mktemp)
+    { sudo "$runner" 2>&1 >&3 | tee "$root_log" >&2; } 3>&1 || root_status=$?
+    root_messages=$(grep '^dotfiles-root-apply:' "$root_log" || true)
+    rm -f "$root_log"
+    [ "$root_status" = 0 ] || echo "dot: the root steps failed. Activating the home generation anyway." >&2
+  fi
+  activate_home "$generation"
+  if [ "$root_status" != 0 ]; then
+    {
+      echo
+      if [ "$home_status" = 0 ]; then
+        echo "dot: ROOT STEPS FAILED (dotfiles-root-apply exited $root_status). The home generation is active."
+      else
+        echo "dot: ROOT STEPS FAILED (dotfiles-root-apply exited $root_status)."
+      fi
+      if [ -n "$root_messages" ]; then
+        # shellcheck disable=SC2001
+        sed 's/^/dot:   /' <<< "$root_messages"
+      else
+        echo "dot:   dotfiles-root-apply gave no reason. See its output above."
+      fi
+      echo "dot: Fix them and run 'dot switch' again. It reruns the root steps until they pass."
+    } >&2
+  fi
+  if [ "$root_status" != 0 ] || [ "$home_status" != 0 ]; then exit 1; fi
+}
+
+distro_owner() {
+  if command -v pacman >/dev/null 2>&1; then
+    pacman -Qo -- "$1" 2>/dev/null | sed -n 's/^.* is owned by \([^ ]*\) \([^ ]*\)$/pacman \1 \2/p'
+  elif command -v rpm >/dev/null 2>&1; then
+    rpm -qf --qf 'rpm %{NAME} %{VERSION}\n' -- "$1" 2>/dev/null | grep -v ' is not owned ' || true
+  fi
+}
+
+older_than_distro() {
+  local bin=$1 distro=${DOTFILES_DISTRO_BIN:-/usr/bin} entry name nix_path ours manager package theirs listed
+  listed=$(for entry in "$bin"/*; do
+    name=${entry##*/}
+    [ -e "$distro/$name" ] || continue
+    nix_path=$(readlink -f "$entry")
+    [ "${nix_path##*/}" = "$name" ] || continue
+    [[ $nix_path =~ /[0-9a-z]{32}-([^/]*)/ ]] || continue
+    [[ ${BASH_REMATCH[1]} =~ ^([^-]|-[^0-9])*-([0-9].*)$ ]] || continue
+    ours=${BASH_REMATCH[2]}
+    read -r manager package theirs < <(distro_owner "$(readlink -f "$distro/$name")") || continue
+    theirs=${theirs#*:}
+    theirs=${theirs%-*}
+    [ "${ours//[-_]/.}" != "${theirs//[-_]/.}" ] || continue
+    [ "$(printf '%s\n%s\n' "${ours//[-_]/.}" "${theirs//[-_]/.}" | sort -V | head -n 1)" = "${ours//[-_]/.}" ] || continue
+    echo "  $name: Nix $ours, $manager $package $theirs"
+  done | sort -s -t: -k2,2 -u | sort)
+  if [ -n "$listed" ]; then printf '%s\n' "$listed"; else echo "  none"; fi
+}
+
+plan_linux() {
+  local generation=$1 units=$1/home-files/.config/systemd/user
+  local plan entry entry_user entry_home listed lines abort=0 sd_switch sd_failed=0 manager old report files from to running unit retiring
+  plan=$(mktemp)
+  planned_moves "$generation" > "$plan"
+  # shellcheck disable=SC2016
+  entry=$(nix_eval "lib.machines.$machine.user" --raw --apply 'user: "${user.name}\n${user.home}"')
+  entry_user=${entry%%$'\n'*}
+  entry_home=${entry#*$'\n'}
+
+  echo "What 'dot switch' would do for $machine on this machine. Nothing is changed."
+  echo
+  echo "Generation"
+  echo "  $generation"
+  [ -z "$build_host" ] || echo "  built on $build_host, and only its closure copied here"
+  echo
+  echo "Warnings"
+  if [ -s "$generation/dotfiles-warnings" ]; then sed 's/^/  /' "$generation/dotfiles-warnings"; else echo "  none"; fi
+  echo
+  echo "Nix copies older than the distro copy they shadow"
+  older_than_distro "$generation/home-path/bin"
+  echo
+  echo "Libraries that foreign packages cannot load (warning only: rebuild the package)"
+  listed=$(unresolved_libraries "$generation")
+  if [ -n "$listed" ]; then mapfile -t lines <<< "$listed"; printf '  %s\n' "${lines[@]}"; else echo "  none"; fi
+  echo
+  echo "Secrets"
+  if [ -x "$generation/dotfiles-secrets" ]; then { "$generation/dotfiles-secrets" --timeout 5 || true; } | sed 's/^./  &/'; else echo "  none"; fi
+  echo
+  echo "User"
+  if [ "$entry_user" = "$USER" ] && [ "$entry_home" = "$HOME" ]; then
+    echo "  $USER in $HOME, as the machine entry says."
+  else
+    echo "  The machine entry is for $entry_user in $entry_home. This is $USER in $HOME."
+    echo "  home-manager refuses to activate for another user or home."
+    abort=1
+  fi
+  echo
+  if unfinished; then
+    echo "Unfinished switch"
+    echo "  An earlier switch did not finish. The switch undoes it first, and puts these back:"
+    files=$(cat "$linked" 2>/dev/null || true)
+    while IFS=$'\t' read -r from to; do
+      exists "$to" || continue
+      if ! exists "$from" || only_links_to "$from" "$files"; then
+        echo "  ~/${from#"$HOME"/}"
+      else
+        echo "  ~/${from#"$HOME"/}  (it cannot: something else is in its place, and what was there is in $to)"
+        abort=1
+      fi
+    done < <(cat "$moved" 2>/dev/null || true)
+    echo "  The rest of this plan reads the home as it is now, before that."
+    echo
+  fi
+  echo "Retired to $state/chezmoi-retired (chezmoi manages them, or they enable a unit file it manages)"
+  if ! command -v chezmoi >/dev/null 2>&1; then echo "  none: chezmoi is not installed"
+  elif [ -e "$state/chezmoi-retired.done" ]; then echo "  none: an earlier switch retired them"
+  elif grep -q "^retire" "$plan"; then planned retire "$plan"
+  else echo "  none"
+  fi
+  echo
+  echo "Set aside to $state/set-aside (in the way of the generation's links)"
+  if grep -q "^aside" "$plan"; then planned aside "$plan"; else echo "  none"; fi
+  echo
+  echo "Still in the way (the place to move these to holds an earlier copy)"
+  if grep -q "^blocked" "$plan"; then planned blocked "$plan"; abort=1; else echo "  none"; fi
+  echo
+  echo "Stopped before anything moves (user units running from a file that is retired or set aside)"
+  running=$(running_units "$plan")
+  if ! user_manager_running; then
+    echo "  none: the user's systemd is not running here"
+  elif [ -z "$running" ]; then
+    echo "  none"
+  else
+    while IFS= read -r unit; do
+      if enabled_by "$generation" "$unit"; then echo "  $unit  (started again from the generation's unit)"; else echo "  $unit"; fi
+    done <<< "$running"
+  fi
+  echo
+  echo "User units"
+  sd_switch=$(grep -o '/nix/store/[^ "]*/bin/sd-switch' "$generation/activate" | head -n 1 || true)
+  manager=$(env XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}" systemctl --user is-system-running 2>&1 || true)
+  if [ ! -d "$units" ]; then
+    echo "  The generation defines no user units."
+  elif [ -z "$sd_switch" ]; then
+    echo "  The generation does not start or stop units."
+  elif [ "$manager" != running ] && [ "$manager" != degraded ]; then
+    echo "  The user's systemd is not running here, so the switch would leave units alone."
+  else
+    if first_switch_pending; then
+      echo "  First switch here. Apart from those stopped above, the running units count as unchanged, so none is"
+      echo "  stopped or restarted, and a unit whose definition is new keeps its process until it is next restarted."
+      old=$units
+    else
+      old=$(readlink -e "$current_home")/home-files/.config/systemd/user
+      [ -e "$old" ] || old=
+    fi
+    echo "  sd-switch, asked what it would do:"
+    report=$(env XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}" \
+      "$sd_switch" --dry-run ${old:+--old-units "$old"} --new-units "$units" 2>&1) || sd_failed=1
+    printf '%s\n' "$report" | sed 's/^/    /'
+    if [ "$sd_failed" = 1 ]; then
+      echo "  sd-switch failed, and the switch would fail with it."
+      abort=1
+    fi
+  fi
+  echo
+  echo "Files written at activation (merged, seeded or replaced)"
+  if [ -x "$generation/home-files/.local/share/dotfiles/mutable-plan" ]; then
+    "$generation/home-files/.local/share/dotfiles/mutable-plan" || echo "  it could not say what would change"
+  else
+    echo "  none"
+  fi
+  echo
+  echo "Root program"
+  if [ ! -x "$generation/home-path/bin/dotfiles-root-apply" ]; then
+    echo "  none"
+  elif root_program_changed "$generation"; then
+    echo "  Differs from the one last applied. The switch runs it with sudo."
+    if ! retiring=$("$generation/home-path/bin/dotfiles-root-apply" --retiring 2>&1); then
+      echo "  It cannot say which units it would disable: $retiring"
+    elif [ -n "$retiring" ]; then
+      echo "  It disables and stops these units, which an earlier run enabled and this generation no longer declares:"
+      while IFS= read -r unit; do echo "    $unit"; done <<< "$retiring"
+    fi
+  else
+    echo "  The one last applied. The switch does not run it."
+  fi
+  echo
+  rm -f "$plan"
+  if [ "$abort" = 0 ]; then
+    echo "The switch would go through."
+  else
+    echo "The switch would abort."
+    exit 1
+  fi
+}
+
+set_aside_etc() {
+  local system=$1 file
+  [ -e /run/current-system ] && return 0
+  for file in shells bashrc zshrc zshenv zprofile; do
+    if [ -e "$system/etc/$file" ] && [ -e "/etc/$file" ] && [ ! -L "/etc/$file" ] && [ ! -e "/etc/$file.before-nix-darwin" ]; then
+      sudo mv "/etc/$file" "/etc/$file.before-nix-darwin"
+    fi
+  done
+}
+
+switch_darwin() {
+  local system=$1 permissions=$1/sw/bin/dotfiles-permissions
+  set_aside_etc "$system"
+  sudo nix-env --profile /nix/var/nix/profiles/system --set "$system"
+  sudo "$system/activate"
+  if [ -x "$permissions" ]; then
+    if [ -t 0 ]; then "$permissions" --open || true; else "$permissions" || true; fi
+  fi
+}
+
+case $command in
+  show) nix_eval "lib.machines.$machine.summary" --raw ;;
+  why) nix_eval "lib.machines.$machine.why.${1:?why needs a solution id}" --raw; echo ;;
+  tree) nix_eval lib.tree --json ;;
+  build) build "$@" ;;
+  secrets)
+    have=$(nix eval --raw --impure --expr builtins.currentSystem)
+    if [ -n "$named" ]; then
+      audit=$(realise "lib.machines.$machine.secretsUnchecked.$have")
+    else
+      want=$(nix_eval "lib.machines.$machine.system" --raw)
+      [ "$want" = "$have" ] || die "entry '$machine' is for $want and this host is $have. Name it with --machine to list its secrets unchecked."
+      audit=$(realise "lib.machines.$machine.secretsAudit")
+    fi
+    exec "$audit" ${secrets_args[@]+"${secrets_args[@]}"}
+    ;;
+  check)
+    if [ -n "$build_host" ]; then
+      on_build_host nix flake check ${override[@]+"${override[@]}"} "$remote_flake" "$@"
+    else
+      nix flake check ${override[@]+"${override[@]}"} "$flake" "$@"
+    fi
+    ;;
+  switch | plan)
+    want=$(nix_eval "lib.machines.$machine.system" --raw)
+    have=$(nix eval --raw --impure --expr builtins.currentSystem)
+    [ "$want" = "$have" ] || die "entry '$machine' is for $want and this host is $have"
+    case $command-$have in
+      plan-*-darwin) die "plan reads a Linux home. nix-darwin has its own dry run: darwin-rebuild build." ;;
+    esac
+    out=$(build --refresh)
+    case $command-$have in
+      switch-*-darwin) show_warnings "$out"; switch_darwin "$out" ;;
+      switch-*) show_warnings "$out"; unresolved_libraries "$out" | sed 's/^/dot: warning: /' >&2; switch_linux "$out" ;;
+      plan-*) plan_linux "$out" ;;
+    esac
+    ;;
+  *) die "unknown command '$command'. Commands: switch, plan, secrets, build, show, why, tree, check." ;;
+esac

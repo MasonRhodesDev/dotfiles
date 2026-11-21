@@ -1,0 +1,31 @@
+#!/bin/sh
+
+shapes=
+case ${SLACK_MCP_XOXP_TOKEN-} in
+  "") ;;
+  xoxp-*)
+    unset SLACK_MCP_XOXC_TOKEN SLACK_MCP_XOXD_TOKEN
+    export SLACK_MCP_ADD_MESSAGE_TOOL="${SLACK_MCP_ADD_MESSAGE_TOOL:-true}"
+    exec npx -y slack-mcp-server@latest "$@"
+    ;;
+  *) shapes="$shapes slack/user-token" ;;
+esac
+unset SLACK_MCP_XOXP_TOKEN
+case ${SLACK_MCP_XOXC_TOKEN-} in "" | xoxc-*) ;; *) shapes="$shapes slack/xoxc-token" ;; esac
+case ${SLACK_MCP_XOXD_TOKEN-} in "" | xoxd-*) ;; *) shapes="$shapes slack/xoxd-token" ;; esac
+
+case ${SLACK_MCP_XOXC_TOKEN-}:${SLACK_MCP_XOXD_TOKEN-} in
+  xoxc-*:xoxd-*)
+    export SLACK_MCP_USER_AGENT="${SLACK_MCP_USER_AGENT:-Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.7871.114 Safari/537.36}"
+    export SLACK_MCP_CUSTOM_TLS="${SLACK_MCP_CUSTOM_TLS:-true}"
+    export SLACK_MCP_ADD_MESSAGE_TOOL="${SLACK_MCP_ADD_MESSAGE_TOOL:-true}"
+    exec npx -y slack-mcp-server@latest "$@"
+    ;;
+esac
+unset SLACK_MCP_XOXC_TOKEN SLACK_MCP_XOXD_TOKEN
+
+echo "slack-mcp: no usable Slack credential. It takes slack/user-token (xoxp-), or slack/xoxc-token (xoxc-) with slack/xoxd-token (xoxd-)." >&2
+echo "  unavailable: ${DOTFILES_CREDENTIALS_MISSING:-none}" >&2
+[ -z "$shapes" ] || echo "  present, but not shaped as that credential should be:$shapes" >&2
+echo "  dotfiles-credential why NAME says what each tier found" >&2
+exit 1

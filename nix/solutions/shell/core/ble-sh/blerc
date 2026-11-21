@@ -1,0 +1,25 @@
+bleopt default_keymap=vi
+
+bleopt char_width_mode=west
+bleopt char_width_version=16.0
+
+bleopt edit_bell=
+
+bleopt complete_menu_style=desc
+bleopt complete_menu_maxlines=15
+
+bleopt prompt_eol_mark=$'\e[2m⏎\e[m'
+bleopt exec_errexit_mark=$'\e[91m[exit %d]\e[m'
+
+ble-face auto_complete='fg=242'
+
+function blerc/vim-load-hook {
+    bleopt keymap_vi_mode_show=
+
+    ble-bind -m vi_nmap -f 'C-r' vi_nmap/redo
+
+    ble-bind -m vi_imap -f up   history-search-backward
+    ble-bind -m vi_imap -f down history-search-forward
+}
+blehook/eval-after-load keymap_vi blerc/vim-load-hook
+

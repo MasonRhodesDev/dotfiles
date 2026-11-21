@@ -1,0 +1,26 @@
+enter_accept = true
+
+style = "compact"
+inline_height = 24
+keymap_mode = "vim-insert"
+workspaces = true
+show_help = false
+show_tabs = false
+history_filter = ["^secret-tool store", "^rbw ", "^ "]
+
+[stats]
+
+[keys]
+
+[sync]
+records = true
+
+[preview]
+
+[daemon]
+
+[search]
+
+[tmux]
+
+[ui]

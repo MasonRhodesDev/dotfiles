@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+
+TRANSCRIPT="$1"
+
+if command -v jq >/dev/null 2>&1 && [[ -f "$TRANSCRIPT" ]]; then
+    SUMMARY=$(tac "$TRANSCRIPT" | \
+        jq -r 'select(.type=="summary") | .summary' 2>/dev/null | \
+        head -1 | \
+        head -c 40)
+
+    if [[ -n "$SUMMARY" ]]; then
+        echo "$SUMMARY"
+        exit 0
+    fi
+
+    BRANCH=$(jq -r 'select(.gitBranch) | .gitBranch' "$TRANSCRIPT" 2>/dev/null | head -1)
+    if [[ -n "$BRANCH" ]] && [[ "$BRANCH" != "null" ]]; then
+        echo "$BRANCH" | head -c 40
+        exit 0
+    fi
+
+    CWD=$(jq -r 'select(.cwd) | .cwd' "$TRANSCRIPT" 2>/dev/null | head -1)
+    if [[ -n "$CWD" ]] && [[ "$CWD" != "null" ]]; then
+        basename "$CWD" | head -c 40
+        exit 0
+    fi
+
+    echo "Idle"
+else
+    echo "Idle"
+fi

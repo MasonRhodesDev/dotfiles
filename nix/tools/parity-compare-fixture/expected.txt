@@ -1,0 +1,84 @@
+fixture
+missing (5)
+  file   .config/unowned.conf  no solution owns it
+  file   .inputrc  owner shell
+  script 03-ensure-bash-shell  owner shell has no root step
+  script 06-tools:wm  owner wm has no home part
+  script 99-unowned  no solution owns it
+extra (1)
+  file   .config/extra.conf
+different (4)
+  file   .claude/settings.json  content (merge-json, a fresh machine's bytes)
+  file   .config/hypr/local.lua  mode 0644, golden 0600
+  file   .config/real.txt  content
+  file   .local/bin/notexec  executable bit: 0444, golden 0755
+dropped (4)
+  file   .config/dropped.conf  on the drop list
+  script 01-dropped  on the drop list
+  script 06-tools:retired  on the drop list
+  script 70-parts-all-dropped:only  on the drop list
+not-selected (2)
+  file   .config/off.conf  owner off is not on this machine
+  script 58-off  owner off is not on this machine
+hm-own (1)
+  file   .local/share/dotfiles/mutable-paths  dotfiles.mutable's list for the switch wrapper
+moved (4)
+  tree   .local/share/blesh  2 files of a package tree that shell links; the golden has nothing there
+  root   /etc/fixture/rule.conf  0644 from the root step of fw
+  script 06-tools:shell  shell has a home part (not proof the part does it)
+  script 50-firewall  root step of fw
+relaxed (2)
+  file   .config/private.conf  golden 0600, now a world-readable store file
+  dir    .config/app  golden 0700, home-manager creates it with the default mode
+same (10)
+  file   .gitconfig  written at activation (dotfiles.mutable)
+  file   .gitconfig-shared  identity rewritten
+  file   .local/bin/run  golden links to /home/USER/scripts/run
+fixture --summary
+  missing          5  (file 2, script 3)
+  extra            1  (file 1)
+  different        4  (file 4)
+  same            10  (file 10)
+  dropped          4  (file 1, script 3)
+  not-selected     2  (file 1, script 1)
+  hm-own           1  (file 1)
+  moved            4  (root 1, script 2, tree 1)
+  relaxed          2  (dir 1, file 1)
+fixture --solution shell
+missing (2)
+  file   .inputrc  owner shell
+  script 03-ensure-bash-shell  owner shell has no root step
+different (1)
+  file   .local/bin/notexec  executable bit: 0444, golden 0755
+moved (2)
+  tree   .local/share/blesh  2 files of a package tree that shell links; the golden has nothing there
+  script 06-tools:shell  shell has a home part (not proof the part does it)
+same (2)
+--solution no-such: no such solution
+--solution off: not enabled on fixture
+--solution empty: owns nothing in this golden, so there is nothing to compare
+manifest
+  f 0444 36e5bca586162872ce8e029b7a3a87d8c7bcffdacaaaa678800bc67bfc2e913c .bashrc
+  m 0600 8f5b7778ac532a8b85b94ef01f714e2d2b059eb681191a7a4a9291f2f22262ff .claude/settings.json
+  f 0444 52c159c121e79d90d6fb6488a4129b94a334dfcec99451f231751594db0c5a82 .config/app/conf
+  f 0444 65110ea3b8b62b0c09742c368bf1527f0978b06dff7a1371ef7b4c98e244d91a .config/extra.conf
+  w 0644 85ea3ace0cee0b2ddcfccbdef859ef84fa867c2523a9060555d359905d37ba37 .config/hypr/local.lua
+  f 0444 b894e80d2938438a0e564c75bf300b0343b726ab69de529cc64e02c35ddd19cd .config/nvim/init.lua
+  f 0444 801a9e3fc173e72802827d26753cf2eca2d55459e2ef45d6704c836f2bfedb33 .config/private.conf
+  f 0444 98d49c779071c0e6c67072b8085ca9c71ee8d72ca5e4e88612815610e1191230 .config/real.txt
+  w 0644 baead7be662266cc8645dcb1463e346a5fe11af95f37cc1d070c8c6fe3d0d3c3 .gitconfig
+  f 0444 d9c387e5a4a99e9b24f6805f3d1f0a1616f88b1469c3a436e45d92a78610d395 .gitconfig-shared
+  l - /home/USER/scripts/cb .local/bin/cb
+  f 0444 ffc40fc666dd82e02e6a9cdb78d30457c661b6cd7b9b8720f8d8bbbba01a9edc .local/bin/notexec
+  f 0555 a4e0317eafab5cf1bc4a0041c7c8aeb6ece56fe72e7b2b3017a8a6574614cd35 .local/bin/run
+  f 0555 bf664cf84f00f6ed76164c8457fdeaf8e4dee547226e9ffcf8274e2d2246fed9 .local/bin/tool
+  f 0444 1267e62460dba8ec0e41ab31109330c1433a4bf7129ba6ec006990fcf1aa17e9 .local/share/blesh/ble.sh
+  f 0444 d3a14bbcf72371466ea18ffb8c3c214256fcc293cd661e101593e0a7faaea21f .local/share/blesh/lib/init.sh
+  f 0444 7d73ab9f81947f3ae0cd7008b2673b57845cd405b21bd7a292aba3f2785d5d85 .local/share/dotfiles/mutable-paths
+  r 0644 548b266ea1ae7f8167b03a9a2a72c71108b97de58f7aab13a44e3a7eb55b0448 /etc/fixture/rule.conf
+  f 0555 a4e0317eafab5cf1bc4a0041c7c8aeb6ece56fe72e7b2b3017a8a6574614cd35 scripts/run
+goldens
+  {"headless": true, "profile": "work", "uses": ["dev", "gaming"]}: headless-agent-box
+  {"headless": false, "profile": "work", "uses": ["dev", "gaming"]}: gaming-desktop
+  {"headless": false, "profile": "work", "uses": ["dev"]}: work-laptop
+  {"headless": false, "profile": "personal", "uses": ["dev"]}: None

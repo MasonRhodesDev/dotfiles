@@ -35,9 +35,12 @@ docs/
 .githooks
 .githooks/**
 .gitleaks.toml
+migration
+migration/**
 
-# Beads issue tracking (stays in repo, not applied to home)
-.beads/
+# The Nix flake that replaces chezmoi. Never a deploy target.
+nix
+nix/**
 
 # Git configuration (stays in repo)
 .gitattributes

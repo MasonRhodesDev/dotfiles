@@ -1,0 +1,508 @@
+#!/usr/bin/env python3
+"""Compare what home-manager writes for a machine with what chezmoi wrote for its profile.
+
+usage:
+  parity-compare [options] MACHINE [GOLDEN]   diff a machine against a golden profile
+  parity-compare --list                       the traits that pick each golden, first match first
+  parity-compare --self-test                  run the fixture in parity-compare-fixture/
+  parity-compare --pack HOME_FILES INDEX      write the tree tar (parity/manifest.nix runs this)
+  parity-compare --manifest TAR               print a tree tar as a manifest (parity/manifest.nix)
+
+options:
+  --summary          counts per group instead of every entry
+  --solution ID      only the paths and scripts ID's inventory owns; repeatable
+  --private DIR      the private input (default: the flake's private-stub)
+  --store URL        build and read on this store (default: $PARITY_STORE, else the local store)
+  --nix PATH         the nix binary (default: $PARITY_NIX, else nix)
+
+The machine's tree is built as `lib.machines.MACHINE.manifest.tree`, so with
+--store nothing builds locally. Only the tar of its home files is read back.
+
+Exit 0 when nothing is missing, extra or different, 1 when something is, 2 on
+a usage error or when a comparison cannot be made.
+"""
+
+import argparse
+import fnmatch
+import hashlib
+import io
+import json
+import os
+import re
+import stat
+import subprocess
+import sys
+import tarfile
+import tomllib
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+FLAKE = os.path.dirname(HERE)
+PARITY = os.path.join(os.path.dirname(FLAKE), "migration", "parity")
+FIXTURE = os.path.join(HERE, "parity-compare-fixture")
+
+GOLDENS = [
+    ("headless-agent-box", {"headless": True}),
+    ("gaming-desktop", {"uses": "gaming"}),
+    ("work-laptop", {"profile": "work"}),
+]
+
+
+def golden_for(traits):
+    def has(trait, value):
+        stated = traits.get(trait)
+        return value in stated if isinstance(stated, list) else stated == value
+    return next((name for name, facts in GOLDENS if all(has(k, v) for k, v in facts.items())), None)
+
+HM_OWN = {
+    ".cache/.keep": "home-manager creates the XDG cache directory",
+    ".local/state/.keep": "home-manager creates the XDG state directory",
+    ".config/environment.d/10-home-manager.conf": "home-manager's session variables for systemd",
+    ".config/systemd/user/tray.target": "home-manager's target for tray applets",
+    ".config/systemd/user/*.wants/*": "enables a unit; replaces the dropped enable-user-services",
+    ".local/share/dotfiles/mutable-paths": "dotfiles.mutable's list for the switch wrapper",
+}
+
+COUNTED = ("missing", "extra", "different")
+GROUPS = COUNTED + ("same", "dropped", "not-selected", "hm-own", "moved", "relaxed")
+
+HOME = re.compile(rb"/home/(?!linuxbrew/)[a-z_][a-z0-9_-]*")
+
+
+class Fail(Exception):
+    pass
+
+
+def matches(pattern, path):
+    if pattern.endswith("/**"):
+        return path == pattern[:-3] or path.startswith(pattern[:-2])
+    parts, segs = pattern.split("/"), path.split("/")
+    return len(parts) == len(segs) and all(fnmatch.fnmatchcase(s, p) for p, s in zip(parts, segs))
+
+
+def normalize(data, rewrites):
+    data = HOME.sub(b"/home/USER", data)
+    before = data
+    for old, new in rewrites:
+        data = data.replace(old, new)
+    return data, data != before
+
+
+def pack(home_files, index_path, out):
+    with open(index_path) as f:
+        index = json.load(f)
+    base = os.path.dirname(os.path.abspath(index_path))
+    meta = {
+        "mutable": {m["path"]: m["strategy"] for m in index["mutable"]},
+        "root": {r["path"]: r["owner"] for r in index["root"]},
+        "rootSteps": sorted(index["rootSteps"]),
+    }
+
+    def add(name, mode, data=None, target=None):
+        info = tarfile.TarInfo(name)
+        info.mode = mode
+        if target is None:
+            info.size = len(data)
+            tar.addfile(info, io.BytesIO(data))
+        else:
+            info.type = tarfile.SYMTYPE
+            info.linkname = target
+            tar.addfile(info)
+
+    def read(path):
+        with open(os.path.join(base, path), "rb") as f:
+            return f.read()
+
+    with tarfile.open(fileobj=out, mode="w|", format=tarfile.PAX_FORMAT) as tar:
+        add("index.json", 0o444, json.dumps(meta, sort_keys=True).encode())
+        found = []
+        for root, dirs, files in os.walk(home_files, followlinks=True):
+            dirs.sort()
+            found += [os.path.join(root, name) for name in files]
+        for path in sorted(found):
+            rel = os.path.relpath(path, home_files)
+            if os.path.exists(path):
+                with open(path, "rb") as f:
+                    add(f"home/{rel}", 0o555 if os.stat(path).st_mode & stat.S_IXUSR else 0o444, f.read())
+            else:
+                add(f"home/{rel}", 0o777, target=os.path.realpath(path))
+        for m in sorted(index["mutable"], key=lambda m: m["path"]):
+            add(f"mutable/{m['path']}", int(m["mode"], 8), read(m["source"]))
+        for r in sorted(index["root"], key=lambda r: r["path"]):
+            add(f"root{r['path']}", int(r["mode"], 8), read(r["source"]))
+
+
+class Home:
+    """A tree tar, read as a stream. entries: path -> (kind, mode, hash or target, rewritten)."""
+
+    def __init__(self, stream, rewrites=()):
+        self.entries, self.root = {}, {}
+        with tarfile.open(fileobj=stream, mode="r|") as tar:
+            meta = None
+            for info in tar:
+                if info.name == "index.json":
+                    meta = json.load(tar.extractfile(info))
+                    continue
+                if meta is None:
+                    raise Fail("tree tar: index.json is not its first member")
+                where, _, path = info.name.partition("/")
+                if info.issym():
+                    target, rewritten = normalize(info.linkname.encode(), rewrites)
+                    self.entries[path] = ("l", None, target.decode(), rewritten)
+                    continue
+                data, rewritten = normalize(tar.extractfile(info).read(), rewrites)
+                digest = hashlib.sha256(data).hexdigest()
+                if where == "home":
+                    self.entries[path] = ("f", info.mode, digest, rewritten)
+                elif where == "mutable":
+                    kind = "m" if meta["mutable"][path] == "merge-json" else "w"
+                    self.entries[path] = (kind, info.mode, digest, rewritten)
+                elif where == "root":
+                    self.root["/" + path] = (meta["root"]["/" + path], info.mode, digest)
+                else:
+                    raise Fail(f"tree tar: unknown member {info.name}")
+        self.root_steps = set(meta["rootSteps"])
+
+    def manifest(self):
+        lines = [f"{kind} {'-' if mode is None else f'{mode:04o}'} {value} {path}"
+                 for path, (kind, mode, value, _) in self.entries.items()]
+        lines += [f"r {mode:04o} {digest} {path}" for path, (_, mode, digest) in self.root.items()]
+        return sorted(lines, key=lambda line: line.split(" ", 3)[3])
+
+
+class Golden:
+    def __init__(self, manifest_path, scripts_path):
+        self.files, self.dirs, self.scripts = {}, {}, []
+        with open(manifest_path) as f:
+            for line in f.read().splitlines():
+                kind, mode, value, path = line.split(" ", 3)
+                if kind == "d":
+                    self.dirs[path] = int(mode, 8)
+                else:
+                    self.files[path] = (kind, None if mode == "-" else int(mode, 8), value)
+        with open(scripts_path) as f:
+            for line in f.read().splitlines():
+                _, digest, name = line.split(" ", 2)
+                if digest != "empty":
+                    self.scripts.append(os.path.basename(name).removesuffix(".sh"))
+
+
+def compare(plan, golden, home):
+    """Returns [(group, kind, name, detail)]."""
+    enabled = set(plan["enabled"])
+    sols = plan["solutions"]
+    drop = plan["drop"]
+    out = []
+
+    def owners(path):
+        return [s for s, v in sorted(sols.items()) if any(matches(p, path) for p in v["files"])]
+
+    def absent(kind, name, own):
+        if any(matches(d, name) for d in drop):
+            return ("dropped", kind, name, "on the drop list")
+        if own and not enabled & set(own):
+            return ("not-selected", kind, name, "owner " + ", ".join(own) + " is not on this machine")
+        return ("missing", kind, name, "owner " + ", ".join(own) if own else "no solution owns it")
+
+    def linked_file(target):
+        found = golden.files.get(target.removeprefix("/home/USER/")) if target.startswith("/home/USER/") else None
+        return found if found and found[0] == "f" else None
+
+    for path, (gkind, gmode, gvalue) in sorted(golden.files.items()):
+        if path not in home.entries:
+            out.append(absent("file", path, owners(path)))
+            continue
+        hkind, hmode, hvalue, rewritten = home.entries[path]
+        notes = ["identity rewritten"] if rewritten else []
+        if gkind == "l" and hkind == "l":
+            why = [] if gvalue == hvalue else [f"link target {hvalue}, golden {gvalue}"]
+        elif hkind == "l":
+            why = [f"a link to {hvalue}, golden a file"]
+        else:
+            if gkind == "l":
+                resolved = linked_file(gvalue)
+                if resolved is None:
+                    out.append(("different", "file", path, f"a file, golden a link to {gvalue}"))
+                    continue
+                notes.append(f"golden links to {gvalue}")
+                _, gmode, gvalue = resolved
+            why = [] if gvalue == hvalue else ["content (merge-json, a fresh machine's bytes)" if hkind == "m" else "content"]
+            if hkind == "f":
+                if (gmode ^ hmode) & stat.S_IXUSR:
+                    why.append(f"executable bit: {hmode:04o}, golden {gmode:04o}")
+                elif not why and not gmode & 0o077:
+                    out.append(("relaxed", "file", path, f"golden {gmode:04o}, now a world-readable store file"))
+            elif gmode != hmode:
+                why.append(f"mode {hmode:04o}, golden {gmode:04o}")
+            if not why and hkind in "wm":
+                notes.append("written at activation (" + ("merge-json" if hkind == "m" else "dotfiles.mutable") + ")")
+        out.append(("different", "file", path, "; ".join(why + notes)) if why else ("same", "file", path, "; ".join(notes)))
+
+    def owned_tree(path):
+        parts = path.split("/")
+        for i in range(len(parts) - 1, 0, -1):
+            top = "/".join(parts[:i])
+            if owners(top) and not any(g.startswith(top + "/") for g in golden.files):
+                return top
+        return None
+
+    trees = {}
+    for path in sorted(set(home.entries) - set(golden.files)):
+        own = [reason for pattern, reason in HM_OWN.items() if matches(pattern, path)]
+        top = None if own else owned_tree(path)
+        if top:
+            trees[top] = trees.get(top, 0) + 1
+            continue
+        out.append(("hm-own", "file", path, own[0]) if own else ("extra", "file", path, ", ".join(owners(path))))
+    for top, count in sorted(trees.items()):
+        out.append(("moved", "tree", top, f"{count} files of a package tree that {', '.join(owners(top))} links; the golden has nothing there"))
+
+    for path, mode in sorted(golden.dirs.items()):
+        if not mode & 0o077 and any(p.startswith(path + "/") for p in home.entries):
+            out.append(("relaxed", "dir", path, f"golden {mode:04o}, home-manager creates it with the default mode"))
+
+    for path, (owner, mode, _) in sorted(home.root.items()):
+        out.append(("moved", "root", path, f"{mode:04o} from the root step of {owner}"))
+
+    for script in sorted(golden.scripts):
+        parts = [(s, p) for s, v in sorted(sols.items()) for p in v["scripts"] if p["id"].split(":")[0] == script]
+        dropped = sorted(d for d in drop if ":" in d and d.split(":")[0] == script)
+        out += [("dropped", "script", name, "on the drop list") for name in dropped]
+        if not parts:
+            if not dropped:
+                out.append(absent("script", script, []))
+            continue
+        for owner, part in parts:
+            name = part["id"]
+            if owner not in enabled:
+                out.append(("not-selected", "script", name, f"owner {owner} is not on this machine"))
+            elif part["root"]:
+                out.append(("moved", "script", name, f"root step of {owner}") if owner in home.root_steps
+                           else ("missing", "script", name, f"owner {owner} has no root step"))
+            else:
+                slots = set(sols[owner]["implemented"]) & {"home", "linux.home"}
+                out.append(("moved", "script", name, f"{owner} has a home part (not proof the part does it)") if slots
+                           else ("missing", "script", name, f"owner {owner} has no home part"))
+    return out
+
+
+def restrict(findings, plan, ids, golden, home):
+    sols, enabled = plan["solutions"], set(plan["enabled"])
+    for sid in ids:
+        if sid not in sols:
+            raise Fail(f"--solution {sid}: no such solution")
+        if sid not in enabled:
+            raise Fail(f"--solution {sid}: not enabled on {plan['machine']}")
+        files = sols[sid]["files"]
+        scripts = [p["id"] for p in sols[sid]["scripts"]]
+        if not any(matches(p, path) for p in files for path in golden.files) and \
+                not any(s.split(":")[0] in golden.scripts for s in scripts):
+            raise Fail(f"--solution {sid}: owns nothing in this golden, so there is nothing to compare")
+    pats = [p for sid in ids for p in sols[sid]["files"]]
+    names = {p["id"] for sid in ids for p in sols[sid]["scripts"]}
+    keep = []
+    for f in findings:
+        _, kind, name, _ = f
+        if kind == "script":
+            ok = name in names
+        elif kind == "root":
+            ok = home.root[name][0] in ids
+        else:
+            ok = any(matches(p, name) for p in pats)
+        if ok:
+            keep.append(f)
+    return keep
+
+
+def report(findings, title, summary):
+    lines = [title]
+    by = {g: [f for f in findings if f[0] == g] for g in GROUPS}
+    if summary:
+        width = max(len(g) for g in GROUPS)
+        for g in GROUPS:
+            kinds = {}
+            for f in by[g]:
+                kinds[f[1]] = kinds.get(f[1], 0) + 1
+            split = ", ".join(f"{k} {n}" for k, n in sorted(kinds.items()))
+            lines.append(f"  {g:<{width}}  {len(by[g]):>4}" + (f"  ({split})" if split else ""))
+        return lines
+    for g in GROUPS:
+        if g == "same":
+            continue
+        if by[g]:
+            lines.append(f"{g} ({len(by[g])})")
+        for _, kind, name, detail in by[g]:
+            lines.append(f"  {kind:<6} {name}" + (f"  {detail}" if detail else ""))
+    lines.append(f"same ({len(by['same'])})")
+    lines += [f"  {kind:<6} {name}  {detail}" for _, kind, name, detail in by["same"] if detail]
+    return lines
+
+
+def counted(findings):
+    return sum(1 for f in findings if f[0] in COUNTED)
+
+
+class Nix:
+    def __init__(self, nix, store, private):
+        self.nix, self.store, self.private = nix, store, private
+        self.flake = FLAKE
+        self.override = ["--override-input", "private", f"path:{os.path.abspath(private)}"] if private else []
+
+    def run(self, *args):
+        cmd = [self.nix, "--extra-experimental-features", "nix-command flakes", *args]
+        try:
+            done = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        except FileNotFoundError:
+            raise Fail(f"no nix at {self.nix}; set --nix or PARITY_NIX")
+        if done.returncode != 0:
+            raise Fail(f"{' '.join(args[:3])} failed:\n{done.stderr.decode(errors='replace')}")
+        return done.stdout
+
+    def plan(self, machine):
+        apply = f"""lib: let
+          m = lib.machines.{json.dumps(machine)} or (throw "no machine {machine}; machines: ${{toString (builtins.attrNames lib.machines)}}");
+          walk = n: if n.kind == "solution" then [ n ] else builtins.concatMap walk n.children;
+        in {{
+          machine = {json.dumps(machine)};
+          inherit (m) traits system enabled;
+          drop = map (d: d.item) lib.tree.drop;
+          solutions = builtins.listToAttrs (map
+            (s: {{ name = s.id; value = {{ inherit (s) files scripts implemented; }}; }})
+            (builtins.concatMap walk lib.tree.groups));
+        }}"""
+        return json.loads(self.run("eval", "--json", f"{self.flake}#lib", "--apply", apply, *self.override))
+
+    def identity(self):
+        path = os.path.join(self.private or os.path.join(self.flake, "private-stub"), "identity.nix")
+        return json.loads(self.run("eval", "--json", "--file", path, "--apply",
+                                   "i: { inherit (i) name emails; work = i.work or { }; }"))
+
+    def tree(self, machine):
+        remote = ["--eval-store", "auto", "--store", self.store] if self.store else []
+        out = self.run("build", "--no-link", "--print-out-paths",
+                       f"{self.flake}#lib.machines.{machine}.manifest.tree", *self.override, *remote)
+        return out.decode().strip()
+
+    def cat(self, path):
+        cmd = [self.nix, "--extra-experimental-features", "nix-command flakes", "store", "cat", path]
+        return subprocess.Popen(cmd + (["--store", self.store] if self.store else []), stdout=subprocess.PIPE)
+
+
+def rewrites_for(identity, profile):
+    """Pairs that turn the private input's identity into the golden's placeholders."""
+    with open(profile, "rb") as f:
+        data = tomllib.load(f)["data"]
+    gid, work = data["identity"], data.get("work", {})
+    pairs = [(identity["name"], gid["name"]),
+             (identity["emails"].get("personal", ""), gid["email_personal"]),
+             (identity["emails"].get("work", ""), gid["email_work"])]
+    if work.get("claude_md"):
+        pairs.append((identity["work"].get("claudeMd", ""), work["claude_md"]))
+    if work.get("overlay_repo"):
+        pairs.append((identity["work"].get("overlayUrl", ""), work["overlay_repo"]))
+    pairs = [(a.encode(), b.encode()) for a, b in pairs if a and a != b]
+    return sorted(pairs, key=lambda p: -len(p[0]))
+
+
+def run_compare(args):
+    nix = Nix(args.nix, args.store, args.private)
+    plan = nix.plan(args.machine)
+    if not plan["system"].endswith("-linux"):
+        raise Fail(f"{args.machine} is {plan['system']}; the goldens are Linux homes")
+    name = args.golden or golden_for(plan["traits"])
+    if name is None:
+        raise Fail(f"no golden for traits {json.dumps(plan['traits'], sort_keys=True)}; name one: {', '.join(sorted(g for g, _ in GOLDENS))}, generic")
+    manifest = os.path.join(PARITY, "golden", f"{name}.manifest")
+    if not os.path.exists(manifest):
+        raise Fail(f"no golden {manifest}")
+    golden = Golden(manifest, os.path.join(PARITY, "golden", f"{name}.scripts"))
+    rewrites = rewrites_for(nix.identity(), os.path.join(PARITY, "profiles", f"{name}.toml"))
+    proc = nix.cat(nix.tree(args.machine))
+    home = Home(proc.stdout, rewrites)
+    if proc.wait() != 0:
+        raise Fail("nix store cat failed")
+    findings = compare(plan, golden, home)
+    if args.solution:
+        findings = restrict(findings, plan, args.solution, golden, home)
+    scope = f", solutions {' '.join(args.solution)}" if args.solution else ""
+    title = f"{args.machine} ({plan['system']}) against golden {name}{scope}"
+    print("\n".join(report(findings, title, args.summary)))
+    return 1 if counted(findings) else 0
+
+
+def self_test():
+    with open(os.path.join(FIXTURE, "plan.json")) as f:
+        plan = json.load(f)
+    buf = io.BytesIO()
+    pack(os.path.join(FIXTURE, "home-files"), os.path.join(FIXTURE, "index.json"), buf)
+    buf.seek(0)
+    home = Home(buf, rewrites_for(
+        {"name": "Alex Example", "emails": {"personal": "alex@example.invalid"}, "work": {}},
+        os.path.join(FIXTURE, "profile.toml")))
+    golden = Golden(os.path.join(FIXTURE, "golden.manifest"), os.path.join(FIXTURE, "golden.scripts"))
+    findings = compare(plan, golden, home)
+    got = report(findings, "fixture", False)
+    got += report(findings, "fixture --summary", True)
+    got += report(restrict(findings, plan, ["shell"], golden, home), "fixture --solution shell", False)
+    for sid in ("no-such", "off", "empty"):
+        try:
+            restrict(findings, plan, [sid], golden, home)
+            got.append(f"--solution {sid}: accepted")
+        except Fail as e:
+            got.append(str(e))
+    buf.seek(0)
+    got += ["manifest"] + ["  " + line for line in Home(buf).manifest()]
+    got += ["goldens"] + [f"  {json.dumps(traits, sort_keys=True)}: {golden_for(traits)}" for traits in plan["goldens"]]
+    with open(os.path.join(FIXTURE, "expected.txt")) as f:
+        want = f.read().splitlines()
+    if got == want:
+        print(f"self-test: ok ({len(want)} lines)")
+        return 0
+    import difflib
+    print("\n".join(difflib.unified_diff(want, got, "expected.txt", "got", lineterm="")))
+    print("self-test: FAILED")
+    return 1
+
+
+def main():
+    p = argparse.ArgumentParser(usage=__doc__.split("\n\n")[1], add_help=False)
+    p.add_argument("machine", nargs="?")
+    p.add_argument("golden", nargs="?")
+    p.add_argument("--summary", action="store_true")
+    p.add_argument("--solution", action="append", default=[])
+    p.add_argument("--private")
+    p.add_argument("--store", default=os.environ.get("PARITY_STORE") or None)
+    p.add_argument("--nix", default=os.environ.get("PARITY_NIX", "nix"))
+    p.add_argument("--list", action="store_true")
+    p.add_argument("--self-test", action="store_true")
+    p.add_argument("--pack", nargs=2, metavar=("HOME_FILES", "INDEX"))
+    p.add_argument("--manifest", metavar="TAR")
+    p.add_argument("-h", "--help", action="store_true")
+    args = p.parse_args()
+    if args.help:
+        print(__doc__)
+        return 0
+    if args.pack:
+        pack(*args.pack, sys.stdout.buffer)
+        return 0
+    if args.manifest:
+        with open(args.manifest, "rb") as f:
+            print("\n".join(Home(f).manifest()))
+        return 0
+    if args.self_test:
+        return self_test()
+    if args.list:
+        for golden, facts in GOLDENS:
+            print(f"{golden:<20} {json.dumps(facts, sort_keys=True)}")
+        return 0
+    if not args.machine:
+        print(__doc__, file=sys.stderr)
+        return 2
+    return run_compare(args)
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except Fail as e:
+        print(f"parity-compare: {e}", file=sys.stderr)
+        sys.exit(2)

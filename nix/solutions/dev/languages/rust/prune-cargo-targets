@@ -1,0 +1,32 @@
+#!/bin/bash
+set -euo pipefail
+
+ROOTS=("${CARGO_PRUNE_ROOTS:-$HOME/repos}")
+DAYS="${CARGO_PRUNE_DAYS:-14}"
+DRY_RUN=0
+[ "${1:-}" = "--dry-run" ] && DRY_RUN=1
+
+freed=0
+kept=0
+
+while IFS= read -r -d '' target; do
+    repo=$(dirname "$target")
+    [ -f "$repo/Cargo.toml" ] || continue
+
+    if [ -n "$(find "$target" -newermt "-${DAYS} days" -print -quit 2>/dev/null)" ]; then
+        kept=$((kept + 1))
+        continue
+    fi
+
+    size=$(du -sh "$target" 2>/dev/null | cut -f1)
+    if [ "$DRY_RUN" = 1 ]; then
+        echo "would remove $target ($size)"
+    else
+        echo "removing $target ($size)"
+        rm -rf "$target"
+    fi
+    freed=$((freed + 1))
+done < <(find "${ROOTS[@]}" -mindepth 2 -maxdepth 4 -type d -name target -prune -print0 2>/dev/null)
+
+echo "prune-cargo-targets: ${freed} removed, ${kept} still in use (older than ${DAYS} days is stale)"
+df -h "$HOME" | tail -1

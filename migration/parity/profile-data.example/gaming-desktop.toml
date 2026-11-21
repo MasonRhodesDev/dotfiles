@@ -1,0 +1,2 @@
+# Copy this directory, put each machine's hostname here, and pass it to render.sh.
+hostname = "example-gaming-desktop"

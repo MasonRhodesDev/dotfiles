@@ -1,0 +1,50 @@
+[data]
+is_work = true
+headless = false
+wallpaper = "/home/USER/Pictures/forrest.png"
+
+[data.profile]
+type = "work"
+
+[data.system]
+hostname = "@hostname@"
+os = "linux"
+os_release_id = "fedora"
+os_release_version = "44"
+arch = "amd64"
+last_updated = "2000-01-01T00:00:00Z"
+
+[data.tracking]
+manifest_file = ".system_manifest.json"
+
+[data.identity]
+name = "Golden Placeholder"
+email_work = "work@example.invalid"
+email_personal = "personal@example.invalid"
+email = "work@example.invalid"
+
+[data.git]
+overrides_json = ""
+
+[data.work]
+claude_md = "Golden placeholder work CLAUDE.md block."
+overlay_repo = "git@example.invalid:placeholder/work-overlay.git"
+
+[[data.git_identity_overrides]]
+condition = "gitdir:~/repos/"
+identity = "personal"
+
+[data.chezmoi]
+hostname = "@hostname@"
+os = "linux"
+arch = "amd64"
+homeDir = "/home/USER"
+username = "USER"
+sourceDir = "/home/USER/.local/share/chezmoi"
+
+[data.chezmoi.osRelease]
+id = "fedora"
+versionID = "44"
+
+[data.parity]
+host_paths = ["/usr/lib/systemd/user/gnome-keyring-daemon.service"]

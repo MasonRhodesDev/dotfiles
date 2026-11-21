@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -uo pipefail
+PATH=@jq@/bin:$PATH
+
+cmd=$(jq -r '.tool_input.command // empty' 2>/dev/null) || exit 0
+[ -n "$cmd" ] || exit 0
+
+re='(CARGO_TARGET_DIR|CARGO_BUILD_TARGET_DIR)=|--target-dir[= ]+'
+home='(~|\$HOME|\$\{HOME\}|/home/|/tmp(/|$|[^A-Za-z0-9._-])|[A-Za-z0-9._])'
+grep -qE "(${re})[\"']?${home}" <<<"$cmd" || exit 0
+
+jq -n --arg root '@ephRoot@' '{hookSpecificOutput: {
+  hookEventName: "PreToolUse",
+  permissionDecision: "deny",
+  permissionDecisionReason: "Build output must not go to the home disk or /tmp (tmpfs). Do not set CARGO_TARGET_DIR or --target-dir: on this machine, cargo is a shim that already gives this workspace its own target dir under \($root)/. Rerun without it; find the dir with `cargo metadata --format-version 1 --no-deps | jq -r .target_directory`."
+}}'

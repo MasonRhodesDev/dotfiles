@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+log=${STEAM_CONTENT_LOG:-$HOME/.local/share/Steam/logs/content_log.txt}
+interval=${HOLD_INTERVAL:-60}
+
+busy() {
+  if gamemoded -s 2>/dev/null | grep -q 'is active'; then
+    echo "gamemode is active"
+    return 0
+  fi
+  if [ -n "$(find "$log" -newermt '-150 seconds' 2>/dev/null)" ] \
+    && tail -n 400 "$log" | grep 'Current download rate:' | tail -n 1 | grep -qv 'rate: 0\.000 Mbps'; then
+    echo "Steam is downloading"
+    return 0
+  fi
+  return 1
+}
+
+while true; do
+  if why=$(busy); then
+    systemd-inhibit --what=sleep --mode=block --who=hold-suspend --why="$why" sleep "$interval"
+  else
+    sleep "$interval"
+  fi
+done

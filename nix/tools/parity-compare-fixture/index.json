@@ -1,0 +1,11 @@
+{
+  "mutable": [
+    { "path": ".gitconfig", "strategy": "seed", "mode": "0644", "source": "store/gitconfig-seed" },
+    { "path": ".claude/settings.json", "strategy": "merge-json", "mode": "0600", "source": "store/settings.json" },
+    { "path": ".config/hypr/local.lua", "strategy": "overwrite", "mode": "0644", "source": "store/local.lua" }
+  ],
+  "root": [
+    { "path": "/etc/fixture/rule.conf", "owner": "fw", "mode": "0644", "source": "store/rule.conf" }
+  ],
+  "rootSteps": [ "fw" ]
+}

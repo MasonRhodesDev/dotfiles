@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cfg_dir="${XDG_CONFIG_HOME:-$HOME/.config}/qbt-magnet"
+# shellcheck source=/dev/null
+[ -r "$cfg_dir/config" ] && . "$cfg_dir/config"
+QBT_URL="${QBT_URL:-}"
+QBT_USER="${QBT_USER:-admin}"
+QBT_PASSWORD_FILE="${QBT_PASSWORD_FILE:-$cfg_dir/password}"
+QBT_CATEGORY="${QBT_CATEGORY:-}"
+
+say() { notify-send -a qbt-magnet "qBittorrent" "$1" 2>/dev/null || echo "$1" >&2; }
+die() { say "$1"; exit 1; }
+
+[ -n "$QBT_URL" ] || die "No QBT_URL in $cfg_dir/config"
+[ -s "$QBT_PASSWORD_FILE" ] || die "No password in $QBT_PASSWORD_FILE"
+jar="$(mktemp)"
+trap 'rm -f "$jar" "$jar.body"' EXIT
+
+api() {
+  local path="$1"; shift
+  curl -sS -m 20 -b "$jar" -c "$jar" -H "Referer: $QBT_URL" \
+    -o "$jar.body" -w '%{http_code}' "$@" "$QBT_URL/api/v2/$path" || echo 000
+}
+ok() { [ "$1" = 204 ] || { [ "$1" = 200 ] && ! grep -q '^Fails' "$jar.body"; }; }
+
+code="$(api auth/login --data-urlencode "username=$QBT_USER" \
+  --data-urlencode password@<(tr -d '\n' <"$QBT_PASSWORD_FILE"))"
+[ "$code" != 000 ] || die "Cannot reach $QBT_URL"
+ok "$code" || die "Login to $QBT_URL was rejected (HTTP $code)"
+
+[ "${1:-}" = "--check" ] && { say "Login to $QBT_URL works"; exit 0; }
+
+added=0
+for link in "$@"; do
+  case "$link" in magnet:\?*) ;; *) continue ;; esac
+  code="$(api torrents/add --data-urlencode "urls=$link" \
+    ${QBT_CATEGORY:+--data-urlencode "category=$QBT_CATEGORY"})"
+  if ok "$code"; then added=$((added + 1)); fi
+done
+[ "$added" -gt 0 ] || die "Nothing was added"
+say "Added $added torrent(s)"

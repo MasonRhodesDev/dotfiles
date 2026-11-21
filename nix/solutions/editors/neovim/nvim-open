@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+FILE_ARG="${1:-}"
+if [[ -z "$FILE_ARG" ]]; then
+    exec nvim
+    exit 0
+fi
+
+FILE_PATH="${FILE_ARG%%:*}"
+POSITION=""
+
+if [[ "$FILE_ARG" =~ ^([^:]+):([0-9]+)(:([0-9]+))?$ ]]; then
+    FILE_PATH="${BASH_REMATCH[1]}"
+    LINE="${BASH_REMATCH[2]}"
+    COLUMN="${BASH_REMATCH[4]:-1}"
+    POSITION="+call cursor($LINE, $COLUMN)"
+fi
+
+if [[ ! "$FILE_PATH" =~ ^/ ]]; then
+    FILE_PATH="$(pwd)/$FILE_PATH"
+fi
+
+find_project_root() {
+    local dir="$1"
+    while [[ "$dir" != "/" ]]; do
+        if [[ -d "$dir/.git" ]] || \
+           [[ -f "$dir/package.json" ]] || \
+           [[ -f "$dir/Cargo.toml" ]] || \
+           [[ -f "$dir/go.mod" ]] || \
+           [[ -f "$dir/pyproject.toml" ]]; then
+            echo "$dir"
+            return 0
+        fi
+        dir="$(dirname "$dir")"
+    done
+    echo "$HOME"
+}
+
+PROJECT_ROOT=$(find_project_root "$(dirname "$FILE_PATH")")
+PROJECT_NAME=$(basename "$PROJECT_ROOT")
+
+SOCKET_DIR="$HOME/.cache/nvim"
+mkdir -p "$SOCKET_DIR"
+
+SOCKET_PATH="$SOCKET_DIR/${PROJECT_NAME}.sock"
+
+if [[ -S "$SOCKET_PATH" ]]; then
+    if nvim --server "$SOCKET_PATH" --remote-send '<Esc>' 2>/dev/null; then
+        if [[ -n "$POSITION" ]]; then
+            exec nvim --server "$SOCKET_PATH" --remote-send "<Esc>:e $FILE_PATH<CR>$POSITION<CR>"
+        else
+            exec nvim --server "$SOCKET_PATH" --remote "$FILE_PATH"
+        fi
+        exit 0
+    else
+        rm -f "$SOCKET_PATH"
+    fi
+fi
+
+if [[ -n "$POSITION" ]]; then
+    exec nvim --listen "$SOCKET_PATH" "$POSITION" "$FILE_PATH"
+else
+    exec nvim --listen "$SOCKET_PATH" "$FILE_PATH"
+fi

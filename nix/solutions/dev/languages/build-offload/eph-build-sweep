@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+set -uo pipefail
+
+EPH_ROOT=${EPH_BUILD_ROOT:-@ephRoot@}
+TTL_MIN=${EPH_BUILD_TTL_MIN:-180}
+CAP_KB=$((${EPH_BUILD_CAP_MB:-25600} * 1024))
+DRY_RUN=0
+[ "${1:-}" = "--dry-run" ] && DRY_RUN=1
+
+[ -d "$EPH_ROOT" ] || exit 0
+
+remove() {
+    if [ "$DRY_RUN" = 1 ]; then
+        echo "would remove $1 ($2)"
+    else
+        echo "removing $1 ($2)"
+        rm -rf -- "$1"
+    fi
+    removed=$((removed + 1))
+}
+
+now=$(date +%s)
+total_kb=0
+removed=0
+busy=0
+idle=()
+
+for d in "$EPH_ROOT"/*/; do
+    d=${d%/}
+    [ -d "$d" ] || continue
+    exec 9>>"$d/.eph-lock" || continue
+    kb=$(du -sk "$d" 2>/dev/null | cut -f1)
+    if ! flock -n -x 9; then
+        busy=$((busy + 1))
+        total_kb=$((total_kb + kb))
+        exec 9>&-
+        continue
+    fi
+    last=$(stat -c %Y "$d/.eph-stamp" 2>/dev/null || stat -c %Y "$d")
+    age_min=$(((now - last) / 60))
+    if [ "$age_min" -ge "$TTL_MIN" ]; then
+        remove "$d" "idle ${age_min}m"
+    else
+        total_kb=$((total_kb + kb))
+        idle+=("$last $kb $d")
+    fi
+    exec 9>&-
+done
+
+if [ "$total_kb" -gt "$CAP_KB" ] && [ "${#idle[@]}" -gt 0 ]; then
+    while read -r _ kb d; do
+        [ "$total_kb" -gt "$CAP_KB" ] || break
+        exec 9>>"$d/.eph-lock" || continue
+        if flock -n -x 9; then
+            remove "$d" "over the $((CAP_KB / 1024))M cap"
+            total_kb=$((total_kb - kb))
+        fi
+        exec 9>&-
+    done < <(printf '%s\n' "${idle[@]}" | sort -n)
+fi
+
+echo "eph-build-sweep: ${removed} removed, ${busy} building, $((total_kb / 1024))M kept in $EPH_ROOT"

@@ -1,0 +1,105 @@
+#!/usr/bin/env bash
+set -uo pipefail
+PATH=@jq@/bin:$PATH
+
+delay=20
+max=15
+min_free_mb=2560
+wait_s=180
+dry=0
+
+usage() {
+    cat <<USAGE
+Usage: herdr-resume-agents [--dry-run] [--max N] [--delay S]
+                           [--min-free-mb M] [--wait S]
+
+  --dry-run       print what would be started, start nothing
+  --max N         cap the number of agents started (default $max)
+  --delay S       seconds between starts (default $delay)
+  --min-free-mb M stop when MemAvailable drops below this (default $min_free_mb)
+  --wait S        seconds to wait for herdr panes to appear (default $wait_s)
+USAGE
+}
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --dry-run) dry=1 ;;
+        --max) max=${2:?}; shift ;;
+        --delay) delay=${2:?}; shift ;;
+        --min-free-mb) min_free_mb=${2:?}; shift ;;
+        --wait) wait_s=${2:?}; shift ;;
+        -h|--help) usage; exit 0 ;;
+        *) echo "unknown argument: $1" >&2; usage >&2; exit 2 ;;
+    esac
+    shift
+done
+
+state="${XDG_STATE_HOME:-$HOME/.local/state}/herdr-resume"
+map="$state/panes.json"
+
+[ -s "$map" ] || { echo "no map at $map; nothing to resume"; exit 0; }
+command -v jq >/dev/null 2>&1 || { echo "jq is required" >&2; exit 1; }
+command -v herdr >/dev/null 2>&1 || { echo "herdr is not on PATH" >&2; exit 1; }
+
+mem_free_mb() { awk '/^MemAvailable:/ {print int($2/1024)}' /proc/meminfo; }
+
+deadline=$((SECONDS + wait_s))
+while :; do
+    if panes=$(herdr pane list 2>/dev/null) \
+       && [ "$(jq -r '.result.panes | length' <<<"$panes" 2>/dev/null || echo 0)" -gt 0 ]; then
+        break
+    fi
+    [ $SECONDS -lt $deadline ] || { echo "herdr has no panes after ${wait_s}s; giving up" >&2; exit 1; }
+    sleep 3
+done
+
+live=$(jq -r '.result.panes[].pane_id' <<<"$panes" 2>/dev/null)
+busy=$(herdr agent list 2>/dev/null | jq -r '.result.agents[].pane_id' 2>/dev/null || true)
+
+started=0 skipped=0
+while IFS=$'\t' read -r pane sid cwd; do
+    [ -n "$pane" ] || continue
+    if ! grep -qxF "$pane" <<<"$live"; then
+        echo "skip $pane: pane no longer exists"; skipped=$((skipped+1)); continue
+    fi
+    if grep -qxF "$pane" <<<"$busy"; then
+        echo "skip $pane: already has an agent"; skipped=$((skipped+1)); continue
+    fi
+    if [ "$started" -ge "$max" ]; then
+        echo "stop: reached --max $max"; break
+    fi
+    free=$(mem_free_mb)
+    if [ "${free:-0}" -lt "$min_free_mb" ]; then
+        echo "stop: MemAvailable ${free}MB is below --min-free-mb $min_free_mb"
+        break
+    fi
+    if [ "$dry" = 1 ]; then
+        echo "would start $pane -> $sid  ($cwd)"
+        started=$((started+1))
+        continue
+    fi
+    name=$(printf 'resume-%s' "$pane" | tr ':' '-' | tr '[:upper:]' '[:lower:]')
+    name=$(printf '%s' "$name" | tr -c 'a-z0-9_-' '-' | cut -c1-32)
+    out=""; ok=0
+    for attempt in 1 2 3; do
+        if out=$(herdr agent start "$name" --kind claude --pane "$pane" \
+                   -- --resume "$sid" 2>&1); then
+            ok=1
+            break
+        fi
+        grep -q "not_ready\|busy\|shell" <<<"$out" || break
+        sleep $((attempt * 15))
+    done
+    if [ "$ok" = 1 ]; then
+        echo "started $pane -> $sid  (free ${free}MB)"
+        started=$((started+1))
+        sleep "$delay"
+    else
+        echo "FAILED  $pane -> $sid: $(tr -d '\n' <<<"$out" | tail -c 180)"
+        skipped=$((skipped+1))
+    fi
+done < <(jq -r 'to_entries
+               | sort_by(.value.updated) | reverse
+               | .[] | [.key, .value.session_id, (.value.cwd // "")] | @tsv' "$map")
+
+echo "resumed $started, skipped $skipped"

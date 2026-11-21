@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+shim=eph-build-shim
+set -uo pipefail
+
+EPH_ROOT=${EPH_BUILD_ROOT:-@ephRoot@}
+SHARED_DEFAULT=@sharedTarget@
+
+self=$(readlink -f "${BASH_SOURCE[0]}")
+real=
+IFS=: read -ra path_dirs <<<"$PATH"
+for d in "${path_dirs[@]}"; do
+    c="$d/cargo"
+    [ -f "$c" ] && [ -x "$c" ] || continue
+    [ "$(readlink -f "$c")" = "$self" ] && continue
+    head -c 256 "$c" 2>/dev/null | grep -qa "$shim" && continue
+    real=$c
+    break
+done
+if [ -z "$real" ]; then
+    echo "cargo ($shim): no real cargo on PATH" >&2
+    exit 127
+fi
+
+[ -d "$(dirname "$EPH_ROOT")" ] || exec "$real" "$@"
+
+manifest=()
+for ((i = 1; i <= $#; i++)); do
+    case ${!i} in
+    --target-dir | --target-dir=*) exec "$real" "$@" ;;
+    --manifest-path)
+        j=$((i + 1))
+        manifest=(--manifest-path "${!j}")
+        ;;
+    --manifest-path=*) manifest=("${!i}") ;;
+    --) break ;;
+    esac
+done
+
+case ${CARGO_TARGET_DIR:-} in
+"" | "$SHARED_DEFAULT" | "$SHARED_DEFAULT"/) ;;
+"$HOME" | "$HOME"/* | /home/* | /tmp | /tmp/* | [!/]*)
+    bad_dir=$CARGO_TARGET_DIR
+    ;;
+*) exec "$real" "$@" ;;
+esac
+
+root=$("$real" locate-project --workspace --message-format plain "${manifest[@]}" 2>/dev/null) ||
+    exec "$real" "$@"
+ws=$(dirname "$root")
+dir="$EPH_ROOT/$(basename "$ws")-$(printf '%s' "$ws" | sha256sum | cut -c1-12)"
+
+locked=
+for _ in 1 2 3; do
+    mkdir -p "$dir" || break
+    exec 9>>"$dir/.eph-lock" || break
+    flock -s 9
+    if [ "/proc/$$/fd/9" -ef "$dir/.eph-lock" ]; then
+        locked=1
+        break
+    fi
+    exec 9>&-
+done
+if [ -z "$locked" ]; then
+    echo "cargo ($shim): could not set up $dir; using the default target dir" >&2
+    exec "$real" "$@"
+fi
+
+if [ -n "${bad_dir:-}" ]; then
+    echo "cargo ($shim): CARGO_TARGET_DIR=$bad_dir is on the home disk or tmpfs; building in $dir instead" >&2
+fi
+
+touch "$dir/.eph-stamp"
+export CARGO_TARGET_DIR="$dir"
+"$real" "$@"
+rc=$?
+touch "$dir/.eph-stamp"
+exit "$rc"

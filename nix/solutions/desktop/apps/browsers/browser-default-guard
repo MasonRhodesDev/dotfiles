@@ -1,0 +1,27 @@
+#!/bin/bash
+set -euo pipefail
+
+export PATH="/usr/bin:/bin:$PATH"
+
+want=
+if [ -f /usr/share/applications/chromium.desktop ]; then
+    want=chromium.desktop
+elif [ -f /usr/share/applications/chromium-browser.desktop ]; then
+    want=chromium-browser.desktop
+else
+    logger -t browser-default-guard "no Chromium desktop file found"
+    exit 1
+fi
+
+cur=$(xdg-mime query default x-scheme-handler/https 2>/dev/null || true)
+
+[ "$cur" = "$want" ] && exit 0
+
+logger -t browser-default-guard "https handler was '${cur:-unset}'; reasserting $want"
+
+xdg-mime default "$want" \
+    text/html \
+    x-scheme-handler/http \
+    x-scheme-handler/https \
+    x-scheme-handler/about \
+    x-scheme-handler/unknown
