@@ -14,6 +14,11 @@ useDefault = true
 
 [allowlist]
 description = "Known false positives"
+regexTarget = "match"
+regexes = [
+  '''fixtureClientSecret''',
+  '''pinnedSubkey = "[0-9A-F]{40}"''',
+]
 paths = [
   # Deleted local e2e test-VM images used a throwaway ssh test password;
   # only relevant for full-history scans.
