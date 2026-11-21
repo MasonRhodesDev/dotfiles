@@ -83,6 +83,7 @@ let
   withoutArchOnly = program { inherit net hypr; };
   onlyArchOnly = program { arch-only = archOnly; };
   borrowing = program { inherit gaming hypr; };
+  either = program { either.packages = { arch = [ "one|two" ]; fedora = [ "one|two" ]; }; };
   borrowingRetried = program { inherit gaming hypr; blocked.packages.arch = [ "broken-package" ]; };
   withLib32 = program { inherit net hypr lib32; };
   onlyLib32 = program { inherit lib32; };
@@ -1066,6 +1067,17 @@ pkgs.runCommand "check-root-apply" { } ''
   [ -e "$FAKE/pkgs/pacman-tailscale" ] || fail "packages stay when their step goes" ""
   again=$(${onlyArchOnly} 2>&1) || fail "the run after units were disabled exits 0" "$again"
   case $again in *"disabled"*) fail "a unit is disabled once" "$again" ;; esac
+
+  for family in fedora arch; do
+    manager=dnf; [ "$family" = fedora ] || manager=pacman
+    fresh ID=$family VERSION_ID=43
+    : > "$FAKE/pkgs/$manager-two"
+    other=$(${either} 2>&1) || fail "$family apply with the second alternative installed exits 0" "$other"
+    [ ! -e "$FAKE/pkgs/$manager-one" ] || fail "$family: an installed second alternative satisfies the package" "$other"
+    fresh ID=$family VERSION_ID=43
+    neither=$(${either} 2>&1) || fail "$family apply with no alternative installed exits 0" "$neither"
+    [ -e "$FAKE/pkgs/$manager-one" ] && [ ! -e "$FAKE/pkgs/$manager-two" ] || fail "$family: with no alternative installed, the first one installs" "$neither"
+  done
 
   upgrading=$(awk '{ for (i = 2; i <= NF; i++) if ($i ~ /^-[A-Za-z]*u/ || $i == "--sysupgrade" || ($1 == "dnf" && ($i ~ /^(upgrade|update|distro-sync|upgrade-minimal|update-minimal)$/))) { print; next } }' $FAKE/every-call)
   [ -s $FAKE/every-call ] && [ -z "$upgrading" ] || fail "no pacman or dnf call in any case asks for an upgrade" "$upgrading"

@@ -356,10 +356,24 @@ let
       : > "$state/units.next"
 
       unsatisfied() {
-        local name status=0
+        local name alt wanted status=0 plain=() alts=()
+        for name; do
+          case $name in
+            *'|'*)
+              IFS='|' read -ra alts <<< "$name"
+              for alt in "''${alts[@]}"; do
+                wanted=$(unsatisfied "$alt") || return 1
+                [ -n "$wanted" ] || continue 2
+              done
+              plain+=("''${alts[0]}")
+              ;;
+            *) plain+=("$name") ;;
+          esac
+        done
+        [ ''${#plain[@]} != 0 ] || return 0
         case $DISTRO in
-          arch) LC_ALL=C pacman -T "$@" || status=$? ;;
-          fedora) for name; do LC_ALL=C rpm -q --quiet --whatprovides "$name" || echo "$name"; done ;;
+          arch) LC_ALL=C pacman -T "''${plain[@]}" || status=$? ;;
+          fedora) for name in "''${plain[@]}"; do LC_ALL=C rpm -q --quiet --whatprovides "$name" || echo "$name"; done ;;
         esac
         [ "$status" = 0 ] || [ "$status" = 127 ] || { echo "the local package database could not say which packages are installed (exit $status)" >&2; return 1; }
       }

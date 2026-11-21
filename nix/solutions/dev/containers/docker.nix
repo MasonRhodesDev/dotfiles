@@ -8,7 +8,7 @@
     {
       packages = {
         arch = [ "docker" ];
-        fedora = [ "moby-engine" ];
+        fedora = [ "moby-engine|docker-ce" ];
       };
       units = [ "docker.socket" ];
       files."/etc/systemd/resolved.conf.d/docker.conf" = {

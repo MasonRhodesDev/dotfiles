@@ -3,6 +3,10 @@ set -euo pipefail
 
 die() { echo "dot: $*" >&2; exit 1; }
 
+features="extra-experimental-features = nix-command flakes"
+export NIX_CONFIG="$features${NIX_CONFIG:+
+$NIX_CONFIG}"
+
 flake=${DOTFILES_FLAKE:-$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)}
 [ -e "$flake/flake.nix" ] || die "no flake.nix in $flake. Set DOTFILES_FLAKE to the checkout's nix directory."
 
@@ -63,7 +67,7 @@ elif [ -z "$build_host" ] && [ -r "$current_home/dotfiles-build-host" ]; then
 fi
 
 on_build_host() {
-  ssh -n -- "$build_host" "PATH=\$PATH:\$HOME/.nix-profile/bin:/nix/var/nix/profiles/default/bin; $(printf '%q ' "$@")"
+  ssh -n -- "$build_host" "PATH=\$PATH:\$HOME/.nix-profile/bin:/nix/var/nix/profiles/default/bin; export NIX_CONFIG=$(printf '%q' "$features"); $(printf '%q ' "$@")"
 }
 
 build_store=
