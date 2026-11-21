@@ -16,7 +16,9 @@
 
       home.activation.workOverlay = lib.mkIf (overlay != null) (lib.hm.dag.entryAfter [ "linkGeneration" ] ''
         if [[ ! -v DRY_RUN ]]; then
-          ssh="${pkgs.openssh}/bin/ssh -o BatchMode=yes -o ConnectTimeout=10"
+          ssh=${pkgs.openssh}/bin/ssh
+          [ -x /usr/bin/ssh ] && ssh=/usr/bin/ssh
+          ssh="$ssh -o BatchMode=yes -o ConnectTimeout=10"
           git=${pkgs.git}/bin/git
           cache="${config.xdg.dataHome}/dotfiles-work"
           if [ -d "$cache/.git" ]; then
