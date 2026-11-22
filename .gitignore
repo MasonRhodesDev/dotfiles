@@ -1,3 +1,6 @@
 CURRENT_PLAN.md
 .plans/
 
+
+__pycache__/
+*.pyc
