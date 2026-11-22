@@ -7,6 +7,9 @@ After=graphical-session.target swaync.service
 ConditionPathExists=%h/.config/infisical/machine.env
 PartOf=graphical-session.target
 Requisite=graphical-session.target
+# a wrapper that keeps failing (no Infisical project here) stops after 5 tries
+StartLimitIntervalSec=600
+StartLimitBurst=5
 
 [Service]
 Type=simple

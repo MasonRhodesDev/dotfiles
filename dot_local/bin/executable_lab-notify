@@ -77,7 +77,7 @@ def nomad_entries(key):
         tok = open(os.path.expanduser(tok_file)).read().strip()
     if not (addr and path and tok):
         return []
-    tok = clean_token(tok, "the Nomad token")
+    tok = clean_token(tok, "NOMAD_TOKEN / LAB_NOTIFY_NOMAD_TOKEN_FILE")
     req = urllib.request.Request(addr + "/v1/var/" + urllib.parse.quote(path), headers={"X-Nomad-Token": tok})
     try:
         with urllib.request.urlopen(req, timeout=15) as r:
@@ -121,7 +121,10 @@ def call(token, method, path, body=None, query=None, timeout=60):
         with urllib.request.urlopen(req, timeout=timeout) as r:
             code, raw = r.status, r.read()
     except urllib.error.HTTPError as e:
-        code, raw = e.code, e.read()
+        try:
+            code, raw = e.code, e.read()
+        except http.client.HTTPException:
+            code, raw = e.code, b""
     except http.client.HTTPException as e:      # a truncated answer: like a network error
         raise urllib.error.URLError(type(e).__name__)
     try:
@@ -169,6 +172,8 @@ def wait_answer(token, mid, seconds):
             return 3
         if code is None or code >= 500:
             time.sleep(min(5, max(0.5, end - time.time())))
+        elif end - time.time() < 1:
+            time.sleep(max(0, end - time.time()))   # no wait parameter under 1 s: don't spin
 
 
 def cmd_send(a, ask=False):
@@ -191,8 +196,8 @@ def cmd_send(a, ask=False):
             body["reply"] = True
     token = sender_token()
     code, r = call_or_die(token, "POST", "/notify", body)
-    if code not in (200, 201):
-        die("send failed (%d): %s" % (code, r.get("error")))
+    if code not in (200, 201) or "id" not in r:
+        die("send failed (%d): %s" % (code, r.get("error") or "no id in the answer"))
     if not ask:
         print(r["id"])
         return 0
@@ -326,12 +331,15 @@ class Desktop:
                 time.sleep(2 ** attempt)
             print("lab-notify: answer to %s failed (%s): %s; showing it again" % (mid, code, r.get("error")), file=sys.stderr)
             with self.lock:
-                self.shown.pop(mid, None)
-            self.refresh.set()
+                if mid in self.shown:
+                    self.shown[mid]["msg"] = None    # keeps the popup id: shown again in place
+            self.reconcile(self.last)
         threading.Thread(target=go, daemon=True).start()
 
     KEEP_ENV = ("HOME", "PATH", "LANG", "LC_ALL", "DISPLAY", "WAYLAND_DISPLAY", "XDG_RUNTIME_DIR",
-                "XDG_CURRENT_DESKTOP", "XDG_SESSION_TYPE", "DBUS_SESSION_BUS_ADDRESS")
+                "XDG_CURRENT_DESKTOP", "XDG_SESSION_TYPE", "XDG_DATA_DIRS", "XDG_CONFIG_DIRS",
+                "DBUS_SESSION_BUS_ADDRESS", "XAUTHORITY", "HYPRLAND_INSTANCE_SIGNATURE", "GTK_THEME",
+                "QT_QPA_PLATFORMTHEME", "XCURSOR_THEME", "XCURSOR_SIZE")
 
     @classmethod
     def open(cls, link):
@@ -405,7 +413,28 @@ class Desktop:
             p.wait()
             time.sleep(2)
 
+    def current_owner(self):
+        """The notification daemon's bus name, starting it if D-Bus activates it."""
+        for _ in range(2):
+            out = subprocess.run(["gdbus", "call", "--session", "--dest", "org.freedesktop.DBus",
+                                  "--object-path", "/org/freedesktop/DBus", "--method",
+                                  "org.freedesktop.DBus.GetNameOwner", "org.freedesktop.Notifications"],
+                                 capture_output=True, text=True, timeout=10)
+            m = re.search(r"'([^']+)'", out.stdout)
+            if out.returncode == 0 and m:
+                return m.group(1)
+            try:
+                self.gdbus("GetServerInformation")      # activates the daemon
+            except (RuntimeError, subprocess.SubprocessError, OSError):
+                pass
+        return None
+
     def run(self):
+        owner = self.current_owner()
+        with self.lock:
+            if owner and owner != self.owner:
+                self.owner, self.shown = owner, {}      # ids from another daemon mean nothing
+                self.save()
         threading.Thread(target=self.signals, daemon=True).start()
         v = ""
         while True:
