@@ -65,5 +65,9 @@ jobs:
           curl -fsSL --retry 5 --retry-delay 3 --retry-all-errors -o gitleaks.tar.gz "$url"
           echo "${GITLEAKS_SHA256}  gitleaks.tar.gz" | sha256sum -c -
           tar xzf gitleaks.tar.gz gitleaks
-          ./gitleaks git . --no-banner --redact --config .gitleaks.toml
-          echo "✅ No secrets found in history (gitleaks ${GITLEAKS_VERSION})" >> "$GITHUB_STEP_SUMMARY"
+          # Scan what HEAD reaches: on a pull request that is the merge of the PR
+          # into main (the PR's commits plus all of main), on a push to main it is
+          # main. Other branches are not scanned, so their findings can't fail an
+          # unrelated PR. Without --log-opts gitleaks scans every ref (--all).
+          ./gitleaks git . --no-banner --redact --config .gitleaks.toml --log-opts="--full-history HEAD"
+          echo "✅ No secrets found in HEAD's history (gitleaks ${GITLEAKS_VERSION})" >> "$GITHUB_STEP_SUMMARY"
