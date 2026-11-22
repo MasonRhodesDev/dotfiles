@@ -16,14 +16,4 @@
       };
     };
   };
-
-  inventory = {
-    starts = {
-      darwin = [ "launchd: jankyborders" ];
-    };
-    files = [ ".config/borders/bordersrc" ];
-    packages = {
-      darwin = [ "jankyborders" ];
-    };
-  };
 }

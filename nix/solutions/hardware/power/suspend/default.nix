@@ -79,11 +79,4 @@ in
       touch $out
     '';
   };
-
-  inventory = {
-    starts = {
-      linux = [ "hold-suspend.service" ];
-    };
-    files = [ ".config/hypr-de/hypridle.conf" ".local/bin/hold-suspend" ".config/systemd/user/hold-suspend.service" "nix:power.sleep" "nix:power.restartAfterPowerFailure" ];
-  };
 }

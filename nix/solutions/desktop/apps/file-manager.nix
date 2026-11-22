@@ -7,10 +7,4 @@
     arch = [ "nautilus" ];
     fedora = [ "nautilus" ];
   };
-
-  inventory = {
-    packages = {
-      linux = [ "nautilus" ];
-    };
-  };
 }

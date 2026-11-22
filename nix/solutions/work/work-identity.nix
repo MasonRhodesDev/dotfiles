@@ -39,14 +39,4 @@
         fi
       '');
     };
-
-  inventory = {
-    files = [ "private:identity.email_work" ".claude/CLAUDE.md#work" ];
-    scripts = [
-      {
-        id = "35-sync-work-overlay";
-        root = false;
-      }
-    ];
-  };
 }

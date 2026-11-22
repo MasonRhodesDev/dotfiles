@@ -28,12 +28,4 @@
     xdg.configFile."environment.d/pnpm.conf".text =
       builtins.replaceStrings [ "@home@" ] [ config.home.homeDirectory ] (builtins.readFile ./pnpm.conf);
   };
-
-  inventory = {
-    files = [ ".bashrc.d/node.bashrc" ".npmrc" ".config/environment.d/pnpm.conf" ];
-    packages = {
-      linux = [ "fnm" ];
-      darwin = [ "fnm" ];
-    };
-  };
 }

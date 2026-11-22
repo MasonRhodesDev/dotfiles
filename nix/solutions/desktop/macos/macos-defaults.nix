@@ -49,12 +49,4 @@ in
       fi
     '';
   };
-
-  inventory = {
-    files = [
-      "nix:system.defaults#keyboard"
-      "nix:system.defaults#dock-spaces-animations"
-      "nix:symbolichotkeys"
-    ];
-  };
 }

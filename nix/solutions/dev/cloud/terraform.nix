@@ -15,11 +15,4 @@
       dotfiles.fragments."bash/completions" = lib.mkIf (lib.elem "bash" machine.enabled) "stub terraform 'complete -C terraform terraform'\n";
       home.packages = [ unfree.terraform unfree.packer ];
     };
-
-  inventory = {
-    packages = {
-      linux = [ "terraform" "packer" ];
-      darwin = [ "terraform" "packer" ];
-    };
-  };
 }

@@ -139,13 +139,4 @@ in
         touch $out
       '';
     };
-
-  inventory = {
-    scripts = [
-      {
-        id = "install-chromium-conf";
-        root = true;
-      }
-    ];
-  };
 }

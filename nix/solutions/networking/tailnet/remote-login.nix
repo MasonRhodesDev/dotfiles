@@ -14,11 +14,4 @@
         KbdInteractiveAuthentication no
       '';
     };
-
-  inventory = {
-    files = [ "nix:services.openssh" "nix:users.users.openssh.authorizedKeys" ];
-    starts = {
-      darwin = [ "com.openssh.sshd (Remote Login)" ];
-    };
-  };
 }

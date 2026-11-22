@@ -8,10 +8,4 @@
     arch = [ "headsetcontrol" ];
     fedora = [ "headsetcontrol" ];
   };
-
-  inventory = {
-    packages = {
-      linux = [ "headsetcontrol" ];
-    };
-  };
 }

@@ -15,13 +15,4 @@
       done
     '';
   };
-
-  inventory = {
-    scripts = [
-      {
-        id = "53-system-session-tweaks:zsa-udev";
-        root = true;
-      }
-    ];
-  };
 }

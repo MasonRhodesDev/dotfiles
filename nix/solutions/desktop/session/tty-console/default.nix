@@ -115,20 +115,4 @@ in
         touch $out
       '';
     };
-
-  inventory = {
-    starts = {
-      root = [ "gpm.service" unit ];
-    };
-    files = [ ".bashrc.d/00-tty-console.bashrc" ];
-    scripts = [
-      {
-        id = "55-tty-console";
-        root = true;
-      }
-    ];
-    packages = {
-      linux = [ "terminus" "kbd" "gpm" ];
-    };
-  };
 }

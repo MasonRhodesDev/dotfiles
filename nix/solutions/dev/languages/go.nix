@@ -6,11 +6,4 @@
   home = { pkgs, ... }: {
     home.packages = [ pkgs.go ];
   };
-
-  inventory = {
-    packages = {
-      linux = [ "go" ];
-      darwin = [ "go" ];
-    };
-  };
 }

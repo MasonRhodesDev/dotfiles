@@ -23,15 +23,4 @@
       Install.WantedBy = [ "timers.target" ];
     };
   };
-
-  inventory = {
-    starts = {
-      linux = [ "reap-orphan-ssh-agents.timer" ];
-    };
-    files = [
-      ".config/systemd/user/reap-orphan-ssh-agents.service"
-      ".config/systemd/user/reap-orphan-ssh-agents.timer"
-      ".local/bin/reap-orphan-ssh-agents"
-    ];
-  };
 }

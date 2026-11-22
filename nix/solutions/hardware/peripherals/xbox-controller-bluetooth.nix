@@ -86,13 +86,4 @@ in
       touch $out
     '';
   };
-
-  inventory = {
-    scripts = [
-      {
-        id = "54-bluetooth-tweaks";
-        root = true;
-      }
-    ];
-  };
 }

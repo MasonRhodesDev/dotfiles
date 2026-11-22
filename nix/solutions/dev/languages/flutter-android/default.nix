@@ -14,13 +14,4 @@
         hl.window_rule({ name = "android-emulator", match = { class = "^(Emulator)$" }, float = true })
       '';
     };
-
-  inventory = {
-    files = [
-      ".bashrc.d/android.bashrc"
-      ".config/environment.d/android.conf"
-      ".config/environment.d/flutter.conf"
-      ".config/hypr/local.lua#android-emulator"
-    ];
-  };
 }

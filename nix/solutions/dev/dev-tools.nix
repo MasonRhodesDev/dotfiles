@@ -11,11 +11,4 @@
   linux.home = { pkgs, ... }: {
     home.packages = [ pkgs.strace ];
   };
-
-  inventory = {
-    packages = {
-      linux = [ "ffmpeg" "imagemagick" "nmap" "netcat" "p7zip" "android-tools" "strace" ];
-      darwin = [ "ffmpeg" "imagemagick" "nmap" "netcat" "p7zip" "android-tools" ];
-    };
-  };
 }

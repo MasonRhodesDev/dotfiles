@@ -60,13 +60,4 @@
         touch $out
       '';
     };
-
-  inventory = {
-    starts = {
-      root = [ "libvirtd.service (Arch)" "virtqemud.socket virtnetworkd.socket virtstoraged.socket virtproxyd.socket (Fedora)" ];
-    };
-    packages = {
-      linux = [ "qemu" "qemu-img" "edk2-ovmf" "virtiofsd" "libvirt" ];
-    };
-  };
 }

@@ -11,8 +11,4 @@
       UserKnownHostsFile = "/dev/null";
     };
   };
-
-  inventory = {
-    files = [ ".ssh/config#ssm" ];
-  };
 }

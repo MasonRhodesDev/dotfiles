@@ -19,8 +19,4 @@
         };
       };
     };
-
-  inventory = {
-    files = [ ".ssh/config#work-mac" ];
-  };
 }

@@ -218,15 +218,4 @@ in
       });
     }
     else { homebrew.casks = [ "tailscale-app" ]; };
-
-  inventory = {
-    starts = {
-      darwin = [ "Tailscale app (login item) with a GUI; tailscaled (launchd daemon) on a headless Mac" ];
-      root = [ "tailscaled.service" ];
-    };
-    packages = {
-      linux = [ "tailscale" ];
-      darwin = [ "tailscale (cask) with a GUI; tailscale (nixpkgs) on a headless Mac" ];
-    };
-  };
 }

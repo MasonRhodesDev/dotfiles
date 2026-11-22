@@ -33,20 +33,4 @@
   darwin.home = { pkgs, ... }: {
     home.packages = [ pkgs.colima pkgs.docker-client ];
   };
-
-  inventory = {
-    starts = {
-      root = [ "docker.socket" ];
-    };
-    scripts = [
-      {
-        id = "53-system-session-tweaks:docker-dns";
-        root = true;
-      }
-    ];
-    packages = {
-      linux = [ "docker" ];
-      darwin = [ "colima" "docker (client)" ];
-    };
-  };
 }

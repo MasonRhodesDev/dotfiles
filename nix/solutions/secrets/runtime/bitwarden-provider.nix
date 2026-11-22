@@ -49,6 +49,4 @@
         printf '%s' "$listed" | ${jq} -j --arg k "$name" 'first(.[] | select(.key == $k and .value != "") | .value)'
       '';
     };
-
-  inventory = { };
 }

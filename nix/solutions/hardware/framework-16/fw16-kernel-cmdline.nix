@@ -46,13 +46,4 @@
       has_all "$(cat /proc/cmdline)" || echo "reboot to boot with: $want"
     '';
   };
-
-  inventory = {
-    scripts = [
-      {
-        id = "51-fw16-grub-cmdline";
-        root = true;
-      }
-    ];
-  };
 }

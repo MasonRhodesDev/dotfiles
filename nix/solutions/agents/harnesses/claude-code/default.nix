@@ -183,18 +183,4 @@ in
       touch $out
     '';
   };
-
-  inventory = {
-    files = [
-      ".claude/CLAUDE.md"
-      ".claude/keybindings.json"
-      ".claude/settings.json"
-      ".claude/references/mermaid-pdf.md"
-      ".bashrc.d/claude.bashrc"
-      ".config/git/ignore"
-      "scripts/undercover-hook"
-      "scripts/undercover-pr-hook"
-      ".local/bin/slack-mcp"
-    ];
-  };
 }

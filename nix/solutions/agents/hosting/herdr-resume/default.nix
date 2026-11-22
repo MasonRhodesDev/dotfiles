@@ -44,16 +44,4 @@ in
         };
       })
     ]);
-
-  inventory = {
-    starts = {
-      linux = [ "herdr-resume-agents.service (with each herdr.service start)" ];
-    };
-    files = [
-      ".local/bin/herdr-resume-agents"
-      ".local/bin/herdr-session-map"
-      ".config/systemd/user/herdr-resume-agents.service"
-      ".claude/settings.json#herdr-resume"
-    ];
-  };
 }

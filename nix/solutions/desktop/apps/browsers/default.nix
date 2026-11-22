@@ -39,24 +39,4 @@
   };
 
   darwin.system.homebrew.casks = [ "firefox" "ungoogled-chromium" ];
-
-  inventory = {
-    starts = {
-      linux = [ "browser-default-guard.path" ];
-    };
-    files = [
-      ".config/systemd/user/browser-default-guard.path"
-      ".config/systemd/user/browser-default-guard.service"
-      ".local/bin/browser-default-guard"
-      ".config/mimeapps.list"
-      ".config/chromium-flags.conf"
-      ".local/share/applications/chromium-browser.desktop"
-      ".config/hypr/local.lua#browsers"
-      "nix:homebrew#browsers"
-    ];
-    packages = {
-      linux = [ "chromium" ];
-      darwin = [ "firefox (cask)" "ungoogled-chromium (cask)" ];
-    };
-  };
 }

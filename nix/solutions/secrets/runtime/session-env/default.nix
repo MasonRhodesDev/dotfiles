@@ -51,15 +51,4 @@
         esac
       ''; };
     };
-
-  inventory = {
-    starts = {
-      linux = [ "dotfiles-session-env.service" ];
-      darwin = [ "launchd: dotfiles-session-env (new)" ];
-    };
-    files = [
-      ".config/systemd/user/dotfiles-session-env.service"
-      ".bashrc.d/zz-dotfiles-env.bashrc"
-    ];
-  };
 }

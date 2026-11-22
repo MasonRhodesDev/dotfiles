@@ -16,19 +16,4 @@
   darwin.home = { pkgs, ... }: {
     home.packages = [ pkgs.pinentry_mac ];
   };
-
-  inventory = {
-    files = [ ".config/rbw/config.json#pinentry" ];
-    scripts = [
-      {
-        id = "05-setup-bitwarden";
-        root = false;
-        note = "packages only; login steps are manual";
-      }
-    ];
-    packages = {
-      linux = [ "pinentry-curses" ];
-      darwin = [ "pinentry-curses" "pinentry_mac" ];
-    };
-  };
 }

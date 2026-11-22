@@ -13,11 +13,4 @@
   darwin.home = { pkgs, ... }: {
     home.packages = [ pkgs.cmake pkgs.pkg-config ];
   };
-
-  inventory = {
-    packages = {
-      linux = [ "gcc" "make" "cmake" "pkg-config" ];
-      darwin = [ "cmake" "pkg-config" ];
-    };
-  };
 }

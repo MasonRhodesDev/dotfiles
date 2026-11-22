@@ -19,18 +19,4 @@
     };
     packages.fedora = [ "pritunl-client-electron" ];
   };
-
-  inventory = {
-    files = [ ".local/share/applications/pritunl-client-electron.desktop" ];
-    scripts = [
-      {
-        id = "54-third-party-repos:pritunl";
-        root = true;
-        note = "Fedora only";
-      }
-    ];
-    packages = {
-      linux = [ "pritunl-client-electron (Fedora)" ];
-    };
-  };
 }

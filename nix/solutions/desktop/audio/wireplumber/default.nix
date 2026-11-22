@@ -13,11 +13,4 @@
     arch = [ "wireplumber" ];
     fedora = [ "wireplumber" ];
   };
-
-  inventory = {
-    files = [ ".config/wireplumber/wireplumber.conf.d/51-soft-mixer.conf" ];
-    packages = {
-      linux = [ "wireplumber" ];
-    };
-  };
 }

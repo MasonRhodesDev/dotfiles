@@ -52,33 +52,4 @@
       pkgs.nerd-fonts.symbols-only
     ];
   };
-
-  inventory = {
-    files = [
-      ".config/fontconfig/fonts.conf"
-      ".config/fontconfig/conf.d/10-hm-fonts.conf"
-      ".config/fontconfig/conf.d/52-hm-default-fonts.conf"
-    ];
-    scripts = [
-      {
-        id = "05-install-fonts";
-        root = false;
-      }
-    ];
-    packages = {
-      linux = [
-        "Lilex"
-        "FiraCode"
-        "JetBrainsMono"
-        "Symbols Nerd Font"
-        "corefonts"
-        "noto"
-        "roboto"
-        "source-code-pro"
-        "SF Pro"
-        "ttf-harmonyos-sans"
-      ];
-      darwin = [ "Lilex" "FiraCode Nerd Font" "JetBrainsMono Nerd Font" "Symbols Nerd Font" ];
-    };
-  };
 }

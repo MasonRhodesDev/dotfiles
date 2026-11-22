@@ -95,22 +95,4 @@
       wc -l < hypr-de.binds > $out
     '';
   };
-
-  inventory = {
-    starts = {
-      darwin = [ "launchd: hammerspoon" "launchd: caps-as-shift" ];
-    };
-    files = [
-      "nix:keymap.nix"
-      ".hammerspoon/init.lua"
-      ".hammerspoon/remap.lua"
-      ".hammerspoon/keymap.json"
-      ".hammerspoon/keyboard-backlight.js"
-      ".config/keymap/cheatsheet.md"
-      "nix:homebrew#hammerspoon"
-    ];
-    packages = {
-      darwin = [ "hammerspoon (cask)" ];
-    };
-  };
 }

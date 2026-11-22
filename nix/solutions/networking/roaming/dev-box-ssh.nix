@@ -26,8 +26,4 @@
         };
       };
     };
-
-  inventory = {
-    files = [ ".ssh/config#dev-box" ];
-  };
 }

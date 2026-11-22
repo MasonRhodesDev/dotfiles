@@ -660,7 +660,6 @@ switch_darwin() {
 case $command in
   show) nix_eval "lib.machines.$machine.summary" --raw ;;
   why) nix_eval "lib.machines.$machine.why.${1:?why needs a solution id}" --raw; echo ;;
-  tree) nix_eval lib.tree --json ;;
   build) build "$@" ;;
   secrets)
     have=$(nix eval --raw --impure --expr builtins.currentSystem)
@@ -694,5 +693,5 @@ case $command in
       plan-*) plan_linux "$out" ;;
     esac
     ;;
-  *) die "unknown command '$command'. Commands: switch, plan, secrets, build, show, why, tree, check." ;;
+  *) die "unknown command '$command'. Commands: switch, plan, secrets, build, show, why, check." ;;
 esac

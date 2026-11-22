@@ -86,22 +86,4 @@ in
         };
       })
     ];
-
-  inventory = {
-    files = [
-      ".claude/settings.json#agent-pane-status"
-      ".codex/hooks.json"
-      ".pi/agent/extensions/agent-status.ts"
-      "scripts/agent-status-claude-session-hook"
-      "scripts/agent-status-claude-activity-hook"
-      "scripts/agent-status-claude-cleanup-hook"
-      "scripts/agent-status-claude-summarize"
-      "scripts/agent-status-bridge.ts"
-      "scripts/agent-status-runner.ts"
-      "scripts/agent-status-codex.ts"
-      "scripts/agent-status-pi.ts"
-      "scripts/terminal-session-task-stack.ts"
-      ".bashrc.d/agent-status.bashrc"
-    ];
-  };
 }

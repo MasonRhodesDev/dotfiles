@@ -44,25 +44,4 @@
       touch $out
     '';
   };
-
-  inventory = {
-    starts = {
-      linux = [ "terminal-header.service" ];
-    };
-    files = [
-      ".config/kitty/tab_bar.py"
-      ".config/kitty/watcher.py"
-      ".config/kitty/kitty.conf#terminal-header"
-      ".config/systemd/user/terminal-header.service"
-      "scripts/terminal-header/daemon.ts"
-      "scripts/terminal-header/resolver.ts"
-      "scripts/terminal-header/types.ts"
-      "scripts/terminal-header/sections/agent.ts"
-      "scripts/terminal-header/sections/cwd.ts"
-      "scripts/terminal-header/sections/ssh.ts"
-      "scripts/terminal-header/targets/index.ts"
-      "scripts/terminal-header/targets/kitty.ts"
-      "scripts/terminal-header/targets/util.ts"
-    ];
-  };
 }

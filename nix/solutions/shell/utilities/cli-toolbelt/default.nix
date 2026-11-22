@@ -19,12 +19,4 @@
   darwin.home = { pkgs, ... }: {
     home.packages = [ pkgs.coreutils ];
   };
-
-  inventory = {
-    files = [ ".ignore" ".terminfo/**" ".local/bin/refresh-completions#uv" ];
-    packages = {
-      linux = [ "curl" "jq" "unzip" "gawk" "btop" "gh" "rsync" "fd" "ripgrep" "uv" "kitty-terminfo" "paru" "downgrade" ];
-      darwin = [ "curl" "jq" "unzip" "gawk" "btop" "gh" "rsync" "fd" "ripgrep" "uv" "kitty-terminfo" "coreutils" ];
-    };
-  };
 }

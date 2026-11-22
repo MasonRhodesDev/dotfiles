@@ -10,18 +10,4 @@
     home.file.".config/atuin/config.toml".source = ./config.toml;
     home.file.".bashrc.d/atuin.bashrc".source = ./atuin.bashrc;
   };
-
-  inventory = {
-    files = [ ".config/atuin/config.toml" ".bashrc.d/atuin.bashrc" ];
-    scripts = [
-      {
-        id = "06-install-shell-tools:atuin";
-        root = false;
-      }
-    ];
-    packages = {
-      linux = [ "atuin" ];
-      darwin = [ "atuin" ];
-    };
-  };
 }

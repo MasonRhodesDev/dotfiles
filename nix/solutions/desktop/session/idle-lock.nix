@@ -16,19 +16,4 @@
       auth        include     login
     '';
   };
-
-  inventory = {
-    starts = {
-      linux = [ "hypridle.service (hypr-de preset)" "logind-idle-control.service (hypr-de preset)" ];
-    };
-    scripts = [
-      {
-        id = "53-system-session-tweaks:pam-hyprlock";
-        root = true;
-      }
-    ];
-    packages = {
-      linux = [ "hypridle" "hyprlock" "logind-idle-control" ];
-    };
-  };
 }

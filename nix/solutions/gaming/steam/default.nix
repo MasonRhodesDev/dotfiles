@@ -36,22 +36,4 @@
       fedora = [ "steam" "gamemode" "hypr-de-gaming" ];
     };
   };
-
-  inventory = {
-    starts = {
-      linux = [ "steam-clean-shutdown.service (hypr-de-gaming)" "hypr-autostart: steam-launch" ];
-    };
-    files = [
-      ".config/systemd/user/graphical-session.target.wants/steam-clean-shutdown.service"
-      ".config/hypr/scripts/steam-clean-shutdown.sh"
-      ".local/bin/steam-launch"
-      ".local/bin/steam-set-launch-options"
-      ".config/environment.d/gaming.conf"
-      ".config/hypr/local.lua#game-rules"
-      ".config/hypr/local.lua#autostart-steam"
-    ];
-    packages = {
-      linux = [ "steam" "gamemode" "hypr-de-gaming" ];
-    };
-  };
 }

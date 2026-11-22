@@ -126,14 +126,6 @@ fromSolutions // {
 
   retire-chezmoi = import ./retire-chezmoi.nix { inherit pkgs evalHome; };
 
-
-  parity-tools = pkgs.runCommand "check-parity-tools" { nativeBuildInputs = [ pkgs.python3 pkgs.git ]; } ''
-    python3 -I ${../tools}/parity-compare --self-test
-    python3 -I ${../../migration/parity}/prepare_test.py 2>&1 | tee prepare.log
-    grep -qx 'OK (skipped=1)' prepare.log
-    touch $out
-  '';
-
   private-closure = import ./private-closure.nix { inherit dot pkgs; };
 
   dot-shellcheck = pkgs.runCommand "check-dot-shellcheck" { nativeBuildInputs = [ pkgs.shellcheck ]; } ''

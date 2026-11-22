@@ -14,11 +14,4 @@
   darwin.home = { pkgs, ... }: {
     home.packages = [ pkgs.gnupg ];
   };
-
-  inventory = {
-    files = [ ".gnupg/common.conf" ];
-    packages = {
-      darwin = [ "gnupg" ];
-    };
-  };
 }

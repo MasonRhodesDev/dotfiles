@@ -41,8 +41,7 @@
       lib = {
         inherit (dot) resolve;
         traits = dot.catalog.traits.schema;
-        tree = dot.tree machines;
-        machines = lib.mapAttrs (_: m: { inherit (m) system traits user enabled why starts summary build manifest secretsAudit secretsUnchecked; }) machines;
+        machines = lib.mapAttrs (_: m: { inherit (m) system traits user enabled why starts summary build secretsAudit secretsUnchecked; }) machines;
       };
 
       checks = perSystem (pkgs: import ./checks { inherit dot inputs pkgs; });

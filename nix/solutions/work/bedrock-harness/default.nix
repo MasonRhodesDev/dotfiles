@@ -20,8 +20,4 @@
       probe = "aws sts get-caller-identity --profile bedrock-developer";
     };
   };
-
-  inventory = {
-    files = [ ".bashrc.d/bedrock-aliases.bashrc" ".config/bedrock-aliases.env" ];
-  };
 }

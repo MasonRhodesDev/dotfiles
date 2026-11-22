@@ -23,15 +23,4 @@
         executable = true;
       };
     };
-
-  inventory = {
-    files = [
-      ".local/bin/bitwarden-exec"
-      ".config/bitwarden/project.json"
-    ];
-    packages = {
-      linux = [ "bws" ];
-      darwin = [ "bws" ];
-    };
-  };
 }

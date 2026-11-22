@@ -9,10 +9,4 @@
     arch = [ "virt-manager" ];
     fedora = [ "virt-manager" ];
   };
-
-  inventory = {
-    packages = {
-      linux = [ "virt-manager" ];
-    };
-  };
 }

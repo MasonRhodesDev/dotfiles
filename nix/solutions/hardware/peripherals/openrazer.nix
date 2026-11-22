@@ -17,17 +17,4 @@
       fedora = [ "openrazer-meta" "polychromatic" ];
     };
   };
-
-  inventory = {
-    scripts = [
-      {
-        id = "54-third-party-repos:razer";
-        root = true;
-        note = "Fedora only";
-      }
-    ];
-    packages = {
-      linux = [ "openrazer" "polychromatic (Fedora)" ];
-    };
-  };
 }

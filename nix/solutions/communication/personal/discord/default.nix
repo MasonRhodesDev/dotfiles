@@ -15,15 +15,4 @@
   linux.root.packages.arch = [ "discord" ];
 
   darwin.system.homebrew.casks = [ "discord" ];
-
-  inventory = {
-    starts = {
-      linux = [ "hypr-autostart: discord" ];
-    };
-    files = [ ".config/discord-flags.conf" ".config/hypr/local.lua#autostart-discord" ".config/hypr/local.lua#discord" ];
-    packages = {
-      linux = [ "discord" ];
-      darwin = [ "discord (cask)" ];
-    };
-  };
 }

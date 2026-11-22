@@ -69,21 +69,4 @@ in
   };
 
   darwin.system.homebrew.brews = [ "herdr" ];
-
-  inventory = {
-    starts = {
-      linux = [ "herdr.service" ];
-      darwin = [ "launchd: herdr (agent with a GUI, daemon as the user on a headless Mac)" ];
-    };
-    files = [
-      ".config/systemd/user/herdr.service"
-      ".config/systemd/user/herdr.service.d/memory.conf"
-      ".bashrc.d/herdr.bashrc"
-      ".config/kitty/kitty.conf#herdr"
-    ];
-    packages = {
-      linux = [ "herdr" ];
-      darwin = [ "herdr" ];
-    };
-  };
 }

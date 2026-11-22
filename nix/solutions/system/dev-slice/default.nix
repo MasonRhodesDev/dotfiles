@@ -74,8 +74,4 @@ in
         touch $out
       '';
     };
-
-  inventory = {
-    files = [ ".config/systemd/user/dev.slice" ".bashrc.d/dev-slice.bashrc" ".local/bin/rust-analyzer" ];
-  };
 }

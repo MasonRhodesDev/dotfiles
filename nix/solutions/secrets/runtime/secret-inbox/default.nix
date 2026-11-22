@@ -30,16 +30,4 @@
       credentials = [ "infisical/inbox-client-id" "infisical/inbox-client-secret" ];
     };
   };
-
-  inventory = {
-    starts = {
-      linux = [ "secret-inbox.service" ];
-      darwin = [ "launchd: secret-inbox (new)" ];
-    };
-    files = [
-      ".config/systemd/user/secret-inbox.service"
-      ".local/bin/secret-inbox"
-      ".local/bin/infisical-ask"
-    ];
-  };
 }

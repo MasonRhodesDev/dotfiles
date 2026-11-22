@@ -28,20 +28,4 @@
     arch = [ "lmtt" "matugen" ];
     fedora = [ "lmtt" "matugen" ];
   };
-
-  inventory = {
-    files = [
-      ".config/lmtt/modules/hyprtoolkit.toml"
-      ".config/lmtt/modules/kitty.toml"
-      ".config/kitty/kitty.conf#lmtt"
-      ".tmux.conf#lmtt"
-      ".config/lmtt/scripts/hyprtoolkit.sh"
-      ".config/gtk-3.0/gtk.css"
-      ".config/gtk-4.0/gtk.css"
-      ".local/share/icons/hicolor/index.theme"
-    ];
-    packages = {
-      linux = [ "lmtt" "matugen" ];
-    };
-  };
 }

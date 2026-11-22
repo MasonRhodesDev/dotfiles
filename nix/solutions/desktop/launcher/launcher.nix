@@ -13,15 +13,4 @@
     homebrew.casks = [ "raycast" ];
     system.defaults.CustomUserPreferences."com.raycast.macos".raycastGlobalHotkey = "Command-49";
   };
-
-  inventory = {
-    starts = {
-      darwin = [ "login item: Raycast" ];
-    };
-    files = [ "nix:homebrew#raycast" ];
-    packages = {
-      linux = [ "fuzzel" ];
-      darwin = [ "raycast (cask)" ];
-    };
-  };
 }

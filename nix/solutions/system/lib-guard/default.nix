@@ -55,6 +55,4 @@ in
   checks = { pkgs, evalHome }: {
     lib-guard = import ./check.nix { inherit pkgs evalHome root; };
   };
-
-  inventory = { };
 }

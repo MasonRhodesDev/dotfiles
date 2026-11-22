@@ -24,8 +24,4 @@
         };
       })
     ];
-
-  inventory = {
-    files = [ ".local/bin/qbt-magnet" ".local/share/applications/qbt-magnet.desktop" ".config/qbt-magnet/config" ".config/mimeapps.list#qbt-magnet" ];
-  };
 }

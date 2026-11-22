@@ -16,10 +16,4 @@
       fi
     '';
   };
-
-  inventory = {
-    packages = {
-      linux = [ "com.orcaslicer.OrcaSlicer (flatpak)" ];
-    };
-  };
 }

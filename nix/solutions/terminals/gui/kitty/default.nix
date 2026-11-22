@@ -49,16 +49,4 @@ in
     home.packages = [ pkgs.kitty ];
     dotfiles.mutable.".config/kitty/kitty.conf" = { strategy = "overwrite"; text = withFragments config darwinConf; };
   };
-
-  inventory = {
-    files = [
-      ".config/kitty/kitty.conf"
-      ".config/kitty/paste_image.py"
-      "scripts/wezterm-paste-image"
-    ];
-    packages = {
-      linux = [ "kitty" ];
-      darwin = [ "kitty" ];
-    };
-  };
 }

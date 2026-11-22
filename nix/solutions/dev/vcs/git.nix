@@ -46,12 +46,4 @@
       text = "# Machine-local git settings. Tools that run `git config --global` write here.\n";
     };
   };
-
-  inventory = {
-    files = [ ".gitconfig" ".ssh/config#github" ];
-    packages = {
-      linux = [ "git" ];
-      darwin = [ "git" ];
-    };
-  };
 }

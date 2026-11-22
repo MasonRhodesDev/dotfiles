@@ -67,34 +67,4 @@
       echo "$path" > $out
     '';
   };
-
-  inventory = {
-    files = [
-      ".bashrc"
-      ".bash_profile"
-      ".profile"
-      ".inputrc"
-      ".bashrc.d/00-path-helpers.bashrc"
-      ".bashrc.d/01-history.bashrc"
-      ".bashrc.d/02-shell-options.bashrc"
-      ".bashrc.d/scripts.bashrc"
-      ".local/bin/refresh-completions"
-      "nix:environment.shells"
-    ];
-    scripts = [
-      {
-        id = "03-ensure-bash-shell";
-        root = true;
-        note = "usermod on Linux; chsh by hand on darwin";
-      }
-      {
-        id = "06-install-shell-tools:bash-completion";
-        root = true;
-      }
-    ];
-    packages = {
-      linux = [ "bash-completion" ];
-      darwin = [ "bash (5.x, replaces macOS bash 3.2)" ];
-    };
-  };
 }

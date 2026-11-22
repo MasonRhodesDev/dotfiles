@@ -51,11 +51,4 @@
         '';
       };
     };
-
-  inventory = {
-    packages = {
-      linux = [ "rbw" "bitwarden-cli" ];
-      darwin = [ "rbw" "bitwarden-cli" ];
-    };
-  };
 }

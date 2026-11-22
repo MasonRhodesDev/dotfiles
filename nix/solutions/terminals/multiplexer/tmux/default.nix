@@ -12,12 +12,4 @@
       text = builtins.readFile ./tmux.conf + (config.dotfiles.fragments."tmux/tmux.conf" or "");
     };
   };
-
-  inventory = {
-    files = [ ".tmux.conf" ];
-    packages = {
-      linux = [ "tmux" ];
-      darwin = [ "tmux" ];
-    };
-  };
 }

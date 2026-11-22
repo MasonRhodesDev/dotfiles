@@ -10,12 +10,4 @@
     home.file.".bashrc.d/editors.bashrc" = lib.mkIf (lib.elem "bash" machine.enabled) { source = ./editors.bashrc; };
     home.file."scripts/nvim-open" = { source = ./nvim-open; executable = true; };
   };
-
-  inventory = {
-    files = [ ".config/nvim/**" ".bashrc.d/nvim.bashrc" ".bashrc.d/editors.bashrc" "scripts/nvim-open" ];
-    packages = {
-      linux = [ "neovim" ];
-      darwin = [ "neovim" ];
-    };
-  };
 }

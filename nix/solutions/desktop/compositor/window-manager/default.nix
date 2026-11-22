@@ -117,25 +117,4 @@
         fi
       '';
     };
-
-  inventory = {
-    starts = {
-      linux = [ "hypr-de-setup: the hypr-DE user preset (swaybg, udiskie, hyprstate and the DE units)" ];
-      darwin = [ "launchd: aerospace-wm" ];
-    };
-    files = [
-      ".config/hypr/local.lua#core"
-      ".config/hypr/power.conf"
-      ".config/hypr-de/xwayland-primary"
-      ".config/uwsm/env"
-      ".bashrc.d/05-uwsm-env.bashrc"
-      ".config/xdg-desktop-portal/hyprland-portals.conf"
-      ".config/electron-flags.conf"
-      ".aerospace.toml"
-    ];
-    packages = {
-      linux = [ "hypr-de" "Hyprland" "hyprstate" "uwsm" "hyprls" ];
-      darwin = [ "aerospace (cask, nikitabobko/tap)" ];
-    };
-  };
 }

@@ -111,18 +111,4 @@ in
         touch $out
       '';
     };
-
-  inventory = {
-    starts = {
-      linux = [ "eph-build-sweep.timer" ];
-    };
-    files = [
-      ".local/bin/cargo"
-      ".local/bin/eph-build-sweep"
-      ".local/bin/claude-build-guard"
-      ".config/systemd/user/eph-build-sweep.service"
-      ".config/systemd/user/eph-build-sweep.timer"
-      ".claude/settings.json#build-offload"
-    ];
-  };
 }

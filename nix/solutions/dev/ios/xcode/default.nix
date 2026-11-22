@@ -129,10 +129,4 @@ in
       touch $out
     '';
   };
-
-  inventory = {
-    packages = {
-      darwin = [ "xcodes" "Xcode ${pin.xcode} (xcodes, into /Applications)" "${pin.runtime} simulator runtime (xcodes)" ];
-    };
-  };
 }

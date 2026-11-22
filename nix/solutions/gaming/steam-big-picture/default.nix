@@ -43,18 +43,4 @@
         end
       '';
     };
-
-  inventory = {
-    starts = {
-      linux = [ "bp-game-focus.service" ];
-    };
-    files = [
-      ".config/systemd/user/bp-game-focus.service"
-      ".config/hypr/bp-common.lua"
-      ".config/hypr/bp-focus.lua"
-      ".config/hypr/bp-monitors.lua"
-      ".config/hypr/scripts/bp-game-focus.py"
-      ".config/hypr/local.lua#bp-loader"
-    ];
-  };
 }

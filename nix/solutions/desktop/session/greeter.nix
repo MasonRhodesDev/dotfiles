@@ -16,16 +16,4 @@
         UMask=0007
       '';
     };
-
-  inventory = {
-    scripts = [
-      {
-        id = "53-system-session-tweaks:greetd-seatd";
-        root = true;
-      }
-    ];
-    packages = {
-      linux = [ "greetd_game_mode" "vigil" ];
-    };
-  };
 }

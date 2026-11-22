@@ -11,15 +11,4 @@
     xdg.configFile."systemd/user/voice-dictation.service.d/50-login-storm.conf".source = ./50-login-storm.conf;
     xdg.configFile."systemd/user/voice-dictation.service.d/50-log-level.conf".source = ./50-log-level.conf;
   };
-
-  inventory = {
-    files = [
-      ".config/hypr/local.lua#voice-dictation"
-      ".config/systemd/user/voice-dictation.service.d/50-login-storm.conf"
-      ".config/systemd/user/voice-dictation.service.d/50-log-level.conf"
-    ];
-    packages = {
-      linux = [ "voice-dictation" ];
-    };
-  };
 }

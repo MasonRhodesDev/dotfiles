@@ -59,6 +59,4 @@
         [ "$found" = 0 ] || fail "Infisical has no $key in $folder"
       '';
     };
-
-  inventory = { };
 }

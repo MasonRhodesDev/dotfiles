@@ -1,9 +1,0 @@
-[data.identity]
-name = "Golden Placeholder"
-email_work = "work@example.invalid"
-email_personal = "personal@example.invalid"
-email = "personal@example.invalid"
-
-[data.work]
-claude_md = ""
-overlay_repo = ""

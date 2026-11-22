@@ -39,20 +39,4 @@
       Install.WantedBy = [ "timers.target" ];
     };
   };
-
-  inventory = {
-    starts = {
-      linux = [ "prune-cargo-targets.timer" ];
-    };
-    files = [
-      ".config/systemd/user/prune-cargo-targets.service"
-      ".config/systemd/user/prune-cargo-targets.timer"
-      ".local/bin/prune-cargo-targets"
-      ".bashrc.d/rust.bashrc"
-    ];
-    packages = {
-      linux = [ "rustup" "cargo-deny" ];
-      darwin = [ "rustup" "cargo-deny" ];
-    };
-  };
 }

@@ -93,10 +93,6 @@ let
       secretsUnchecked = lib.genAttrs systems (s:
         let tool = import ../modules/home/credential-tool.nix { pkgs = inputs.nixpkgs.legacyPackages.${s}; }; in
         tool.audit (tool.program home.dotfiles.secretsReport null));
-      manifest = import ../parity/manifest.nix {
-        inherit lib home;
-        pkgs = inputs.nixpkgs.legacyPackages.${system};
-      };
       why = lib.mapAttrs
         (id: conditions:
           let

@@ -7,11 +7,4 @@
   home = { pkgs, ... }: {
     home.packages = [ pkgs.mongosh ];
   };
-
-  inventory = {
-    packages = {
-      linux = [ "mongosh" ];
-      darwin = [ "mongosh" ];
-    };
-  };
 }

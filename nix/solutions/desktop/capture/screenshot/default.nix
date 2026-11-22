@@ -13,11 +13,4 @@
     arch = [ "grim" "slurp" "swappy" "hyprpicker" "wl-clipboard" "gpu-screen-recorder" ];
     fedora = [ "grim" "slurp" "swappy" "hyprpicker" "wl-clipboard" ];
   };
-
-  inventory = {
-    files = [ "scripts/swappy-shortcuts.md" "scripts/swappy-tools-guide.md" ];
-    packages = {
-      linux = [ "grim" "slurp" "swappy" ];
-    };
-  };
 }

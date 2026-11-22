@@ -15,17 +15,4 @@
     };
     packages.fedora = [ "acli" ];
   };
-
-  inventory = {
-    scripts = [
-      {
-        id = "54-third-party-repos:acli";
-        root = true;
-        note = "Fedora only";
-      }
-    ];
-    packages = {
-      linux = [ "acli (Fedora)" ];
-    };
-  };
 }

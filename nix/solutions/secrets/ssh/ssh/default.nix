@@ -65,11 +65,4 @@
       ssh-add -l > /dev/null 2>&1 || /usr/bin/ssh-add --apple-load-keychain > /dev/null 2>&1
     ''; };
   };
-
-  inventory = {
-    starts = {
-      linux = [ "ssh-agent.socket" ];
-    };
-    files = [ ".ssh/config" ".bashrc.d/ssh.bashrc" ".config/environment.d/ssh-agent.conf" ".ssh/config#usekeychain" ];
-  };
 }

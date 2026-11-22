@@ -8,13 +8,4 @@
     arch = [ "swaync" ];
     fedora = [ "SwayNotificationCenter" ];
   };
-
-  inventory = {
-    starts = {
-      linux = [ "swaync.service (hypr-de preset)" ];
-    };
-    packages = {
-      linux = [ "swaync" ];
-    };
-  };
 }

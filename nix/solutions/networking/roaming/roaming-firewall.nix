@@ -55,21 +55,4 @@
       enableStealthMode = true;
     };
   };
-
-  inventory = {
-    starts = {
-      root = [ "firewalld.service" ];
-    };
-    files = [ "nix:networking.applicationFirewall" ];
-    scripts = [
-      {
-        id = "59-asahi-firewalld";
-        root = true;
-        note = "named for Asahi, policy is generic";
-      }
-    ];
-    packages = {
-      linux = [ "firewalld" ];
-    };
-  };
 }

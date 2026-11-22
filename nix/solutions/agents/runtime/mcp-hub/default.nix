@@ -29,10 +29,4 @@
         };
       };
     };
-
-  inventory = {
-    starts.linux = [ "mcp-hub.service" ];
-    files = [ ".config/systemd/user/mcp-hub.service" ];
-    packages.linux = [ "mcp-hub (npm global)" ];
-  };
 }

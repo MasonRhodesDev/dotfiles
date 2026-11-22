@@ -8,11 +8,4 @@
     home.file.".local/bin/node".source = "${pkgs.nodejs}/bin/node";
     home.file.".local/bin/npm".source = "${pkgs.nodejs}/bin/npm";
   };
-
-  inventory = {
-    files = [ ".local/bin/node" ".local/bin/npm" ];
-    packages = {
-      darwin = [ "nodejs (linked into ~/.local/bin)" "agent-device and expo-device-hub (T3, into ~/.t3/device)" ];
-    };
-  };
 }

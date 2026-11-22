@@ -20,16 +20,4 @@
       '';
     };
   };
-
-  inventory = {
-    scripts = [
-      {
-        id = "50-nm-wifi-powersave:generic";
-        root = true;
-      }
-    ];
-    packages = {
-      linux = [ "NetworkManager" ];
-    };
-  };
 }

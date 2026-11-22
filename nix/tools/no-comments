@@ -17,7 +17,7 @@ BY_SUFFIX = {
     ".gitconfig-shared": HASH, ".tool": HASH, ".run": HASH, ".cb": HASH,
 }
 BY_NAME = {"bashrc": HASH, "bash_profile": HASH, "profile": HASH, "inputrc": HASH, "blerc": HASH, "ignore": HASH}
-SKIP_DIRS = ("checks/fixtures/", "tools/parity-compare-fixture/")
+SKIP_DIRS = ("checks/fixtures/",)
 DATA = (".md", ".json", ".pub", ".asc", ".txt", ".lock", ".png", ".svg")
 
 KEEP = re.compile(r"(^\s*#!|^\s*#@ |>>> herdr-radar |<<< herdr-radar |>>> dotfiles: |<<< dotfiles: |>>> chezmoi managed: |<<< chezmoi managed: |^\s*# shellcheck |^\s*// @ts-|^\s*#%PAM)")

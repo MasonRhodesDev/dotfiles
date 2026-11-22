@@ -12,8 +12,4 @@
       hl.bind("F20", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.local/bin/swiftpoint-profile-osd"), { desc = "Mouse: Show Swiftpoint profile" })
     '';
   };
-
-  inventory = {
-    files = [ ".local/bin/swiftpoint-profile-osd" ".config/hypr/local.lua#swiftpoint-f20" ];
-  };
 }

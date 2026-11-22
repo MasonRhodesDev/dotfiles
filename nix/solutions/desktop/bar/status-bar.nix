@@ -113,16 +113,4 @@ in
     };
 
   darwin.system.system.defaults.NSGlobalDomain._HIHideMenuBar = true;
-
-  inventory = {
-    starts = {
-      linux = [ "waybar.service (hypr-de preset)" ];
-      darwin = [ "launchd: sketchybar" ];
-    };
-    files = [ ".config/sketchybar/sketchybarrc" ];
-    packages = {
-      linux = [ "waybar" "waybar-workspace-buttons" ];
-      darwin = [ "sketchybar" ];
-    };
-  };
 }

@@ -146,26 +146,4 @@ in
       [ "$failures" = 0 ] && touch $out
     '';
   };
-
-  inventory = {
-    starts = {
-      linux = [ "t3code.service (user, written by t3 up, started at boot through linger)" "t3-desktop-pair.service (user, graphical session, Linux with a desktop)" ];
-      darwin = [ "com.t3tools.t3code.service (launchd agent, written by t3 up) with a GUI; t3code (launchd daemon as the user) on a headless Mac" ];
-    };
-    files = [
-      ".config/systemd/user/t3code.service.d/path.conf"
-      ".config/systemd/user/t3-desktop-pair.service"
-      ".local/bin/t3-desktop-client"
-    ];
-    scripts = [
-      {
-        id = "60-t3code-service";
-        root = false;
-        note = "T3's installer where t3 is missing, and t3 up where there is no unit and no running server. The version is T3's own";
-      }
-    ];
-    packages = {
-      linux = [ "t3 (T3's installer, into ~/.t3)" ];
-    };
-  };
 }

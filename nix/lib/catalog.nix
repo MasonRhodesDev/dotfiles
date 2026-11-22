@@ -18,7 +18,7 @@ let
       (slot: _: lib.attrByPath (lib.splitString "." slot) null raw)
       slots);
 
-  metaKeys = [ "name" "description" "platforms" "only" "when" "requires" "conflicts" "fragments" "checks" "inventory" ];
+  metaKeys = [ "name" "description" "platforms" "only" "when" "requires" "conflicts" "fragments" "checks" ];
   groupKeys = [ "name" "description" "when" ];
   slotKeys = { linux = [ "home" "root" ]; darwin = [ "home" "system" ]; };
 
@@ -53,7 +53,6 @@ let
       fragments = raw.fragments or [ ];
       parts = partsOf raw;
       checks = raw.checks or null;
-      inventory = raw.inventory or null;
     };
 
   group = { id, parent, file, raw, children }:

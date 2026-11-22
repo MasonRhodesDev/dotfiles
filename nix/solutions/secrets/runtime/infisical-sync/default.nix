@@ -23,16 +23,4 @@
       };
       home.file.".claude/skills/infisical-secrets/SKILL.md" = lib.mkIf (lib.elem "claude-code" machine.enabled) { source = ./SKILL.md; };
     };
-
-  inventory = {
-    files = [
-      ".config/infisical/project.json"
-      ".local/bin/infisical-exec"
-      ".claude/skills/infisical-secrets/SKILL.md"
-    ];
-    packages = {
-      linux = [ "infisical" ];
-      darwin = [ "infisical" ];
-    };
-  };
 }

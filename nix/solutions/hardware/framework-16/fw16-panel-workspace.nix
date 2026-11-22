@@ -9,8 +9,4 @@
       hl.workspace_rule({ workspace = "9", monitor = "${machine.private.internalPanel}" })
     '';
   };
-
-  inventory = {
-    files = [ ".config/hypr/local.lua#fw16-edp2-pin" ];
-  };
 }

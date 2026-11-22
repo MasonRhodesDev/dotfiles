@@ -40,19 +40,4 @@
   darwin.home = { ... }: {
     programs.git.settings.credential.helper = "osxkeychain";
   };
-
-  inventory = {
-    starts = {
-      linux = [ "keyring-resync.service" ];
-    };
-    files = [
-      ".config/systemd/user/keyring-resync.service"
-      ".local/bin/keyring-resync"
-      ".local/share/dbus-1/services/org.freedesktop.secrets.service"
-      ".gitconfig#credential-helper"
-    ];
-    packages = {
-      linux = [ "gnome-keyring" "seahorse" "python-gobject" ];
-    };
-  };
 }

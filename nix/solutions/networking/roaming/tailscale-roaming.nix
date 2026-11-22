@@ -48,17 +48,4 @@
       fi
     '';
   };
-
-  inventory = {
-    starts = {
-      root = [ "NM dispatcher: tailscale-away-from-home" ];
-    };
-    scripts = [
-      {
-        id = "60-tailscale-away-from-home";
-        root = true;
-        note = "operator user from the private repo";
-      }
-    ];
-  };
 }
