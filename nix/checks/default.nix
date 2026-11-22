@@ -124,6 +124,8 @@ fromSolutions // {
 
   dot-switch = import ./dot-switch.nix { inherit pkgs; };
 
+  retire-chezmoi = import ./retire-chezmoi.nix { inherit pkgs evalHome; };
+
 
   parity-tools = pkgs.runCommand "check-parity-tools" { nativeBuildInputs = [ pkgs.python3 pkgs.git ]; } ''
     python3 -I ${../tools}/parity-compare --self-test

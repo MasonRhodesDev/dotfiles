@@ -1,4 +1,4 @@
-{ config, options, lib, machine, owners, fragmentOwners, modulesPath, ... }:
+{ config, options, lib, pkgs, machine, owners, fragmentOwners, modulesPath, ... }:
 let
   who = import ./who.nix { inherit lib options owners modulesPath; };
   setBy = key:
@@ -38,5 +38,9 @@ in
       stateVersion = "26.05";
     };
     manual.manpages.enable = false;
+
+    home.activation.retireChezmoi = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
+      run ${import ./retire-chezmoi.nix { inherit pkgs; }}
+    '';
   };
 }

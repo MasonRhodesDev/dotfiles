@@ -210,7 +210,7 @@ planned_move() {
 planned_moves() {
   local generation=$1 units=$HOME/.config/systemd/user paths files target relative above link
   paths=$(mktemp)
-  if command -v chezmoi >/dev/null 2>&1 && [ ! -e "$state/chezmoi-retired.done" ]; then
+  if command -v chezmoi >/dev/null 2>&1 && [ ! -e "$state/chezmoi-retired.done" ] && [ ! -e "$state/chezmoi-state-retired" ]; then
     chezmoi managed --include=files,symlinks --path-style=absolute | while IFS= read -r target; do
       relative=${target#"$HOME"/}
       exists "$target" || continue
@@ -410,7 +410,7 @@ activate_home() {
     rm -f "$moved" "$linked" "$made"
     if grep -q "^retire" "$plan"; then
       touch "$state/chezmoi-retired.done"
-      echo "chezmoi's files are in $state/chezmoi-retired. Run 'chezmoi purge' when the machine looks right."
+      echo "chezmoi's files are in $state/chezmoi-retired. The next switch removes chezmoi's own state, keeping a source checkout that holds work no remote has."
     fi
     if grep -q "^aside" "$plan"; then
       echo "What was in the way of the generation's links is in $state/set-aside."
@@ -555,6 +555,7 @@ plan_linux() {
   echo "Retired to $state/chezmoi-retired (chezmoi manages them, or they enable a unit file it manages)"
   if ! command -v chezmoi >/dev/null 2>&1; then echo "  none: chezmoi is not installed"
   elif [ -e "$state/chezmoi-retired.done" ]; then echo "  none: an earlier switch retired them"
+  elif [ -e "$state/chezmoi-state-retired" ]; then echo "  none: an earlier switch retired chezmoi's state"
   elif grep -q "^retire" "$plan"; then planned retire "$plan"
   else echo "  none"
   fi
