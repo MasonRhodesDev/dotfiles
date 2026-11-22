@@ -31,7 +31,7 @@ in
   description = "The claude CLI, installed by Anthropic's installer and left to update itself. CLAUDE.md, settings merge, keybindings, agents, references, undercover hooks, and on a work machine the slack-mcp wrapper, which takes Slack's tokens from the credential chain in its environment.";
   platforms = [ "linux" "darwin" ];
 
-  fragments = [ "claude/CLAUDE.md/work" "claude/CLAUDE.md/machine" "claude/CLAUDE.md/private" ];
+  fragments = [ "claude/CLAUDE.md/work" "claude/CLAUDE.md/private" ];
 
   home = { config, lib, pkgs, identity, machine, ... }:
     let
@@ -39,10 +39,9 @@ in
       work = fragment "claude/CLAUDE.md/work";
       private = fragment "claude/CLAUDE.md/private";
       claudeMd = builtins.replaceStrings
-        [ "@work@" "@machine@" "@private@\n" "@firstName@" ]
+        [ "@work@" "@private@\n" "@firstName@" ]
         [
           (if work == "" then "\n" else "\n${work}\n")
-          (fragment "claude/CLAUDE.md/machine")
           (if private == "" then "" else "\n${private}")
           (lib.head (lib.splitString " " identity.name))
         ]

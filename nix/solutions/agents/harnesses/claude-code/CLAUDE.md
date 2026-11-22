@@ -32,7 +32,7 @@
 - Before committing, scan the diff for the patterns above. A hit outside an example file or a gitignored override is a bug to fix, not a note to leave.
 - If a feature genuinely cannot be generic, say so explicitly and isolate it behind the boundary with a named option, rather than letting personal and general details blend in the same file.
 
-@machine@## Secrets
+## Secrets
 - Secrets and credentials come from Infisical. Load the `infisical-secrets` skill before handling any API key, token, password or other credential, and never write secrets to disk, hardcode them, print them, or ask me to paste them into chat. If one is missing, ask me to add it in Infisical.
 
 ## References
