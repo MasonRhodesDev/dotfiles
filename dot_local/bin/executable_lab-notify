@@ -1,0 +1,496 @@
+#!/usr/bin/env python3
+"""lab-notify: reach a person on their phones and desktops, and get their answer.
+
+Client for a Notify hub (a Node-RED "Notify" tab with an HTTP API). People are
+the hub's person slugs; the hub sends to every phone signed in with that
+person's login and to every desktop running `lab-notify desktop` for them.
+
+  lab-notify send --to alice --title "Backup done" --target https://... [--body ...]
+  lab-notify ask  --to alice --title "Merge #58?" --target https://... -o Merge -o Wait [--reply]
+                  [--link "Open PR=https://..."] [--wait SECONDS]
+                                         # prints the answer; exit 0 answered,
+                                         # 2 expired/cleared, 3 still open (prints id)
+  lab-notify wait ID [--wait SECONDS]    # same, for an ask sent earlier
+  lab-notify status [ID]                 # one message, or the hub's people/devices
+  lab-notify clear ID | --tag TAG
+  lab-notify desktop                     # receiver: desktop popups with buttons/reply
+
+Keep the title a headline that stands alone; put instructions where the reader
+already is (chat, a PR), and send them there with --target (required: an https
+link, a Home Assistant path like /lovelace/0, or entityId:<entity>).
+
+Configuration (environment; nothing is assumed):
+  LAB_NOTIFY_URL            the hub's base URL (required)
+  LAB_NOTIFY_TOKEN          sender token, or:
+  LAB_NOTIFY_DEVICE_TOKEN   desktop device token, or both looked up in a Nomad
+                            variable: NOMAD_ADDR + LAB_NOTIFY_NOMAD_VAR, with
+                            NOMAD_TOKEN or the file in LAB_NOTIFY_NOMAD_TOKEN_FILE
+                            (items notify_senders "name:token,..." and
+                            notify_devices "device:person:token,...")
+  LAB_NOTIFY_SENDER         sender name in that variable (default "agents")
+  LAB_NOTIFY_DEVICE         device name in that variable (default: host name)
+"""
+import argparse
+import ast
+import http.client
+import json
+import os
+import re
+import socket
+import subprocess
+import sys
+import threading
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
+
+POLL = 45  # the hub holds a long-poll for at most 45 s
+TOKEN_OK = re.compile(r"^[A-Za-z0-9._~+/=-]{16,}$")
+
+
+def die(msg, code=1):
+    print("lab-notify: " + msg, file=sys.stderr)
+    sys.exit(code)
+
+
+def hub():
+    url = os.environ.get("LAB_NOTIFY_URL", "").strip().rstrip("/")
+    if not re.match(r"^https?://\S+$", url):
+        die("set LAB_NOTIFY_URL to the Notify hub's base URL")
+    return url
+
+
+def clean_token(tok, where):
+    tok = (tok or "").strip()
+    if not TOKEN_OK.match(tok):
+        die("the token from %s is malformed (expected one word of 16+ token characters)" % where)
+    return tok
+
+
+def nomad_entries(key):
+    addr = os.environ.get("NOMAD_ADDR", "").strip().rstrip("/")
+    path = os.environ.get("LAB_NOTIFY_NOMAD_VAR", "").strip()
+    tok = os.environ.get("NOMAD_TOKEN", "").strip()
+    tok_file = os.environ.get("LAB_NOTIFY_NOMAD_TOKEN_FILE", "")
+    if not tok and tok_file and os.path.exists(os.path.expanduser(tok_file)):
+        tok = open(os.path.expanduser(tok_file)).read().strip()
+    if not (addr and path and tok):
+        return []
+    tok = clean_token(tok, "the Nomad token")
+    req = urllib.request.Request(addr + "/v1/var/" + urllib.parse.quote(path), headers={"X-Nomad-Token": tok})
+    try:
+        with urllib.request.urlopen(req, timeout=15) as r:
+            items = json.load(r).get("Items", {})
+    except urllib.error.HTTPError as e:
+        die("could not read %s from Nomad: HTTP %d" % (path, e.code), code=75)
+    except urllib.error.URLError as e:
+        die("could not reach Nomad: %s" % e.reason, code=75)
+    except (OSError, ValueError, http.client.HTTPException) as e:
+        die("could not read %s from Nomad (%s)" % (path, type(e).__name__), code=75)
+    return [e.strip().split(":") for e in items.get(key, "").split(",") if e.strip()]
+
+
+def sender_token():
+    if os.environ.get("LAB_NOTIFY_TOKEN"):
+        return clean_token(os.environ["LAB_NOTIFY_TOKEN"], "LAB_NOTIFY_TOKEN")
+    name = os.environ.get("LAB_NOTIFY_SENDER", "agents")
+    for e in nomad_entries("notify_senders"):
+        if len(e) == 2 and e[0] == name:
+            return clean_token(e[1], "the Nomad variable")
+    die("no sender token: set LAB_NOTIFY_TOKEN, or NOMAD_ADDR + LAB_NOTIFY_NOMAD_VAR with sender %r in it" % name)
+
+
+def device_token(device):
+    if os.environ.get("LAB_NOTIFY_DEVICE_TOKEN"):
+        return clean_token(os.environ["LAB_NOTIFY_DEVICE_TOKEN"], "LAB_NOTIFY_DEVICE_TOKEN")
+    for e in nomad_entries("notify_devices"):
+        if len(e) == 3 and e[0] == device:
+            return clean_token(e[2], "the Nomad variable")
+    # exit 0: a machine that isn't a notify device stays quietly down (the
+    # unit restarts only on failure)
+    die("no device token for %r: set LAB_NOTIFY_DEVICE_TOKEN" % device, code=0)
+
+
+def call(token, method, path, body=None, query=None, timeout=60):
+    url = hub() + path + ("?" + urllib.parse.urlencode(query) if query else "")
+    data = json.dumps(body).encode() if body is not None else None
+    req = urllib.request.Request(url, data=data, method=method, headers={
+        "Authorization": "Bearer " + token, "Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            code, raw = r.status, r.read()
+    except urllib.error.HTTPError as e:
+        code, raw = e.code, e.read()
+    except http.client.HTTPException as e:      # a truncated answer: like a network error
+        raise urllib.error.URLError(type(e).__name__)
+    try:
+        body = json.loads(raw or b"{}")
+    except ValueError:
+        return code, {"error": "not JSON (HTTP %d)" % code}
+    return code, body if isinstance(body, dict) else {"error": "unexpected answer (HTTP %d)" % code}
+
+
+def call_or_die(*a, **kw):
+    try:
+        return call(*a, **kw)
+    except (urllib.error.URLError, OSError) as e:
+        die("could not reach the hub: %s" % getattr(e, "reason", e))
+
+
+def mpath(mid):
+    return "/notify/msg/" + urllib.parse.quote(str(mid), safe="")
+
+
+def wait_answer(token, mid, seconds):
+    end = time.time() + seconds
+    while True:
+        left = end - time.time()
+        code = None
+        try:
+            code, r = call(token, "GET", mpath(mid), query={"wait": min(POLL, int(left))} if left >= 1 else None,
+                           timeout=max(5, min(POLL + 15, left + 5)))
+        except (urllib.error.URLError, OSError) as e:
+            print("lab-notify: %s, retrying" % getattr(e, "reason", e), file=sys.stderr)
+        if code is not None and code < 500:
+            if code != 200 or "state" not in r:
+                die("status %d: %s" % (code, r.get("error") or "no state in the answer"))
+            if r["state"] == "answered":
+                print(r["answer"])
+                return 0
+            if r["state"] != "open":
+                print("lab-notify: %s %s" % (mid, r["state"]), file=sys.stderr)
+                return 2
+        elif code is not None:
+            print("lab-notify: hub answered %d, retrying" % code, file=sys.stderr)
+        if time.time() >= end:
+            print(mid)
+            print("lab-notify: no answer yet; `lab-notify wait %s` to keep waiting" % mid, file=sys.stderr)
+            return 3
+        if code is None or code >= 500:
+            time.sleep(min(5, max(0.5, end - time.time())))
+
+
+def cmd_send(a, ask=False):
+    body = {"to": a.to, "title": a.title}
+    for k in ("body", "target", "category", "tag"):
+        if getattr(a, k):
+            body[k] = getattr(a, k)
+    if a.expires:
+        body["expires_in"] = a.expires
+    if ask:
+        actions = [{"label": o} for o in (a.option or [])]
+        for spec in a.link or []:
+            label, _, url = spec.partition("=")
+            if not label or not url:
+                die("--link needs LABEL=URL")
+            actions.append({"label": label, "url": url})
+        if actions:
+            body["actions"] = actions
+        if a.reply or not a.option:
+            body["reply"] = True
+    token = sender_token()
+    code, r = call_or_die(token, "POST", "/notify", body)
+    if code not in (200, 201):
+        die("send failed (%d): %s" % (code, r.get("error")))
+    if not ask:
+        print(r["id"])
+        return 0
+    print("lab-notify: asked %s on %d phone(s), id %s" % (", ".join(r["to"]), r["phones"], r["id"]), file=sys.stderr)
+    return wait_answer(token, r["id"], a.wait)
+
+
+# --- desktop receiver -------------------------------------------------------
+
+CONTROL = re.compile(r"[\x00-\x08\x0b-\x1f\x7f]")
+
+
+def gv_str(s):
+    s = CONTROL.sub("", str(s)).encode("utf-8", "replace").decode("utf-8")
+    return "'" + s.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n").replace("\t", "\\t") + "'"
+
+
+SIGNAL = re.compile(r"org\.freedesktop\.Notifications\.(ActionInvoked|NotificationReplied|NotificationClosed) (\(.*\))\s*$")
+OWNER = re.compile(r"org\.freedesktop\.Notifications is owned by (\S+)")
+
+
+def gv_args(text):
+    """GVariant text of (uint32 id, 'string') or (uint32 id, uint32 n) -> a Python tuple.
+    Only the leading type names are dropped, never text inside the string."""
+    m = re.fullmatch(r"\((?:uint32 )?(\d+), (.*)\)", text.strip(), re.S)
+    if not m:
+        raise ValueError("unexpected signal arguments")
+    rest = m.group(2)
+    n = re.fullmatch(r"(?:uint32 )?(\d+)", rest)
+    return int(m.group(1)), int(n.group(1)) if n else ast.literal_eval(rest)
+
+
+class Desktop:
+    URGENCY = {"alert": 2, "ask": 1, "info": 0}
+
+    def __init__(self, device):
+        self.device = device
+        self.token = device_token(device)
+        state = os.environ.get("XDG_RUNTIME_DIR") or die("XDG_RUNTIME_DIR is unset")
+        self.state_file = os.path.join(state, "lab-notify-shown.json")
+        try:
+            # {"owner": notification daemon's bus name, "shown": {message id ->
+            # {"n": popup id or None once closed, "msg": ...}}}
+            st = json.load(open(self.state_file))
+            self.owner, self.shown = st["owner"], st["shown"]
+        except (OSError, ValueError, KeyError, TypeError):
+            self.owner, self.shown = None, {}
+        self.lock = threading.Lock()
+        self.refresh = threading.Event()
+        self.last = []          # the last inbox, to re-show from when the daemon changes
+
+    def save(self):
+        with open(self.state_file + ".tmp", "w") as f:
+            json.dump({"owner": self.owner, "shown": self.shown}, f)
+        os.replace(self.state_file + ".tmp", self.state_file)
+
+    def gdbus(self, method, *args):
+        out = subprocess.run(["gdbus", "call", "--session", "--dest", "org.freedesktop.Notifications",
+                              "--object-path", "/org/freedesktop/Notifications",
+                              "--method", "org.freedesktop.Notifications." + method, "--", *args],
+                             capture_output=True, text=True, timeout=10)
+        if out.returncode:
+            raise RuntimeError(out.stderr.strip())
+        return out.stdout
+
+    def show(self, m, replaces=0):
+        actions = []
+        for i, act in enumerate(m.get("actions") or []):
+            actions += ["NT_%d" % i, act["label"]]
+        if m.get("link"):
+            actions += ["default", "Open"]
+        if m.get("reply"):
+            actions += ["inline-reply", "Reply"]
+        hints = "{'urgency': <byte %d>, 'desktop-entry': <'lab-notify'>}" % self.URGENCY.get(m.get("category"), 1)
+        body = m.get("body") or ""
+        if m.get("sender"):
+            body = (body + "\n\n" if body else "") + "from " + m["sender"]
+        out = self.gdbus("Notify", gv_str("Lab"), "uint32 %d" % (replaces or 0), "''", gv_str(m.get("title", "")),
+                         gv_str(body), "[" + ",".join(gv_str(x) for x in actions) + "]", hints,
+                         "int32 %d" % (0 if m.get("category") in ("ask", "alert") else -1))
+        return int(re.search(r"uint32 (\d+)", out).group(1))
+
+    def close(self, n):
+        try:
+            self.gdbus("CloseNotification", "uint32 %d" % n)
+        except (RuntimeError, subprocess.SubprocessError, OSError):
+            pass
+
+    def reconcile(self, messages):
+        """Show what is open, close what is not. True when every message was handled."""
+        ok = True
+        with self.lock:
+            live = {m["id"]: m for m in messages}
+            for mid in list(self.shown):
+                if mid not in live:
+                    n = self.shown.pop(mid)["n"]
+                    if n:
+                        self.close(n)
+            for mid, m in live.items():
+                old = self.shown.get(mid)
+                if old and old["msg"] == m:
+                    continue
+                try:
+                    n = self.show(m, replaces=(old or {}).get("n") or 0)
+                except Exception as e:      # one bad message must not stop the others
+                    print("lab-notify: could not show %s: %s" % (mid, e), file=sys.stderr)
+                    ok = False
+                    continue
+                self.shown[mid] = {"n": n, "msg": m}
+            self.save()
+        return ok
+
+    def by_popup(self, n):
+        with self.lock:
+            for mid, s in self.shown.items():
+                if s["n"] == n:
+                    return mid, s["msg"]
+        return None, None
+
+    def answer(self, mid, body):
+        def go():
+            for attempt in range(6):
+                try:
+                    code, r = call(self.token, "POST", mpath(mid) + "/answer", body)
+                except (urllib.error.URLError, OSError) as e:
+                    code, r = None, {"error": str(getattr(e, "reason", e))}
+                if code in (200, 409):
+                    return
+                if code is not None and code < 500:
+                    break
+                time.sleep(2 ** attempt)
+            print("lab-notify: answer to %s failed (%s): %s; showing it again" % (mid, code, r.get("error")), file=sys.stderr)
+            with self.lock:
+                self.shown.pop(mid, None)
+            self.refresh.set()
+        threading.Thread(target=go, daemon=True).start()
+
+    KEEP_ENV = ("HOME", "PATH", "LANG", "LC_ALL", "DISPLAY", "WAYLAND_DISPLAY", "XDG_RUNTIME_DIR",
+                "XDG_CURRENT_DESKTOP", "XDG_SESSION_TYPE", "DBUS_SESSION_BUS_ADDRESS")
+
+    @classmethod
+    def open(cls, link):
+        if not str(link).startswith("https://"):
+            print("lab-notify: not opening %r: only https links" % str(link)[:80], file=sys.stderr)
+            return
+        env = {k: os.environ[k] for k in cls.KEEP_ENV if k in os.environ}   # none of the unit's secrets
+        cmd = ["xdg-open", link]
+        if subprocess.run(["sh", "-c", "command -v systemd-run"], capture_output=True).returncode == 0:
+            cmd = ["systemd-run", "--user", "--scope", "--quiet", "--collect"] + cmd   # outlives the unit
+        try:
+            subprocess.Popen(cmd, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except OSError as e:
+            print("lab-notify: could not open a link: %s" % e, file=sys.stderr)
+
+    def on_signal(self, kind, args):
+        n = int(args[0])
+        if kind == "NotificationClosed":
+            with self.lock:
+                for s in self.shown.values():
+                    if s["n"] == n:
+                        s["n"] = None      # dismissed: never re-shown, never matched again
+                self.save()
+            return
+        mid, m = self.by_popup(n)
+        if not mid:
+            return
+        arg = str(args[1])
+        if kind == "NotificationReplied":
+            if arg.strip():
+                self.answer(mid, {"answer": arg.strip()})
+        elif arg == "default" and m.get("link"):
+            self.open(m["link"])
+        elif re.fullmatch(r"NT_\d", arg):
+            acts = m.get("actions") or []
+            i = int(arg[3:])
+            if i < len(acts):
+                if acts[i].get("url"):
+                    self.open(acts[i]["url"])
+                else:
+                    self.answer(mid, {"action": i})
+
+    def signals(self):
+        while True:
+            try:
+                p = subprocess.Popen(["gdbus", "monitor", "--session", "--dest", "org.freedesktop.Notifications"],
+                                     stdout=subprocess.PIPE, text=True)
+            except OSError as e:
+                print("lab-notify: gdbus monitor: %s" % e, file=sys.stderr)
+                time.sleep(10)
+                continue
+            for line in p.stdout:
+                try:
+                    own = OWNER.search(line)
+                    if own:
+                        with self.lock:
+                            changed = own.group(1) != self.owner
+                            if changed:
+                                # a new notification daemon: our popup ids mean nothing to it
+                                self.owner, self.shown = own.group(1), {}
+                                self.save()
+                        if changed:
+                            self.reconcile(self.last)       # show the open ones again now
+                            self.refresh.set()
+                        continue
+                    hit = SIGNAL.search(line)
+                    if hit:
+                        self.on_signal(hit.group(1), gv_args(hit.group(2)))
+                except Exception as e:
+                    print("lab-notify: signal %r: %s" % (line.strip()[:200], e), file=sys.stderr)
+            p.wait()
+            time.sleep(2)
+
+    def run(self):
+        threading.Thread(target=self.signals, daemon=True).start()
+        v = ""
+        while True:
+            if self.refresh.is_set():
+                self.refresh.clear()
+                v = ""
+            try:
+                code, r = call(self.token, "GET", "/notify/inbox",
+                               query={"v": v, "wait": POLL} if v else None, timeout=POLL + 15)
+            except (urllib.error.URLError, OSError) as e:
+                print("lab-notify: inbox: %s" % getattr(e, "reason", e), file=sys.stderr)
+                time.sleep(10)
+                continue
+            if code != 200 or "v" not in r:
+                print("lab-notify: inbox %d: %s" % (code, r.get("error")), file=sys.stderr)
+                time.sleep(30 if code == 401 else 10)
+                continue
+            msgs = [m for m in (r.get("messages") or []) if isinstance(m, dict) and m.get("id")]
+            self.last = msgs
+            if r["v"] != v:
+                if self.reconcile(msgs):
+                    v = r["v"]
+                else:
+                    time.sleep(5)       # keep the old version: fetch and try again
+
+
+def main():
+    ap = argparse.ArgumentParser(prog="lab-notify", description=__doc__.split("\n\n")[0])
+    sub = ap.add_subparsers(dest="cmd", required=True)
+
+    def common(p):
+        p.add_argument("--to", action="append", required=True, help="person (the hub's person slug); repeat for several")
+        p.add_argument("--title", required=True, help="a headline that stands alone (max 100)")
+        p.add_argument("--body", help="1-3 lines of context (max 1000)")
+        p.add_argument("--target", required=True,
+                       help="where a tap goes: an https link, a Home Assistant path, or entityId:<entity>")
+        p.add_argument("--category", choices=["alert", "ask", "info"])
+        p.add_argument("--tag", help="same sender + tag updates the open message instead of adding one")
+        p.add_argument("--expires", type=int, help="seconds until it expires (ask 24 h, info 4 h)")
+
+    p = sub.add_parser("send", help="send a notification, print its id")
+    common(p)
+    p = sub.add_parser("ask", help="ask and wait for the answer")
+    common(p)
+    p.add_argument("-o", "--option", action="append", help="an answer button (max 3, or 2 with --reply)")
+    p.add_argument("--link", action="append", help='a button that opens a link: "LABEL=URL"')
+    p.add_argument("--reply", action="store_true", help="allow a typed reply (the default with no options)")
+    p.add_argument("--wait", type=int, default=600, help="seconds to wait for the answer (default 600)")
+    p = sub.add_parser("wait", help="wait for the answer to an earlier ask")
+    p.add_argument("id")
+    p.add_argument("--wait", type=int, default=600)
+    p = sub.add_parser("status", help="one message's state, or the hub's people and devices")
+    p.add_argument("id", nargs="?")
+    p = sub.add_parser("clear", help="clear an open message everywhere")
+    p.add_argument("id", nargs="?")
+    p.add_argument("--tag")
+    p = sub.add_parser("desktop", help="run the desktop receiver")
+    p.add_argument("--device", default=os.environ.get("LAB_NOTIFY_DEVICE") or socket.gethostname())
+    a = ap.parse_args()
+    if a.cmd == "desktop" and not os.environ.get("LAB_NOTIFY_URL"):
+        die("LAB_NOTIFY_URL is not set: not a notify desktop", code=0)
+    hub()
+
+    if a.cmd == "send":
+        return cmd_send(a)
+    if a.cmd == "ask":
+        return cmd_send(a, ask=True)
+    if a.cmd == "wait":
+        return wait_answer(sender_token(), a.id, a.wait)
+    if a.cmd == "status":
+        code, r = call_or_die(sender_token(), "GET", mpath(a.id) if a.id else "/notify/status")
+        print(json.dumps(r, indent=2))
+        return 0 if code == 200 else 1
+    if a.cmd == "clear":
+        if a.id:
+            code, r = call_or_die(sender_token(), "DELETE", mpath(a.id))
+        elif a.tag:
+            code, r = call_or_die(sender_token(), "POST", "/notify", {"tag": a.tag, "clear": True})
+        else:
+            die("clear needs an id or --tag")
+        print(json.dumps(r))
+        return 0 if code == 200 else 1
+    if a.cmd == "desktop":
+        Desktop(a.device).run()
+
+
+if __name__ == "__main__":
+    sys.exit(main())

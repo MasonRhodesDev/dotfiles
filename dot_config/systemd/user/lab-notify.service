@@ -1,0 +1,19 @@
+[Unit]
+Description=lab-notify desktop receiver: Notify hub messages as desktop popups
+Documentation=file:%h/.local/bin/lab-notify
+# LAB_NOTIFY_URL and LAB_NOTIFY_DEVICE_TOKEN come from Infisical through
+# infisical-exec, which restarts the receiver when they change.
+After=graphical-session.target swaync.service
+ConditionPathExists=%h/.config/infisical/machine.env
+PartOf=graphical-session.target
+Requisite=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/infisical-exec %h/.local/bin/lab-notify desktop
+Restart=on-failure
+RestartSec=10
+Slice=background.slice
+
+[Install]
+WantedBy=graphical-session.target
