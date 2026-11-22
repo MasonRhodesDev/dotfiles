@@ -1,18 +1,26 @@
 {
   name = "Fonts";
-  description = "Code and UI fonts. SF Pro is native on darwin.";
+  description = "Code and UI fonts, and on Linux the Microsoft core fonts for web and document metrics. SF Pro is native on darwin.";
   platforms = [ "linux" "darwin" ];
 
-  linux.home = { pkgs, ... }: {
-    fonts.fontconfig.enable = true;
-    home.packages = [
-      pkgs.lilex
-      pkgs.nerd-fonts.fira-code
-      pkgs.nerd-fonts.jetbrains-mono
-      pkgs.nerd-fonts.symbols-only
-    ];
-    xdg.configFile."fontconfig/fonts.conf".source = ./fonts.conf;
-  };
+  linux.home = { pkgs, ... }:
+    let
+      unfree = import pkgs.path {
+        inherit (pkgs.stdenv.hostPlatform) system;
+        config.allowUnfreePackages = [ "corefonts" ];
+      };
+    in
+    {
+      fonts.fontconfig.enable = true;
+      home.packages = [
+        unfree.corefonts
+        pkgs.lilex
+        pkgs.nerd-fonts.fira-code
+        pkgs.nerd-fonts.jetbrains-mono
+        pkgs.nerd-fonts.symbols-only
+      ];
+      xdg.configFile."fontconfig/fonts.conf".source = ./fonts.conf;
+    };
 
   linux.root.packages = {
     arch = [
