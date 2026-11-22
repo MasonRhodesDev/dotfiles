@@ -92,6 +92,8 @@ fromSolutions // {
 
   mac-server = decided "mac-server" (import ./mac-server.nix { inherit dot lib; });
 
+  t3code = decided "t3code" (import ./t3code.nix { inherit dot lib; });
+
   github-ssh = import ./github-ssh.nix { inherit dot lib pkgs; };
 
   tailscale-join = import ./tailscale-join.nix { inherit pkgs stub; };
