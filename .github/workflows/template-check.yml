@@ -65,5 +65,17 @@ jobs:
           curl -fsSL --retry 5 --retry-delay 3 --retry-all-errors -o gitleaks.tar.gz "$url"
           echo "${GITLEAKS_SHA256}  gitleaks.tar.gz" | sha256sum -c -
           tar xzf gitleaks.tar.gz gitleaks
-          ./gitleaks git . --no-banner --redact --config .gitleaks.toml
-          echo "✅ No secrets found in history (gitleaks ${GITLEAKS_VERSION})" >> "$GITHUB_STEP_SUMMARY"
+          # Scan what HEAD reaches: on a pull request that is the PR merged into its
+          # base branch (the PR's commits plus all of the base), on a push to main it
+          # is main. Other branches and tags are not scanned, so their findings can't
+          # fail an unrelated PR. Without --log-opts gitleaks scans every ref (--all).
+          # --diff-merges=first-parent also scans what a merge commit itself adds
+          # (a conflict resolution), which plain git log -p skips.
+          rc=0
+          out=$(./gitleaks git . --no-banner --no-color --redact --config .gitleaks.toml \
+            --log-opts="HEAD --diff-merges=first-parent" 2>&1) || rc=$?
+          echo "$out"
+          [ "$rc" -eq 0 ] || exit "$rc"
+          # gitleaks exits 0 when git log itself fails, having scanned nothing
+          echo "$out" | grep -Eq '\b[1-9][0-9]* commits scanned' || { echo "::error::gitleaks scanned no commits"; exit 1; }
+          echo "✅ No secrets found in HEAD's history (gitleaks ${GITLEAKS_VERSION})" >> "$GITHUB_STEP_SUMMARY"
