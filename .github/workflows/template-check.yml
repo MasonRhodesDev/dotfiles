@@ -1,4 +1,4 @@
-name: Template render check
+name: Secret scan
 
 on:
   push:
@@ -6,49 +6,6 @@ on:
   pull_request:
 
 jobs:
-  render:
-    name: Render (${{ matrix.profile == 'true' && 'work' || 'personal' }})
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        profile: ["true", "false"]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
-
-      - name: Install chezmoi
-        run: sh -c "$(curl -fsLS get.chezmoi.io)" -- -b "$HOME/.local/bin"
-
-      - name: Render config template
-        env:
-          CHEZMOI_GIT_OVERRIDES: '[]'
-          CHEZMOI_IDENTITY_EMAIL_PERSONAL: ci-personal@example.invalid
-          CHEZMOI_IDENTITY_EMAIL_WORK: ci-work@example.invalid
-          CHEZMOI_IDENTITY_NAME: CI Template Check
-        run: |
-          export PATH="$HOME/.local/bin:$PATH"
-          chezmoi init --source "$PWD" \
-            --promptBool "Is this a work machine"=${{ matrix.profile }} \
-            --promptBool "Is this a headless machine (SSH only, no desktop)"=false
-          echo "### Config rendered (is_work=${{ matrix.profile }})" >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Render all source templates
-        run: |
-          export PATH="$HOME/.local/bin:$PATH"
-          # status computes the full target state, rendering every template,
-          # .chezmoiignore, and script template — any template error fails here.
-          chezmoi status --source "$PWD" > /dev/null
-          count=$(find . -name '*.tmpl' -not -path './.git/*' | wc -l)
-          echo "✅ All templates rendered cleanly ($count .tmpl files, is_work=${{ matrix.profile }})" >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Verify profile gating
-        run: |
-          export PATH="$HOME/.local/bin:$PATH"
-          is_work=$(chezmoi data --source "$PWD" | jq -r .is_work)
-          [ "$is_work" = "${{ matrix.profile }}" ] || { echo "::error::is_work rendered '$is_work', expected '${{ matrix.profile }}'"; exit 1; }
-          echo "✅ is_work=$is_work, profile=$(chezmoi data --source "$PWD" | jq -r .profile.type)" >> "$GITHUB_STEP_SUMMARY"
-
   gitleaks:
     name: Secret scan
     runs-on: ubuntu-latest

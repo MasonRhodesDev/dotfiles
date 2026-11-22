@@ -1,11 +1,8 @@
 #!/bin/bash
-# Block commits containing secrets. This repo is PUBLIC and chezmoi
-# auto-pushes, so anything committed is published immediately.
-# Installed via core.hooksPath=.githooks (run_once_after_40-setup-git-hooks.sh).
 
 if ! command -v gitleaks >/dev/null 2>&1; then
-    echo "pre-commit: gitleaks not installed — secret scan SKIPPED." >&2
-    echo "  Install: see .chezmoiscripts/run_once_after_40-setup-git-hooks.sh.tmpl" >&2
+    echo "pre-commit: gitleaks is not installed, so the secret scan is SKIPPED." >&2
+    echo "  Install: the gitleaks solution of the Nix flake, or your package manager" >&2
     exit 0
 fi
 
@@ -15,16 +12,11 @@ if ! gitleaks git --staged --no-banner --redact --config "$repo_root/.gitleaks.t
     echo "✗ pre-commit: gitleaks found potential secrets in staged changes:" >&2
     gitleaks git --staged --no-banner --redact --config "$repo_root/.gitleaks.toml" 2>&1 | tail -20 >&2
     echo "" >&2
-    echo "This repo is public + auto-pushed. Remove the secret, or if it's a" >&2
+    echo "This repo is public. Remove the secret, or if it's a" >&2
     echo "false positive add an allowlist entry to .gitleaks.toml." >&2
     exit 1
 fi
 
-# secret-guard: block work identifiers (org/brand names, work email) that must
-# never enter this PUBLIC repo. The forbidden strings are NOT stored here — they
-# live in a local, gitignored blocklist deployed from the private overlay repo
-# (~/.local/share/dotfiles-work/secret-guard.txt), one pattern per line, so the
-# public repo never contains the very strings it guards against. No file => skip.
 guard="$HOME/.local/share/dotfiles-work/secret-guard.txt"
 if [ -f "$guard" ]; then
     staged="$(git diff --cached --no-color)"
@@ -35,8 +27,8 @@ if [ -f "$guard" ]; then
             echo "" >&2
             echo "✗ pre-commit: staged changes contain a blocked work identifier." >&2
             echo "  (matched a pattern from the private secret-guard blocklist)" >&2
-            echo "  This repo is public — scrub it; real values belong in Bitwarden" >&2
-            echo "  or the private overlay repo, never in the source." >&2
+            echo "  This repo is public, so scrub it. Real values belong in the private" >&2
+            echo "  repo or the credential store, never in the source." >&2
             exit 1
         fi
     done < "$guard"

@@ -1,14 +1,3 @@
-# Gitleaks config for the dotfiles repo.
-# The pre-commit hook (.githooks/pre-commit) blocks commits containing
-# secrets — critical because this repo is public and chezmoi autoPushes.
-#
-# NOTE: work identifiers (org/brand names, work email) are deliberately NOT
-# listed as detection patterns here — doing so would republish the very strings
-# we keep out of this public repo. Instead they never enter the source: identity
-# and work data come from Bitwarden (see .chezmoi.toml.tmpl) and work-only files
-# live in the private overlay repo. For an optional local-only blocklist guard,
-# see the pre-commit hook's `secret-guard` section.
-
 [extend]
 useDefault = true
 
@@ -20,12 +9,8 @@ regexes = [
   '''pinnedSubkey = "[0-9A-F]{40}"''',
 ]
 paths = [
-  # Deleted local e2e test-VM images used a throwaway ssh test password;
-  # only relevant for full-history scans.
   '''e2e-testing/infrastructure/packer/.*\.pkr\.hcl''',
 ]
 commits = [
-  # Deleted documentation template containing example credentials and
-  # Authorization headers with placeholder values.
   "d1f96d838a8b2d42609dbfae416d7eff2e763c35",
 ]

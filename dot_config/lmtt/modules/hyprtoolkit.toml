@@ -1,9 +1,0 @@
-name = "hyprtoolkit"
-description = "Hyprtoolkit palette with Material You colors"
-binary = "hyprctl"
-priority = 100
-
-[script]
-path = "~/.config/lmtt/scripts/hyprtoolkit.sh"
-timeout = 5000
-pass_as_env = true
