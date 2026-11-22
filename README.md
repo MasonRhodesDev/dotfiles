@@ -1,154 +1,112 @@
-# Hyprland Dotfiles
+# Dotfiles
 
-Dotfiles for a Hyprland/Wayland desktop on **Fedora** (with Arch support),
-managed with [chezmoi](https://chezmoi.io). Work/personal machine split via
-template conditionals, Material You theming via
-[lmtt](https://github.com/MasonRhodesDev/linux-multi-theme-toggle), and a
-declarative package registry audited by Claude.
+One Nix flake configures every machine: home-manager on Linux (Fedora and
+Arch, a Hyprland desktop or a headless server) and nix-darwin with
+home-manager on macOS. The flake lives in [`nix/`](nix).
 
-## 🚀 Quick Start
+## How it is put together
 
-### Fresh Installation
+- **Solutions** (`nix/solutions/<group>/.../<solution>`) each configure one
+  thing: a shell, an editor, a service, a piece of hardware. A solution has a
+  `home` part and may add `linux.home`, `linux.root`, `darwin.home` or
+  `darwin.system` parts, plus `checks` the flake runs.
+- **Traits** (`nix/traits.nix`) describe a machine: `headless`, `form`,
+  `profile`, `secrets`, `uses` and `hardware`. A solution or group says when it
+  applies with `when`, and `requires` or `conflicts` with other solutions.
+- **Machines** are data in a private input, never in this repo. The input holds
+  `identity.nix` and one `machines/<name>.nix` per machine with its system,
+  traits, user and private values. [`nix/private-stub`](nix/private-stub) shows
+  the shape with placeholder values, and the flake checks build against it.
+- **Root steps** (`linux.root`) are what a Linux home cannot do for itself:
+  distro packages, files under `/etc`, units. `dot switch` runs them with
+  `sudo` before it activates the home generation, whenever they changed.
 
-One command on a virgin machine (installs git/jq/rbw/chezmoi via the package
-manager, walks through Bitwarden login so identity prompts are pre-seeded,
-then runs `chezmoi init --apply`):
+## Set up a machine
 
-```bash
-sh -c "$(curl -fsLS https://raw.githubusercontent.com/MasonRhodesDev/dotfiles/main/bootstrap.sh)"
-```
-
-All machine-varying private data is fetched **once per machine** from a single
-Bitwarden secure note (`chezmoi-data`) at init, then persisted in
-`~/.config/chezmoi/chezmoi.toml` — never stored in this public repo. Fields:
-
-| Field | Purpose |
-|-------|---------|
-| `name`, `email_work`, `email_personal` | git author identity |
-| `git_overrides` | JSON array of `{condition, identity}` git `includeIf` rules (dir- or org-based); drives `~/.gitconfig` |
-| `work_claude_md` | work-only design/brand block injected into `~/.claude/CLAUDE.md` |
-| `work_overlay_repo` | git URL of the private overlay repo (work files, e.g. Claude templates) |
-
-Only `name`/emails have a prompt fallback; the rest degrade to safe defaults if
-absent. If any value changes in Bitwarden later, run `chezmoi-refresh-identity`.
-`rbw` uses `pinentry-curses` so unlock works over a plain TTY/SSH during init.
-
-### Existing Machine
+On a fresh machine with only `curl`:
 
 ```bash
-# Pull latest changes
-chezmoi update
-
-# Check for differences
-chezmoi diff
-
-# Apply changes
-chezmoi apply
+curl -fsSL <raw URL of nix/bootstrap> -o bootstrap
+sh bootstrap <repo URL>
 ```
 
-## 📁 Repository Structure
+`nix/bootstrap` installs Determinate Nix when it is missing, signs in to
+GitHub for an SSH key, clones the repo to `$DOTFILES_DIR` (default
+`~/.local/share/dotfiles`) and runs `nix/dot switch`.
 
-```
-.
-├── dot_config/              # ~/.config applications
-│   ├── hypr/               # Hyprland compositor config
-│   ├── hypr/profiles/      # Monitor profiles consumed by hyprstate
-│   ├── nvim/               # Neovim configuration
-│   ├── waybar/             # Status bar configuration
-│   ├── matugen/            # Theme generation templates
-│   └── ...
-├── dot_local/bin/          # Local executables
-├── scripts/                # Utility scripts (deployed to ~/scripts)
-├── software_installers/    # packages.toml registry (repo-only, see docs)
-├── .chezmoiscripts/        # run_once / run_onchange lifecycle scripts
-└── docs/                   # Detailed documentation (repo-only)
-```
+`dot` finds the private input beside the checkout's origin (`<origin>-private`)
+unless `--private REF` or `DOTFILES_PRIVATE` names one, and picks the machine
+entry named after the host unless `--machine NAME` or `DOTFILES_MACHINE` does.
+For a machine with no entry it prints the entry to add and the traits to
+choose from.
 
-## 🎨 Theme System
+## Everyday commands
 
-Theming is handled by [lmtt](https://github.com/MasonRhodesDev/linux-multi-theme-toggle)
-(Linux Multi-Theme Toggle), a standalone tool that generates Material You
-colors with matugen and injects them into application configs:
+Run them from the checkout's `nix/` directory, or put `nix/dot` on your PATH.
 
 ```bash
-lmtt switch light|dark|toggle   # Switch themes
-lmtt status                     # Current theme
-lmtt list                       # Installed modules
+dot plan                 # what a switch would move, start and stop (Linux)
+dot switch               # build and activate this machine
+dot show                 # traits, solutions and started units of this machine
+dot why <solution>       # which traits enabled a solution here
+dot secrets              # the credentials this machine needs, and where each comes from
+dot check                # nix flake check
+dot --private stub --machine stub-work-laptop show   # try it with the stub input
 ```
 
-Generated files are prefixed `lmtt-*` and excluded from chezmoi via
-`.chezmoiignore`.
+`--build-host HOST` builds on another machine over SSH and copies the result
+back.
 
-## 💻 Key Applications
+## Working on the flake
 
-| Category | Application | Config Location |
-|----------|-------------|-----------------|
-| **Compositor** | Hyprland | `~/.config/hypr/` |
-| **Terminal** | Wezterm | `~/.config/wezterm/` |
-| **Editor** | Neovim / Zed | `~/.config/nvim/`, `~/.config/zed/` |
-| **Shell** | Fish + Oh My Posh | `~/.config/fish/` |
-| **Status Bar** | Waybar | `~/.config/waybar/` |
-| **Launcher** | Fuzzel | `~/.config/fuzzel/` |
-| **Notifications** | SwayNC | `~/.config/swaync/` |
-| **System Monitor** | Btop | `~/.config/btop/` |
+- Add a solution as a `.nix` file, or a directory with a `default.nix`, under
+  the group it belongs to. The catalog finds it by path and rejects unknown
+  keys.
+- Personal values (hostnames, addresses, accounts, hardware ids) go in the
+  private input and reach a solution through `machine.private` or `identity`.
+  Committed defaults are generic. The `leak-scan` check fails on any term the
+  private identity lists in `leakTerms`.
+- Files carry no comments. The `no-comments` check enforces it.
+- `nix flake check` builds every check and evaluates every stub machine.
 
-## 🔧 Common Tasks
+## Secrets
 
-### Adding New Files
-```bash
-# Add a config file to chezmoi
-chezmoi add ~/.config/newapp/config.conf
+Credentials resolve through one chain: the machine's local store, then the
+provider its `secrets` trait names (Infisical, Bitwarden Secrets Manager or a
+Bitwarden vault), then a derived value, then a manual step. `dot secrets`
+lists what a machine needs. Nothing secret is committed.
 
-# Add a script
-chezmoi add ~/scripts/my-script.sh
-```
+The repo is public. Enable the pre-commit hook in a clone with
+`git config core.hooksPath .githooks`. It runs gitleaks, and on a work machine
+also checks a private blocklist. False positives go in `.gitleaks.toml`.
 
-### Managing Templates
-```bash
-# Test template rendering
-chezmoi execute-template < ~/.local/share/chezmoi/dot_config/example.tmpl
+## Desktop
 
-# Edit templates
-chezmoi edit ~/.gitconfig
-```
+The desktop environment (Hyprland config, waybar, swaync, fuzzel, theming
+templates, idle and lock policy) ships as the
+[hypr-DE](https://github.com/MasonRhodesDev/hypr-DE) package. This flake
+installs it and owns the per-machine layer on top, described in
+[docs/HYPRLAND-CONFIG.md](docs/HYPRLAND-CONFIG.md). Theming is
+[lmtt](https://github.com/MasonRhodesDev/linux-multi-theme-toggle), see
+[docs/THEME-SYSTEM.md](docs/THEME-SYSTEM.md). The editor setup is in
+[docs/NEOVIM-SETUP.md](docs/NEOVIM-SETUP.md).
 
-### Monitoring Changes
-```bash
-# Check chezmoi status
-chezmoi status
+The login stack is owned by
+[greetd_game_mode](https://github.com/MasonRhodesDev/greetd_game_mode) with
+[Vigil](https://github.com/MasonRhodesDev/vigil) as its greeter. Provision it
+with `sudo game-mode setup`.
 
-# See what would be applied
-chezmoi diff
-```
+## Coming from chezmoi
 
-## 📚 Documentation
+This repo was a chezmoi source tree until the flake replaced it. The first
+`dot switch` on a machine that chezmoi managed moves the files chezmoi wrote to
+`~/.local/state/dotfiles/chezmoi-retired`. The switch after that removes
+chezmoi's own state (`~/.local/share/chezmoi`, `~/.config/chezmoi`, its cache
+and drift state). It keeps the source checkout, and says why, when the checkout
+has uncommitted, untracked, stashed or unpushed work, linked worktrees, or a
+copy of this flake. The chezmoi binary itself came from the distro, so remove
+it with the package manager.
 
-- [Software Package Registry](docs/SOFTWARE-INSTALLERS.md)
-- [Theme System](docs/THEME-SYSTEM.md)
-- [Hyprland Configuration](docs/HYPRLAND-CONFIG.md)
-- [Neovim Setup](docs/NEOVIM-SETUP.md)
-- [Chezmoi Workflow](docs/CHEZMOI-WORKFLOW.md)
-
-## greetd Login Manager
-
-The packaged login stack is owned by
-**[greetd_game_mode](https://github.com/MasonRhodesDev/greetd_game_mode)**
-with **[Vigil](https://github.com/MasonRhodesDev/vigil)** as its greeter.
-
-```bash
-sudo game-mode setup
-```
-
-The setup command renders the package-owned templates into `/etc/greetd`.
-The retired `greetd-config` checkout and symlink installer are no longer part
-of the active desktop path.
-
-## ⚠️ Important Notes
-
-- **Never use `chezmoi apply --force`** - This can overwrite local changes
-- **Use `chezmoi add` to save changes** - Don't edit deployed-file copies in `.local/share/chezmoi` directly
-- **Work/personal split** - `is_work` (hostname-based) excludes gaming/Steam configs from work machines via `.chezmoiignore`. Work-only *files* (Claude templates) live in a **private overlay repo** (`work_overlay_repo`), cloned into `~/.claude/templates` on work machines by `run_onchange_after_35-sync-work-overlay` — they are never committed to this public repo.
-
-## 📄 License
+## License
 
 MIT License.

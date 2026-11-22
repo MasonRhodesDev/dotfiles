@@ -1,19 +1,25 @@
 # Hyprland configuration
 
-The desktop environment moved out of this repo into
-[hypr-DE](https://github.com/MasonRhodesDev/hypr-DE) (2026-08). Compositor
-config, waybar, swaync, fuzzel, theming templates, idle/lock policy, and all
-DE scripts/units ship in the `hypr-de` package.
+The desktop environment lives in
+[hypr-DE](https://github.com/MasonRhodesDev/hypr-DE). Compositor config,
+waybar, swaync, fuzzel, theming templates, idle and lock policy, and the DE
+scripts and units ship in the `hypr-de` package, which the `window-manager`
+solution installs.
 
-What this repo still owns:
+What the flake writes on top of it:
 
-- `~/.config/hypr/local.lua` — per-machine overrides (autostart apps, personal
-  window rules, gaming opt-in); runs after the packaged config, last-wins
-- `~/.config/hypr/profiles/` — monitor layouts (hyprstate selects by EDID)
-- `~/.config/hypr/power.conf` — hyprstate power policy (hyprstate reads the
-  user path only)
-- `~/.config/hypr-de/notify-plugins/` — per-app notification recovery plugins
-- `~/.config/uwsm/env` — personal session env (SSH agent socket)
+| Path | Solution | What it is |
+|------|----------|------------|
+| `~/.config/hypr/local.lua` | `window-manager`, assembled from the `hypr/*` fragments other solutions add | Per-machine overrides: autostart apps, window rules, binds. It runs after the packaged config, so it wins. |
+| `~/.config/hypr/power.conf` | `window-manager` | hyprstate power policy. hyprstate reads only the user path. |
+| `~/.config/uwsm/env` | `window-manager` | Session environment, such as the SSH agent socket. |
+| `~/.config/hypr-de/xwayland-primary` | `window-manager` | The XWayland primary monitor, from `machine.private.xwaylandPrimary`. |
+| `~/.config/hypr-de/hypridle.conf` | `suspend` | The idle timeouts knob file hypr-DE reads. |
+| `~/.config/hypr-de/notify-plugins/` | `slack` | Per-app notification recovery plugins. |
+| `~/.config/hypr/bp-*.lua`, `~/.config/hypr/scripts/bp-game-focus.py` | `steam-big-picture` | Steam Big Picture monitor and focus handling. |
 
-Everything else: see the hypr-DE README for the customization surface
-(lmtt module shadowing, systemd drop-ins, `hypr-de-set-wallpaper`).
+Monitor profiles belong to hyprstate, which renders them at runtime. The flake
+does not write them.
+
+For the rest of the customization surface (lmtt module shadowing, systemd
+drop-ins, `hypr-de-set-wallpaper`) see the hypr-DE README.

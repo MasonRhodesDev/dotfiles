@@ -1,67 +1,45 @@
-# Chezmoi Dotfiles Repository
+# Dotfiles
 
-Dotfiles repository for Fedora/Hyprland/Wayland system. Uses Go templates (.tmpl) with automated installers and theme management.
+One Nix flake in `nix/` configures every machine: home-manager on Linux
+(Fedora and Arch) and nix-darwin with home-manager on macOS. README.md
+describes the layout and the `dot` commands.
 
 ## Key Commands
 
-- `chezmoi add <file>` - Track a LIVE file (copies ~/file → source directory)
-- `chezmoi diff` - Compare source vs target (what would change)
-- `chezmoi status` - Show tracked files with pending changes
-- `chezmoi data` - Show template data values
-- `chezmoi execute-template < file.tmpl` - Test template rendering
+Nix is on PATH only in a login shell (`bash -lc`).
 
-## Important Distinction
+- `nix/dot --private stub --machine <stub> show` shows a stub machine's traits and solutions
+- `nix/dot --private stub --machine <stub> why <solution>` shows why a solution is enabled
+- `nix flake check` (from `nix/`) builds every check and evaluates every stub machine
+- `nix build .#lib.machines.<stub>.build` (from `nix/`) builds one machine's generation
 
-- **Live files** (`~/.config/foo`, `~/.bashrc`) - Use `chezmoi add` to track
-- **Source repo files** (`~/.local/share/chezmoi/*`) - Auto-committed by chezmoi (`autoCommit=true`, `autoPush=true`)
-- `chezmoi add` copies live → source; it cannot add files already in source
+Never run `dot switch` unless asked: it changes the machine you are on.
 
-## Version Control
+## Layout
 
-Single branch `main`. Chezmoi auto-commits and auto-pushes via git (`autoCommit=true`, `autoPush=true`).
+- `nix/solutions/` holds the solutions, grouped by directory. Each says when it
+  applies (`when` on traits), what it `requires` or `conflicts` with, and its
+  `home`, `linux.home`, `linux.root`, `darwin.home` and `darwin.system` parts.
+- `nix/traits.nix` lists the traits a machine states.
+- `nix/lib/` loads the catalog, resolves each machine's solutions and composes
+  its configuration.
+- `nix/modules/home/` holds the options every home has: fragments, mutable
+  files, root steps, services, credentials, and the chezmoi state retirement.
+- `nix/checks/` and each solution's `checks` run in `nix flake check`.
+- `nix/private-stub/` is a placeholder private input with stub machines.
 
-**This repo is PUBLIC.** A gitleaks pre-commit hook (`.githooks/`, wired via
-`core.hooksPath`) blocks secrets from being committed. False positives go in
-`.gitleaks.toml`.
+## Rules
 
-## Machine Role & Identity (important caveats)
-
-- `is_work` is **declared per-machine** via `promptBoolOnce` on the first
-  `chezmoi init` and persisted in `~/.config/chezmoi/chezmoi.toml`. It is NOT
-  derived from hostname after that. To change a machine's role:
-  `chezmoi init --promptBool "Is this a work machine"=true`
-- `identity.*` / `email` values are fetched from Bitwarden (rbw) and **baked
-  into the config at init time**. After changing them in Bitwarden, run
-  `chezmoi init` to re-render — `chezmoi apply` alone will NOT pick them up.
-- `exact_` directories (e.g. `dot_config/hypr/exact_configs/`) DELETE any
-  unmanaged file in the target dir on apply (chezmoiignore'd files excepted).
-  Add new files there to chezmoi before applying.
-
-## Architecture
-
-- `dot_*` → `.*` files in home directory
-- `private_*` → Files with restricted permissions
-- `.tmpl` suffix → Go template files (processed before deploy)
-- `run_*` → Scripts executed during apply
-- `modify_*` → Scripts that modify existing files
-
-## Directory Structure
-
-- `software_installers/packages.toml` - Declarative package registry (repo-only, see docs/SOFTWARE-INSTALLERS.md)
-- `scripts/` - Management utilities (deployed to `~/scripts/`)
-- `dot_config/` → `~/.config/`
-- Theme switching: `lmtt switch light|dark|toggle` (external tool, see docs/THEME-SYSTEM.md)
-
-## Template Variables
-
-Access with `{{ .variable }}` syntax. Check available data with `chezmoi data`.
+- This repo is PUBLIC. Personal values (names, emails, hostnames, addresses,
+  hardware ids, accounts) live in the private input and reach code through
+  `identity` or `machine.private`. The `leak-scan` check enforces it.
+- No comments in any file. The `no-comments` check enforces it.
+- A gitleaks pre-commit hook lives in `.githooks/`. Enable it in a clone with
+  `git config core.hooksPath .githooks`. False positives go in `.gitleaks.toml`.
 
 ## greetd Config (external)
 
 greetd configuration is owned by the packaged
 https://github.com/MasonRhodesDev/greetd_game_mode setup flow, with
-https://github.com/MasonRhodesDev/vigil as the greeter.
-
-- Provision: `sudo game-mode setup`
-- Package-owned templates are rendered into `/etc/greetd`
-- The archived `greetd-config` symlink installer is not an active path
+https://github.com/MasonRhodesDev/vigil as the greeter. Provision it with
+`sudo game-mode setup`.
