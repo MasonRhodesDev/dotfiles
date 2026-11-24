@@ -3,6 +3,11 @@ useDefault = true
 
 [allowlist]
 description = "Known false positives"
+regexTarget = "match"
+regexes = [
+  '''fixtureClientSecret''',
+  '''pinnedSubkey = "[0-9A-F]{40}"''',
+]
 paths = [
   '''e2e-testing/infrastructure/packer/.*\.pkr\.hcl''',
 ]

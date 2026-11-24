@@ -1,0 +1,170 @@
+#!/usr/bin/env bash
+set -euo pipefail
+PATH=@jq@/bin:@procps@/bin:$PATH
+
+t3=$HOME/.local/bin/t3
+userdata=${T3CODE_HOME:-$HOME/.t3}/userdata
+settings=$userdata/desktop-settings.json
+unit=${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user/t3code.service
+label="T3 desktop app on $(uname -n)"
+minimum=0.1.11
+takeover="systemd-run --user --collect --unit t3-desktop-takeover $HOME/.local/bin/t3-desktop-client takeover"
+
+say() { echo "t3-desktop-client: $*" >&2; }
+
+owner() {
+  local pid
+  pid=$(jq -r '.pid // empty' "$userdata/server-runtime.json" 2>/dev/null) || return 0
+  if [ -n "$pid" ] && [ -e "/proc/$pid" ]; then echo "$pid"; fi
+}
+
+in_service() { grep -q '/t3code\.service$' "/proc/$1/cgroup" 2>/dev/null; }
+
+embedded() { tr '\0' ' ' < "/proc/$1/cmdline" 2>/dev/null | grep -q 'apps/server/dist/bin\.mjs'; }
+
+busy() { ps -o comm= --ppid "$1" | grep -qvxE 't3-resource-mon|cloudflared'; }
+
+app_main() { pgrep -U "$UID" -a -x t3code | awk '!/ --type=/ && !/ --require / { print $1; exit }' || true; }
+
+app_too_old() {
+  local seen
+  seen=$(cat "$userdata/desktop-last-started-version" 2>/dev/null) || return 1
+  [ "$(printf '%s\n' "$minimum" "$seen" | sort -V | head -n 1)" != "$minimum" ]
+}
+
+paired() {
+  "$t3" auth session list --json 2>/dev/null | jq -e --arg label "$label" '
+    any(.[]; .subject == "one-time-token" and .client.label == $label
+      and (.expiresAt == null or (.expiresAt | sub("\\.[0-9]+"; "") | fromdateiso8601) > now))' > /dev/null
+}
+
+start_service() {
+  local pid
+  if [ -e "$unit" ]; then systemctl --user enable --now t3code.service; else "$t3" up --lan --yes; fi
+  for _ in $(seq 60); do
+    pid=$(owner)
+    if [ -n "$pid" ] && in_service "$pid"; then return 0; fi
+    sleep 1
+  done
+  say "t3code.service did not take the T3 home within a minute. See: journalctl --user -u t3code.service"
+  return 1
+}
+
+client_mode() {
+  local tmp
+  [ "$(jq -r '.localEnvironmentEnabled' "$settings" 2>/dev/null)" = false ] && return 0
+  mkdir -p "$userdata"
+  tmp=$(mktemp "$settings.XXXXXX")
+  if [ -s "$settings" ]; then
+    if ! jq '.localEnvironmentEnabled = false' "$settings" > "$tmp"; then
+      rm -f "$tmp"
+      say "$settings is not valid JSON, left as it is"
+      return 1
+    fi
+    chmod --reference="$settings" "$tmp"
+  else
+    echo '{"localEnvironmentEnabled":false}' > "$tmp"
+    chmod 0644 "$tmp"
+  fi
+  mv -f "$tmp" "$settings"
+}
+
+converge() {
+  local pid
+  [ -x "$t3" ] || { say "$t3 is missing"; return 1; }
+  if app_too_old; then
+    say "the T3 app last ran as $(cat "$userdata/desktop-last-started-version"), and running it as a client of the service needs $minimum or newer. Update the app and open it once, then run: t3-desktop-client converge"
+    return 1
+  fi
+  pid=$(owner)
+  if [ -n "$pid" ] && ! in_service "$pid"; then
+    if embedded "$pid"; then
+      say "the T3 app hosts its own server (pid $pid). When no agent turn or terminal runs in it, hand the T3 home to the service: $takeover"
+    else
+      say "a T3 server outside t3code.service (pid $pid) owns the T3 home. Stop it, then run: t3-desktop-client converge"
+    fi
+    return 2
+  fi
+  start_service || return 1
+  client_mode
+}
+
+pair_once() {
+  local out origin url
+  out=$("$t3" pair --label "$label" --ttl 1h) || return 1
+  origin=$(sed -n 's/^Pairing with .*(\(http[^)]*\)).*/\1/p' <<< "$out")
+  url=$(sed -n 's/^Pairing URL: //p' <<< "$out")
+  if [ -z "$origin" ] || [ -z "$url" ]; then
+    say "could not read the pairing URL from t3 pair"
+    return 1
+  fi
+  xdg-open "t3code://pair?pairingUrl=$(jq -rn --arg url "$origin/${url#*://*/}" '$url | @uri')"
+}
+
+confirmed() {
+  local step=5 deadline=$((SECONDS + 3600))
+  until paired; do
+    [ "$SECONDS" -lt "$deadline" ] || return 1
+    sleep "$step"
+    step=$((step < 150 ? step * 2 : 300))
+  done
+}
+
+pair() {
+  paired && return 0
+  until [ -n "$(app_main)" ]; do sleep 10; done
+  sleep 5
+  if pair_once; then
+    say "the T3 app asks to add this machine's backend. Confirm it there within the hour"
+    if confirmed; then
+      say "the T3 app is paired with t3code.service"
+      return 0
+    fi
+  fi
+  say "the T3 app is not paired with t3code.service. To ask again: systemctl --user start t3-desktop-pair.service"
+  return 1
+}
+
+takeover() {
+  local pid main exe= desktop= argv=()
+  pid=$(owner)
+  if [ -n "$pid" ] && ! in_service "$pid" && embedded "$pid"; then
+    if busy "$pid"; then
+      say "the T3 app's server (pid $pid) is running agents or terminals. Nothing was changed:"
+      ps -o pid=,comm= --ppid "$pid" >&2
+      return 1
+    fi
+    main=$(app_main)
+    [ -n "$main" ] || { say "found the app's server (pid $pid) but not the app"; return 1; }
+    exe=$(tr '\0' '\n' < "/proc/$pid/environ" | sed -n 's/^APPIMAGE=//p')
+    [ -n "$exe" ] || exe=$(readlink "/proc/$main/exe")
+    desktop=$(tr '\0' '\n' < "/proc/$pid/environ" | sed -n 's/^XDG_CURRENT_DESKTOP=//p')
+    mapfile -d '' -t argv < "/proc/$main/cmdline"
+    [ "${#argv[@]}" -gt 1 ] || read -ra argv <<< "${argv[0]}"
+    kill -TERM "$main"
+    for _ in $(seq 60); do
+      if [ ! -e "/proc/$pid" ] && [ ! -e "/proc/$main" ]; then break; fi
+      sleep 1
+    done
+    if [ -e "/proc/$pid" ] || [ -e "/proc/$main" ]; then
+      say "the T3 app did not quit within a minute"
+      return 1
+    fi
+  fi
+  converge || return $?
+  if [ -n "$exe" ]; then
+    systemd-run --user --collect --quiet ${desktop:+--setenv=XDG_CURRENT_DESKTOP=$desktop} -- "$exe" "${argv[@]:1}"
+  fi
+  pair
+}
+
+case ${1:-} in
+  converge) converge ;;
+  pair)
+    status=0
+    converge || status=$?
+    case $status in 0) pair ;; 2) exit 0 ;; *) exit "$status" ;; esac
+    ;;
+  takeover) takeover ;;
+  *) say "usage: t3-desktop-client converge|pair|takeover"; exit 64 ;;
+esac

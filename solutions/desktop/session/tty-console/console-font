@@ -1,0 +1,21 @@
+#!/bin/sh
+root=${DOTFILES_ROOT_PREFIX:-}
+
+height=0
+if [ -r "$root/sys/class/graphics/fb0/virtual_size" ]; then
+    height=$(cut -d, -f2 "$root/sys/class/graphics/fb0/virtual_size")
+fi
+if   [ "$height" -ge 1300 ]; then font=ter-132b
+elif [ "$height" -ge 900  ]; then font=ter-124b
+elif [ "$height" -ge 1    ]; then font=ter-118b
+else                             font=ter-124b
+fi
+
+took=
+for vcs in "$root"/sys/class/vc/vcs[0-9]*; do
+    [ -e "$vcs" ] || continue
+    tty=tty${vcs##*/vcs}
+    if setfont -C "/dev/$tty" "$font" 2>/dev/null; then took="$took $tty"; fi
+done
+echo "console font $font for a ${height}px framebuffer on${took:- no text console}"
+exit 0

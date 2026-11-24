@@ -1,0 +1,112 @@
+vim.api.nvim_create_autocmd({ "BufWinEnter" }, {
+  callback = function()
+    vim.cmd "set formatoptions-=cro"
+  end,
+})
+
+vim.api.nvim_create_autocmd({ "FileType" }, {
+  pattern = {
+    "netrw",
+    "Jaq",
+    "qf",
+    "git",
+    "help",
+    "man",
+    "lspinfo",
+    "oil",
+    "spectre_panel",
+    "lir",
+    "DressingSelect",
+    "tsplayground",
+    "",
+  },
+  callback = function()
+    vim.cmd [[
+      nnoremap <silent> <buffer> q :close<CR>
+      set nobuflisted
+    ]]
+  end,
+})
+
+vim.api.nvim_create_autocmd({ "CmdWinEnter" }, {
+  callback = function()
+    vim.cmd "quit"
+  end,
+})
+
+vim.api.nvim_create_autocmd({ "VimResized" }, {
+  callback = function()
+    vim.cmd "tabdo wincmd ="
+  end,
+})
+
+vim.api.nvim_create_autocmd({ "BufWinEnter" }, {
+  pattern = { "!vim" },
+  callback = function()
+    vim.cmd "checktime"
+  end,
+})
+
+vim.api.nvim_create_autocmd({ "TextYankPost" }, {
+  callback = function()
+    vim.highlight.on_yank { higroup = "Visual", timeout = 40 }
+  end,
+})
+
+vim.api.nvim_create_autocmd({ "FileType" }, {
+  pattern = { "gitcommit", "markdown" },
+  callback = function()
+    vim.opt_local.wrap = true
+    vim.opt_local.spell = true
+  end,
+})
+
+vim.api.nvim_create_autocmd({"BufRead", "BufNewFile"}, {
+  pattern = {
+    "*/.config/hypr/*.conf",
+    "*/.config/hypr/configs/*.conf"
+  },
+  callback = function()
+    vim.bo.filetype = 'hypr'
+  end,
+})
+
+vim.api.nvim_create_augroup("EarlyWorkingDir", { clear = true })
+vim.api.nvim_create_autocmd("VimEnter", {
+  group = "EarlyWorkingDir",
+  once = true,
+  callback = function()
+    local arg = vim.fn.argv(0)
+    if arg and arg ~= "" then
+      local path = vim.fn.fnamemodify(arg, ":p")
+      local target_path = path
+      
+      if vim.fn.isdirectory(path) == 0 then
+        target_path = vim.fn.fnamemodify(path, ":h")
+      end
+      
+      local git_root = vim.fn.system("cd " .. vim.fn.shellescape(target_path) .. " && git rev-parse --show-toplevel 2>/dev/null")
+      git_root = vim.trim(git_root)
+      
+      if vim.v.shell_error == 0 and git_root ~= "" then
+        vim.cmd("cd " .. vim.fn.fnameescape(git_root))
+      elseif vim.fn.isdirectory(path) == 1 then
+        vim.cmd("cd " .. vim.fn.fnameescape(path))
+      end
+    end
+  end,
+})
+
+vim.api.nvim_create_autocmd({"WinEnter", "BufEnter"}, {
+  callback = function()
+    vim.opt_local.cursorline = true
+    vim.opt_local.relativenumber = true
+  end
+})
+
+vim.api.nvim_create_autocmd({"WinLeave", "BufLeave"}, {
+  callback = function()
+    vim.opt_local.cursorline = false
+    vim.opt_local.relativenumber = false
+  end
+})

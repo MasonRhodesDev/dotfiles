@@ -1,145 +1,104 @@
-# Hyprland Dotfiles
+# dotfiles
 
-Dotfiles for a Hyprland/Wayland desktop on **Fedora** (with Arch support),
-managed with [chezmoi](https://chezmoi.io). Work/personal machine split via
-template conditionals, Material You theming via
-[lmtt](https://github.com/MasonRhodesDev/linux-multi-theme-toggle), and a
-declarative package registry audited by Claude.
+One Nix flake configures a set of machines, with home-manager on Linux distros (not NixOS) and nix-darwin on macOS. Every piece of configuration is a solution that says which machines it is for. The machines themselves live in a separate private repository, so this one holds no personal data.
 
-## 🚀 Quick Start
+## Layout
 
-### Fresh Installation
+| Path | What it holds |
+|------|---------------|
+| `traits.nix` | The traits a machine states, each with a fixed set of values: `headless`, `form`, `profile`, `secrets`, `uses`, `hardware`. |
+| `solutions/` | The solutions, in groups. A group is a directory with a `_group.nix`, and the top level holds groups only. |
+| `lib/` | Resolves a machine's traits to the solutions it gets, and composes them into one home-manager or nix-darwin configuration. |
+| `modules/` | Shared modules the solutions build on, for files an app also writes, root steps, credentials, services and reports. |
+| `checks/` | The flake checks. `nix flake check` runs them. |
+| `private-stub/` | An example private repository. It is the default of the `private` input. |
+| `dot` | The command that builds and switches a machine. |
+| `bootstrap` | Sets up a fresh machine and runs its first switch. |
 
-One command on a virgin machine (installs git/jq/rbw/chezmoi via the package
-manager, walks through Bitwarden login so identity prompts are pre-seeded,
-then runs `chezmoi init --apply`):
+## Solutions
 
-```bash
-sh -c "$(curl -fsLS https://raw.githubusercontent.com/MasonRhodesDev/dotfiles/main/bootstrap.sh)"
-```
+A solution is a `.nix` file, or a directory with a `default.nix`, whose name is its id. It sets `name`, `description` and `platforms` (`linux`, `darwin` or both), and puts its configuration in one or more slots:
 
-All machine-varying private data is fetched **once per machine** from a single
-Bitwarden secure note (`chezmoi-data`) at init, then persisted in
-`~/.config/chezmoi/chezmoi.toml` — never stored in this public repo. Fields:
+| Slot | Is |
+|------|----|
+| `home` | a home-manager module for every platform |
+| `linux.home`, `darwin.home` | a home-manager module for one platform |
+| `linux.root` | a step that needs root on a Linux distro, such as files under `/etc`, system units or distro packages |
+| `darwin.system` | a nix-darwin module |
 
-| Field | Purpose |
-|-------|---------|
-| `name`, `email_work`, `email_personal` | git author identity |
-| `git_overrides` | JSON array of `{condition, identity}` git `includeIf` rules (dir- or org-based); drives `~/.gitconfig` |
-| `work_claude_md` | work-only design/brand block injected into `~/.claude/CLAUDE.md` |
-| `work_overlay_repo` | git URL of the private overlay repo (work files, e.g. Claude templates) |
+`when` limits a solution, or a whole group, to machines whose traits match, as in `when = { headless = false; uses = "gaming"; }`. `requires` and `conflicts` name other solutions, and `checks` adds flake checks. A switch runs the root steps with sudo, and only when they changed since the last run.
 
-Only `name`/emails have a prompt fallback; the rest degrade to safe defaults if
-absent. If any value changes in Bitwarden later, run `chezmoi-refresh-identity`.
-`rbw` uses `pinentry-curses` so unlock works over a plain TTY/SSH during init.
+## Declaring a machine
 
-### Existing Machine
-
-```bash
-# Pull latest changes
-chezmoi update
-
-# Check for differences
-chezmoi diff
-
-# Apply changes
-chezmoi apply
-```
-
-## 📁 Repository Structure
+The private repository has this shape:
 
 ```
-.
-├── dot_config/              # ~/.config applications
-│   ├── hypr/               # Hyprland compositor config
-│   ├── hypr/profiles/      # Monitor profiles consumed by hyprstate
-│   ├── nvim/               # Neovim configuration
-│   ├── waybar/             # Status bar configuration
-│   ├── matugen/            # Theme generation templates
-│   └── ...
-├── dot_local/bin/          # Local executables
-├── scripts/                # Utility scripts (deployed to ~/scripts)
-├── software_installers/    # packages.toml registry (repo-only)
-└── .chezmoiscripts/        # run_once / run_onchange lifecycle scripts
+identity.nix
+machines/
+  <machine>.nix
 ```
 
-## 🎨 Theme System
+`identity.nix` holds what every machine shares: the name and email addresses for git, the git `includeIf` rules, and `leakTerms`, the names and hosts the leak scan must never find in this repository. `private-stub/identity.nix` is an example.
 
-Theming is handled by [lmtt](https://github.com/MasonRhodesDev/linux-multi-theme-toggle)
-(Linux Multi-Theme Toggle), a standalone tool that generates Material You
-colors with matugen and injects them into application configs:
+A machine entry is named for the machine's short hostname (its LocalHostName on macOS):
 
-```bash
-lmtt switch light|dark|toggle   # Switch themes
-lmtt status                     # Current theme
-lmtt list                       # Installed modules
+```nix
+{
+  system = "x86_64-linux";
+  traits = { headless = false; form = "laptop"; profile = "personal"; secrets = "none"; uses = [ "dev" ]; };
+  user = { name = "alex"; home = "/home/alex"; };
+  private = { };
+}
 ```
 
-Generated files are prefixed `lmtt-*` and excluded from chezmoi via
-`.chezmoiignore`.
+`system` is `x86_64-linux`, `aarch64-linux` or `aarch64-darwin`. `private` holds values that belong to this machine alone, such as monitor names, which some solutions read. `exclude` drops solutions or whole groups by id, and `include` names solutions the machine must get, so evaluation fails when its traits rule one out. The machines in `private-stub/machines/` use every trait value between them, and a check keeps it so.
 
-## 💻 Key Applications
+To start your own, copy `private-stub` into a new repository named like this one with `-private` on the end, next to it on the same host, and edit it.
 
-| Category | Application | Config Location |
-|----------|-------------|-----------------|
-| **Compositor** | Hyprland | `~/.config/hypr/` |
-| **Terminal** | Wezterm | `~/.config/wezterm/` |
-| **Editor** | Neovim / Zed | `~/.config/nvim/`, `~/.config/zed/` |
-| **Shell** | Fish + Oh My Posh | `~/.config/fish/` |
-| **Status Bar** | Waybar | `~/.config/waybar/` |
-| **Launcher** | Fuzzel | `~/.config/fuzzel/` |
-| **Notifications** | SwayNC | `~/.config/swaync/` |
-| **System Monitor** | Btop | `~/.config/btop/` |
+## Setting up a machine
 
-## 🔧 Common Tasks
-
-### Adding New Files
-```bash
-# Add a config file to chezmoi
-chezmoi add ~/.config/newapp/config.conf
-
-# Add a script
-chezmoi add ~/scripts/my-script.sh
+```sh
+git clone <your fork> ~/.local/share/dotfiles
+sh ~/.local/share/dotfiles/bootstrap
 ```
 
-### Managing Templates
-```bash
-# Test template rendering
-chezmoi execute-template < ~/.local/share/chezmoi/dot_config/example.tmpl
+The bootstrap installs Nix if it is missing, signs in to GitHub with an SSH key so the private repository can be fetched, and runs `dot switch`. Run from elsewhere, `sh bootstrap <repo url>` clones the repository to `$DOTFILES_DIR` (default `~/.local/share/dotfiles`) first.
 
-# Edit templates
-chezmoi edit ~/.gitconfig
+## dot
+
+```sh
+./dot [--machine NAME] [--private REF] [--build-host HOST] [COMMAND]
 ```
 
-### Monitoring Changes
-```bash
-# Check chezmoi status
-chezmoi status
+| Command | Does |
+|---------|------|
+| `switch` | Builds the machine and activates it. The default. |
+| `plan` | On Linux, lists the files a switch would set aside, the units it would stop and whether it would run the root steps. Changes nothing. |
+| `build` | Builds the machine and prints the store path. |
+| `show` | Prints the machine's traits, the solutions it gets and what it starts. |
+| `why ID` | Prints the traits and `when` conditions that gave the machine solution `ID`. |
+| `secrets` | Lists the credentials the machine's solutions expect and whether each one resolves. `--json` for JSON, `--machine NAME` to list another machine's without checking. |
+| `check` | Runs `nix flake check` with the private repository. |
 
-# See what would be applied
-chezmoi diff
+`--machine` defaults to the short hostname. `--private` takes any flake reference, and `--private stub` uses `private-stub`. Without it, dot derives the private repository from the checkout's `origin`, so `git@github.com:you/dotfiles.git` gives `git+ssh://git@github.com/you/dotfiles-private`. `--build-host` evaluates and builds on another machine over SSH and copies only the result back, and `--build-host local` builds here even when the active generation names a build host. `DOTFILES_MACHINE`, `DOTFILES_PRIVATE` and `DOTFILES_BUILD_HOST` set the same three, and `DOTFILES_FLAKE` points dot at another checkout.
+
+Without a private repository, try it on the stub machines:
+
+```sh
+./dot --private stub --machine stub-headless show
+nix flake check
 ```
 
-## greetd Login Manager
+## Development
 
-The packaged login stack is owned by
-**[greetd_game_mode](https://github.com/MasonRhodesDev/greetd_game_mode)**
-with **[Vigil](https://github.com/MasonRhodesDev/vigil)** as its greeter.
+`nix flake check` builds every check against `private-stub`. Among them, `no-comments` fails on any comment in the tree, and `leak-scan` fails on home directories, private addresses, email addresses and the `leakTerms` of the private input. Run it with yours as well:
 
-```bash
-sudo game-mode setup
+```sh
+nix build .#checks.x86_64-linux.leak-scan --override-input private <your private repo>
 ```
 
-The setup command renders the package-owned templates into `/etc/greetd`.
-The retired `greetd-config` checkout and symlink installer are no longer part
-of the active desktop path.
+`git config core.hooksPath .githooks` turns on the pre-commit hook, which runs gitleaks on staged changes.
 
-## ⚠️ Important Notes
+## License
 
-- **Never use `chezmoi apply --force`** - This can overwrite local changes
-- **Use `chezmoi add` to save changes** - Don't edit deployed-file copies in `.local/share/chezmoi` directly
-- **Work/personal split** - `is_work` (hostname-based) excludes gaming/Steam configs from work machines via `.chezmoiignore`. Work-only *files* (Claude templates) live in a **private overlay repo** (`work_overlay_repo`), cloned into `~/.claude/templates` on work machines by `run_onchange_after_35-sync-work-overlay` — they are never committed to this public repo.
-
-## 📄 License
-
-MIT License.
+MIT

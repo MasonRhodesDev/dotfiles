@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+set -uo pipefail
+PATH=@jq@/bin:$PATH
+
+[ -n "${HERDR_PANE_ID:-}" ] || exit 0
+command -v jq >/dev/null 2>&1 || exit 0
+
+state="${XDG_STATE_HOME:-$HOME/.local/state}/herdr-resume"
+map="$state/panes.json"
+mkdir -p "$state" 2>/dev/null || exit 0
+
+input=$(cat 2>/dev/null) || exit 0
+sid=$(jq -r '.session_id // empty' <<<"$input" 2>/dev/null) || exit 0
+[ -n "$sid" ] || exit 0
+cwd=$(jq -r '.cwd // empty' <<<"$input" 2>/dev/null)
+transcript=$(jq -r '.transcript_path // empty' <<<"$input" 2>/dev/null)
+
+exec 9>"$state/.lock" 2>/dev/null || exit 0
+flock -w 5 9 2>/dev/null || exit 0
+
+old=$(jq -c . "$map" 2>/dev/null) || old='{}'
+[ -n "$old" ] || old='{}'
+
+tmp=$(mktemp "$state/.panes.XXXXXX" 2>/dev/null) || exit 0
+if jq -n --argjson old "$old" \
+      --arg pane "$HERDR_PANE_ID" \
+      --arg sid "$sid" \
+      --arg cwd "$cwd" \
+      --arg tab "${HERDR_TAB_ID:-}" \
+      --arg ws "${HERDR_WORKSPACE_ID:-}" \
+      --arg transcript "$transcript" \
+      --arg at "$(date -Is)" \
+      '$old + {($pane): {session_id: $sid, cwd: $cwd, tab_id: $tab,
+                         workspace_id: $ws, transcript: $transcript,
+                         updated: $at}}' >"$tmp" 2>/dev/null; then
+    mv -f "$tmp" "$map" 2>/dev/null
+fi
+rm -f "$tmp" 2>/dev/null
+exit 0

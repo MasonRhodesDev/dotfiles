@@ -1,0 +1,50 @@
+#!/bin/sh
+set -eu
+
+say() { printf '\n==> %s\n' "$*"; }
+
+if ! command -v nix >/dev/null 2>&1 && [ ! -x /nix/var/nix/profiles/default/bin/nix ]; then
+  say "Installing Determinate Nix"
+  curl -fsSL https://install.determinate.systems/nix | sh -s -- install --no-confirm
+fi
+if ! command -v nix >/dev/null 2>&1; then
+  # shellcheck disable=SC1091
+  . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
+fi
+
+tools() { nix shell nixpkgs#git nixpkgs#gh nixpkgs#openssh --command "$@"; }
+
+host=github.com
+case $(ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -T "git@$host" 2>&1 || true) in
+  *"successfully authenticated"*) ;;
+  *)
+    say "Signing in to GitHub (creates and uploads an SSH key for this machine)"
+    tools gh auth login --hostname "$host" --git-protocol ssh --web
+    ;;
+esac
+
+here=$(cd "$(dirname "$0")" 2>/dev/null && pwd || true)
+if [ -n "$here" ] && [ -x "$here/dot" ]; then
+  checkout=$here
+else
+  repo=${1:?usage: sh bootstrap REPO_URL}
+  checkout=${DOTFILES_DIR:-$HOME/.local/share/dotfiles}
+  if [ ! -d "$checkout/.git" ]; then
+    say "Cloning $repo to $checkout"
+    tools git clone "$repo" "$checkout"
+  fi
+fi
+
+say "Switching this machine"
+tools "$checkout/dot" switch
+
+if [ "$(uname -s)" = Darwin ]; then
+  case $(sysadminctl -screenLock status 2>&1) in
+    *immediate*) ;;
+    *)
+      say "Require the password as soon as the display sleeps (asks for your login password)"
+      sysadminctl -screenLock immediate -password - || true
+      ;;
+  esac
+  say "Log out and back in once, so the Spaces and hotkey settings take effect."
+fi

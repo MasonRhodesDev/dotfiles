@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=qBittorrent magnet handler
+Exec=sh -c 'exec "$HOME/.local/bin/qbt-magnet" "$@"' _ %u
+NoDisplay=true
+Terminal=false
+MimeType=x-scheme-handler/magnet;

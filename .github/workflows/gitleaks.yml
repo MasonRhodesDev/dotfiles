@@ -1,0 +1,23 @@
+name: Secret scan
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  gitleaks:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          fetch-depth: 0
+
+      - name: Run gitleaks
+        run: |
+          ver=$(curl -fsSL https://api.github.com/repos/gitleaks/gitleaks/releases/latest | jq -r .tag_name)
+          curl -fsSL "https://github.com/gitleaks/gitleaks/releases/download/${ver}/gitleaks_${ver#v}_linux_x64.tar.gz" | tar xz gitleaks
+          ./gitleaks git . --no-banner --redact --config .gitleaks.toml
+          echo "No secrets found in history (gitleaks ${ver})" >> "$GITHUB_STEP_SUMMARY"

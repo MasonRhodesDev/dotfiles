@@ -1,3 +1,0 @@
-#!/bin/sh
-exec systemd-run --user --quiet --scope --slice=dev.slice --collect -- \
-    "$HOME/.cargo/bin/rust-analyzer" "$@"

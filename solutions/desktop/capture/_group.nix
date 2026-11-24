@@ -1,0 +1,4 @@
+{
+  name = "Capture";
+  description = "screenshots";
+}

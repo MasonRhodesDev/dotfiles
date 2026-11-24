@@ -1,0 +1,131 @@
+#!/usr/bin/env python3
+import os
+import re
+import sys
+
+HASH = {"kind": "line", "line": re.compile(r"^\s*#")}
+NIX = {"kind": "line", "line": re.compile(r"^\s*(#|--)( |$)")}
+LUA = {"kind": "line", "line": re.compile(r"^\s*--"), "open": re.compile(r"^\s*--\[=*\["), "close": re.compile(r"\]=*\]")}
+SLASH = {"kind": "line", "line": re.compile(r"^\s*//"), "open": re.compile(r"^\s*/\*"), "close": re.compile(r"\*/")}
+CSS = {"kind": "line", "line": re.compile(r"^$a"), "open": re.compile(r"^\s*/\*"), "close": re.compile(r"\*/")}
+
+BY_SUFFIX = {
+    ".nix": NIX, ".lua": LUA, ".ts": SLASH, ".js": SLASH, ".css": CSS,
+    ".sh": HASH, ".bash": HASH, ".bashrc": HASH, ".py": HASH, ".conf": HASH, ".toml": HASH,
+    ".desktop": HASH, ".rules": HASH, ".list": HASH, ".ini": HASH, ".theme": HASH,
+    ".service": HASH, ".timer": HASH, ".path": HASH, ".socket": HASH, ".slice": HASH, ".target": HASH,
+    ".gitconfig-shared": HASH, ".tool": HASH, ".run": HASH, ".cb": HASH,
+}
+BY_NAME = {"bashrc": HASH, "bash_profile": HASH, "profile": HASH, "inputrc": HASH, "blerc": HASH, "ignore": HASH}
+SKIP_DIRS = ("checks/fixtures/",)
+DATA = (".md", ".json", ".pub", ".asc", ".txt", ".lock", ".png", ".svg")
+
+KEEP = re.compile(r"(^\s*#!|^\s*#@ |>>> herdr-radar |<<< herdr-radar |>>> dotfiles: |<<< dotfiles: |^\s*# shellcheck |^\s*// @ts-|^\s*#%PAM)")
+
+
+def syntax(path, full):
+    name = os.path.basename(path)
+    if path.startswith(SKIP_DIRS) or name.endswith(DATA) or name == "no-comments":
+        return None
+    for suffix, rules in BY_SUFFIX.items():
+        if name.endswith(suffix):
+            return rules
+    if name in BY_NAME:
+        return BY_NAME[name]
+    try:
+        with open(full, encoding="utf-8") as f:
+            first = f.readline()
+    except (UnicodeDecodeError, OSError):
+        return None
+    if first.startswith("#!"):
+        if "bun" in first or "node" in first:
+            return SLASH
+        return HASH
+    return None
+
+
+def comment_lines(lines, rules):
+    found = []
+    block = False
+    for i, line in enumerate(lines):
+        if block:
+            found.append(i)
+            if rules["close"].search(line):
+                block = False
+            continue
+        if i == 0 and line.startswith("#!"):
+            continue
+        if KEEP.search(line):
+            continue
+        if "open" in rules and rules["open"].match(line):
+            found.append(i)
+            if not rules["close"].search(line[rules["open"].match(line).end():]):
+                block = True
+            continue
+        if rules["line"].match(line):
+            found.append(i)
+    return found
+
+
+OPENERS = re.compile(r"(\{|\(|\[|=|\blet|\bin|''|then|do|else|function\(\)|function [\w.:]+\(.*\))\s*$")
+
+
+def stripped(lines, found):
+    gone = set(found)
+    out = []
+    i = 0
+    while i < len(lines):
+        if i not in gone:
+            out.append(lines[i])
+            i += 1
+            continue
+        while i < len(lines) and i in gone:
+            i += 1
+        before = out[-1] if out else None
+        after_blank = i < len(lines) and lines[i].strip() == ""
+        if after_blank and (before is None or before.strip() == "" or OPENERS.search(before.rstrip("\n"))):
+            while i < len(lines) and lines[i].strip() == "":
+                i += 1
+    return out
+
+
+def files(root):
+    for top, dirs, names in os.walk(root):
+        dirs[:] = [d for d in dirs if d != ".git"]
+        for name in names:
+            path = os.path.relpath(os.path.join(top, name), root)
+            if not os.path.islink(os.path.join(root, path)):
+                yield path
+
+
+def main():
+    fix = "--fix" in sys.argv[1:]
+    roots = [a for a in sys.argv[1:] if a != "--fix"] or ["."]
+    total = 0
+    for root in roots:
+        for path in sorted(files(root)):
+            full = os.path.join(root, path)
+            rules = syntax(path, full)
+            if rules is None:
+                continue
+            with open(full, encoding="utf-8") as f:
+                lines = f.readlines()
+            found = comment_lines(lines, rules)
+            if not found:
+                continue
+            total += len(found)
+            if fix:
+                mode = os.stat(full).st_mode
+                with open(full, "w", encoding="utf-8") as f:
+                    f.writelines(stripped(lines, found))
+                os.chmod(full, mode)
+            else:
+                for i in found:
+                    print(f"{path}:{i + 1}: {lines[i].rstrip()}")
+    if total and not fix:
+        print(f"no-comments: {total} comment lines. The code is the documentation.", file=sys.stderr)
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

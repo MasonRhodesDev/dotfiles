@@ -1,0 +1,136 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() { echo "usage: leak-scan [--owner NAME] [--terms FILE] DIR" >&2; exit 2; }
+owner=
+terms=/dev/null
+while [ $# -gt 0 ]; do
+  case $1 in
+    --owner) owner=${2:?--owner needs a name}; shift 2 ;;
+    --terms) terms=${2:?--terms needs a file}; shift 2 ;;
+    -*) usage ;;
+    *) break ;;
+  esac
+done
+[ $# = 1 ] && [ -d "$1" ] || usage
+root=${1%/}
+[ -r "$terms" ] || { echo "leak-scan: cannot read $terms" >&2; exit 2; }
+
+records() {
+  local path list
+  list=$(mktemp)
+  find "$root" -mindepth 1 \( -type f -o -type l \) -print0 > "$list" || { echo "leak-scan: cannot list everything under $root" >&2; exit 2; }
+  while IFS= read -r -d '' path; do
+    export rel=${path#"$root"/}
+    case $rel in *[[:cntrl:]]*) echo "leak-scan: control character in a name: $(printf %q "$rel")" >&2; exit 2 ;; esac
+    printf '%s\tname\t%s\n' "$rel" "$rel"
+    if [ -L "$path" ]; then
+      printf '%s\tlink target\t%s\n' "$rel" "$(readlink "$path")"
+    else
+      awk '{ printf "%s\t%d\t%s\n", ENVIRON["rel"], NR, $0 }' "$path" || { echo "leak-scan: cannot read $rel" >&2; exit 2; }
+    fi
+  done < <(sort -z "$list")
+  rm -f "$list"
+}
+
+status=0
+records | owner=$owner terms=$terms awk '
+  BEGIN {
+    owner = ENVIRON["owner"]
+    while ((getline term < ENVIRON["terms"]) > 0) if (term != "") terms[tolower(term)] = 1
+    placeholder["user"]; placeholder["linuxbrew"]; placeholder["alex"]; placeholder["fixture"]
+  }
+
+  function report(rule) { printf "%s:%s: %s: %s\n", rel, where, rule, text; found = 1 }
+
+  function without(line, form,    out, at, before) {
+    out = ""
+    while ((at = index(line, form)) > 0) {
+      before = at > 1 ? substr(line, at - 1, 1) : ""
+      out = out substr(line, 1, at - 1) (before ~ /[A-Za-z0-9.-]/ ? form : "\001")
+      line = substr(line, at + length(form))
+    }
+    return out line
+  }
+
+  function homes(    lower, pos, start, name) {
+    lower = tolower(text)
+    pos = 1
+    while (match(substr(lower, pos), /\/(home|users)\/[a-z0-9_.-]+/)) {
+      start = pos + RSTART - 1
+      pos = start + RLENGTH
+      name = substr(lower, start, RLENGTH)
+      sub(/^\/[a-z]+\//, "", name)
+      sub(/\.+$/, "", name)
+      if (name == "" || name in placeholder) continue
+      if (substr(lower, start, 6) == "/home/" && substr(lower, 1, start - 1) ~ /(^|[^a-z0-9_.-])modules$/) continue
+      report("home directory")
+    }
+  }
+
+  function emails(    pos, start, token, at, mailbox, domain, after) {
+    pos = 1
+    while (match(substr(text, pos), /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/)) {
+      start = pos + RSTART - 1
+      pos = start + RLENGTH
+      token = substr(text, start, RLENGTH)
+      sub(/[.-]+$/, "", token)
+      after = substr(text, start + length(token), 1)
+      at = index(token, "@")
+      mailbox = substr(token, 1, at - 1)
+      domain = tolower(substr(token, at + 1))
+      if (domain !~ /^[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z][a-z]+$/) continue
+      if (domain ~ /^([a-z0-9-]+\.)*example\.(com|org|net)$/ || domain ~ /\.(invalid|example|test)$/) continue
+      if (mailbox == "git" && domain == "github.com" && (after == ":" || after == "/")) continue
+      report("email address")
+    }
+  }
+
+  function addresses(    pos, start, token, octet, i) {
+    pos = 1
+    while (match(substr(text, pos), /[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/)) {
+      start = pos + RSTART - 1
+      pos = start + RLENGTH
+      token = substr(text, start, RLENGTH)
+      if (start > 1 && substr(text, start - 1, 1) == ".") continue
+      if (substr(text, pos, 2) ~ /^\.[0-9]/) continue
+      split(token, octet, ".")
+      for (i = 1; i <= 4; i++) octet[i] += 0
+      if (octet[1] > 255 || octet[2] > 255 || octet[3] > 255 || octet[4] > 255) continue
+      if (token == "172.17.0.1") continue
+      if (octet[1] == 10 \
+          || (octet[1] == 172 && octet[2] >= 16 && octet[2] <= 31) \
+          || (octet[1] == 192 && octet[2] == 168) \
+          || (octet[1] == 100 && octet[2] >= 64 && octet[2] <= 127) \
+          || (octet[1] == 169 && octet[2] == 254)) report("private network address")
+    }
+  }
+
+  function names(    rest, term) {
+    rest = text
+    if (owner != "") {
+      rest = without(rest, "github:" owner "/")
+      rest = without(rest, "github.com/" owner "/")
+      rest = without(rest, "\"owner\": \"" owner "\"")
+    }
+    rest = tolower(rest)
+    if (owner != "" && index(rest, tolower(owner))) report("repository owner outside a repository URL")
+    for (term in terms) if (index(rest, term)) report("private term")
+  }
+
+  {
+    rel = $0; sub(/\t.*/, "", rel)
+    text = substr($0, length(rel) + 2)
+    where = text; sub(/\t.*/, "", where)
+    text = substr(text, length(where) + 2)
+    homes(); emails(); addresses(); names()
+  }
+
+  END { exit found }
+' || status=$?
+
+case $status in
+  0) echo "leak-scan: clean" ;;
+  1) echo "leak-scan: person or machine data in the public tree" >&2; exit 1 ;;
+  *) echo "leak-scan: the scan itself failed" >&2; exit 2 ;;
+esac

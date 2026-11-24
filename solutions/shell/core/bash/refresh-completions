@@ -1,0 +1,29 @@
+#!/bin/bash
+set -uo pipefail
+
+dir=${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions
+mkdir -p "$dir"
+
+gen() { # gen <cmd> <generator command...>
+    local cmd=$1; shift
+    command -v "$cmd" >/dev/null 2>&1 || { printf '%-12s skipped (not installed)\n' "$cmd"; return 0; }
+    local tmp
+    tmp=$(mktemp "$dir/.$cmd.XXXXXX")
+    if "$@" >"$tmp" 2>/dev/null && [ -s "$tmp" ]; then
+        mv -f "$tmp" "$dir/$cmd"
+        printf '%-12s %s lines\n' "$cmd" "$(wc -l <"$dir/$cmd")"
+    else
+        rm -f "$tmp"
+        printf '%-12s FAILED (generator returned nothing)\n' "$cmd" >&2
+    fi
+}
+
+stub() { # stub <cmd> <completion line>   for tools that complete via -C
+    local cmd=$1 line=$2
+    command -v "$cmd" >/dev/null 2>&1 || { printf '%-12s skipped (not installed)\n' "$cmd"; return 0; }
+    printf '%s\n' "$line" >"$dir/$cmd"
+    printf '%-12s stub\n' "$cmd"
+}
+
+gen pulumi    pulumi gen-completion bash
+gen codex     codex completion bash
