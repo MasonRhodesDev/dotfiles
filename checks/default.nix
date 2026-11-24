@@ -10,7 +10,7 @@ let
     else throw "check ${name} failed:\n${lib.concatMapStrings (f: "  - ${f}\n") failures}";
 
   optional = {
-    private = [ "internalPanel" "dgpuPci" "softMixerNodes" "xwaylandPrimary" "infisical" "workMacServer" "packages" "bedrock" "buildHost" ];
+    private = [ "internalPanel" "dgpuPci" "softMixerNodes" "xwaylandPrimary" "infisical" "workMacServer" "packages" "bedrock" "buildHost" "networkZones" ];
     identity = [ "work" "tailnets" "buildHosts" ];
   };
   without =
