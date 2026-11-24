@@ -7,6 +7,7 @@
   private.internalPanel = "eDP-EXAMPLE";
   private.dgpuPci = "0000:ff:00.0";
   private.trustedNetworks = [ "example-home-wifi" ];
+  private.networkZones = { "example-office-wifi" = "work"; };
   private.infisical = { projectId = "example-project"; environment = "example-env"; path = "/example-path"; };
   private.workMacServer = { tailnetAddress = "work-mac.example.invalid"; user = "alex"; };
   private.packages = [ "rbw" ];

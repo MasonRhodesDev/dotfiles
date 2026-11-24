@@ -1,6 +1,6 @@
 {
   name = "Roaming firewall";
-  description = "Linux: firewalld zones per Wi-Fi profile, closed on unknown networks; trusted list from the private repo. darwin: macOS application firewall with stealth mode.";
+  description = "Linux: firewalld zones per Wi-Fi profile, closed on unknown networks; trusted list and per-network zones from the private repo. darwin: macOS application firewall with stealth mode.";
   platforms = [ "linux" "darwin" ];
   when.form = "laptop";
 
@@ -12,6 +12,7 @@
     units = [ "firewalld.service" ];
     script = ''
       trusted=(${lib.escapeShellArgs machine.private.trustedNetworks})
+      declare -A zones=(${lib.concatStringsSep " " (lib.mapAttrsToList (n: z: "[${lib.escapeShellArg n}]=${lib.escapeShellArg z}") (machine.private.networkZones or { }))})
 
       for u in nftables iptables; do
         if systemctl is-enabled "$u" >/dev/null 2>&1; then
@@ -37,6 +38,7 @@
         [ "$type" = "802-11-wireless" ] || continue
         want=public
         for t in "''${trusted[@]}"; do [ "$name" = "$t" ] && want=trusted; done
+        [ -n "''${zones[$name]:-}" ] && want=''${zones[$name]}
         have=$(nmcli -g connection.zone connection show "$name" 2>/dev/null || true)
         if [ "$have" != "$want" ]; then
           nmcli connection modify "$name" connection.zone "$want"
