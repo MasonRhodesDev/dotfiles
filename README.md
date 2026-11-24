@@ -58,11 +58,11 @@ To start your own, copy `private-stub` into a new repository named like this one
 ## Setting up a machine
 
 ```sh
-git clone <your fork> ~/.local/share/dotfiles
-sh ~/.local/share/dotfiles/bootstrap
+git clone <your fork> ~/.local/share/dotfiles-flake
+sh ~/.local/share/dotfiles-flake/bootstrap
 ```
 
-The bootstrap installs Nix if it is missing, signs in to GitHub with an SSH key so the private repository can be fetched, and runs `dot switch`. Run from elsewhere, `sh bootstrap <repo url>` clones the repository to `$DOTFILES_DIR` (default `~/.local/share/dotfiles`) first.
+The bootstrap installs Nix if it is missing, signs in to GitHub with an SSH key so the private repository can be fetched, and runs `dot switch`. Run from elsewhere, `sh bootstrap <repo url>` clones the repository to `$DOTFILES_DIR` (default `~/.local/share/dotfiles-flake`) first.
 
 ## dot
 

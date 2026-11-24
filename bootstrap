@@ -28,7 +28,7 @@ if [ -n "$here" ] && [ -x "$here/dot" ]; then
   checkout=$here
 else
   repo=${1:?usage: sh bootstrap REPO_URL}
-  checkout=${DOTFILES_DIR:-$HOME/.local/share/dotfiles}
+  checkout=${DOTFILES_DIR:-$HOME/.local/share/dotfiles-flake}
   if [ ! -d "$checkout/.git" ]; then
     say "Cloning $repo to $checkout"
     tools git clone "$repo" "$checkout"
